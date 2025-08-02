@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-@Injectable()
+/* @Injectable()
 export class AuthService {
   constructor(private jwtService: JwtService) {}
 
@@ -13,4 +13,29 @@ export class AuthService {
     };
     return this.jwtService.sign(payload);
   }
+}
+ */
+
+// src/auth/auth.service.ts
+@Injectable()
+export class AuthService {
+  constructor(private jwtService: JwtService) {}
+
+  generateTokens(user: any) {
+    const payload = { sub: user.id, username: user.username };
+
+    const access_token = this.jwtService.sign(payload, {
+      secret: process.env.JWT_ACCESS_TOKEN_SECRET,
+      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION,
+    });
+
+    const refresh_token = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_TOKEN_SECRET,
+      expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRATION,
+    });
+
+    return { access_token, refresh_token };
+  }
+
+  // Optional: you could also verify/refresh a token here
 }

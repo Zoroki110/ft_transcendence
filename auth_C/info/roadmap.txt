@@ -1,0 +1,197 @@
+🔐 YOUR ROADMAP: Modules 4 & 5 - Auth Specialist
+Let’s break your mission down week by week, so you can hit all the targets without stress.
+
+🧭 OVERVIEW OF YOUR RESPONSIBILITIES
+✅ Module 4: Remote Authentication
+Implement OAuth 2.0 with:
+
+✅ 42 API
+
+✅ Google
+
+✅ GitHub
+
+Secure exchange of tokens → use JWT for internal sessions
+
+Map OAuth users to local accounts
+
+Handle edge cases (token refresh, denied consent, etc.)
+
+✅ Module 5: Two-Factor Authentication (2FA) + JWT
+Implement TOTP (Time-based One-Time Password)
+
+Setup QR code generation
+
+Secure storage of TOTP secrets
+
+Integrate with JWT (user must pass both factors to be logged in)
+
+Frontend integration with QR code & token entry UI
+
+🗓 WEEK 1 – OAuth & Foundation
+👣 Day 1-2: Groundwork
+✅ Research OAuth 2.0 flow
+
+✅ Explore 42 API, Google OAuth & GitHub OAuth
+
+✅ Create OAuth test apps (in 42 intra, Google Cloud, GitHub Developer)
+
+✅ Set up .env and keep secrets out of Git
+
+📦 Deliverable:
+auth.service.ts with OAuth flow scaffolded
+
+.env with CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+
+Postman or Curl-tested callback endpoint
+
+👣 Day 3-4: OAuth Backend Integration
+🔧 Use passport + passport-oauth2 or passport-42, etc. with NestJS
+
+🔐 On callback, create or link user in DB
+
+💾 Store only safe data (never store access_token)
+
+🎟 Issue JWT from server after successful OAuth login
+
+📦 Deliverable:
+Working login with at least one provider (42)
+
+Automatic user creation/mapping
+
+Secure JWT issued
+
+👣 Day 5: Frontend Integration
+🌐 Button: “Login with 42 / Google / GitHub”
+
+🎯 Redirect → OAuth flow → receive JWT token → store in localStorage
+
+🔒 Protect routes with JWT
+
+📦 Deliverable:
+End-to-end working OAuth login with 42
+
+Proper JWT flow
+
+Error handling if auth fails
+
+🗓 WEEK 2 – 2FA + Advanced Auth Security
+👣 Day 6-7: Backend 2FA Logic
+🔐 Use speakeasy (or manual TOTP logic)
+
+🧠 Store encrypted 2FA secret per user
+
+📤 Endpoint to generate + return QR code (/2fa/setup)
+
+✅ Verify token endpoint (/2fa/verify)
+
+📦 Deliverable:
+User can activate 2FA
+
+QR code works with Google Authenticator or Authy
+
+Token verification endpoint is functional
+
+👣 Day 8-9: JWT + 2FA Integration
+👥 Update login flow:
+
+If user has 2FA enabled, don’t send final JWT yet
+
+Require /2fa/verify before issuing JWT
+
+Optional: Add backup codes (bonus)
+
+Store is2FAValidated = true/false on session temporarily
+
+📦 Deliverable:
+Combined flow: OAuth → 2FA (if enabled) → JWT
+
+Error handling on invalid tokens
+
+👣 Day 10-11: Frontend 2FA Flow
+🧭 After OAuth, if 2FA is enabled → show “Enter Authenticator Code”
+
+📷 Show QR when enabling 2FA
+
+⛑ UX for errors and token resubmission
+
+📦 Deliverable:
+Fully functional 2FA UI
+
+Smooth integration into login flow
+
+Disabling 2FA option in settings
+
+🗓 WEEK 3 – Polish & Production Hardening
+👣 Day 12-13: Security Testing
+SQL Injection / XSS audit
+
+Rate-limiting login/verify endpoints
+
+Token expiration & refresh handling
+
+Passwordless login support?
+
+👣 Day 14-15: Logging + Monitoring
+Add logs for suspicious attempts
+
+Integrate logs into DevOps dashboard (ask teammate E)
+
+👣 Day 16-19: Final Polish
+Complete documentation (OAuth setup, 2FA steps)
+
+Final code cleanup
+
+Include .env.example
+
+Help backend/DevOps debug JWT integration
+
+📚 Tools & Libraries You Might Use
+Task	Tool
+OAuth	passport, passport-42, passport-google-oauth20, passport-github2
+JWT	@nestjs/jwt, jsonwebtoken
+TOTP	speakeasy, otplib
+QR Code	qrcode (to generate data URLs)
+Env Management	dotenv
+
+📦 Folder/File Suggestions
+bash
+Copy
+Edit
+src/
+│
+├── auth/
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   ├── strategies/
+│   │   ├── 42.strategy.ts
+│   │   ├── google.strategy.ts
+│   │   └── github.strategy.ts
+│   ├── guards/
+│   │   └── jwt-auth.guard.ts
+│   └── 2fa/
+│       ├── 2fa.service.ts
+│       ├── 2fa.controller.ts
+│       └── interfaces/...
+✅ Your Goals for a Solid Peer Review
+🔒 OAuth flow with 3 providers
+
+🧾 JWT secure & scoped
+
+🛡 2FA toggle + QR + validation
+
+🧪 Tests for auth logic
+
+📘 Clear docs + security practices
+
+🤝 Seamless integration with other modules
+
+Would you like me to generate:
+
+A sample NestJS OAuth controller
+
+A 2FA implementation example
+
+Or a flowchart diagram for your login process?
+
+Let me know how you'd like to start hands-on!
