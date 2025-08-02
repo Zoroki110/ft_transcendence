@@ -21,4 +21,10 @@ export class UserService {
 
     return user;
   }
+
+  async findById(id: string) {
+	//return this.userRepository.findOne({ where: { id } }); //for when we have an actual DB
+	return this.users.get(id); 
+	}
+
 }
