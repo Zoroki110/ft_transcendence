@@ -1,66 +1,256 @@
-# DevOps
-La partie DevOps de ce projet a pour objectif de garantir l'efficacité, la stabilité et la scalabilité de l'application à travers une automatisation et une surveillance continues. Les principaux objectifs sont :
+# 🏗️ DevOps Configuration - Transcendence
 
-    Automatisation du déploiement : Mise en place de pipelines CI/CD (Intégration Continue et Déploiement Continu) pour automatiser la construction, les tests, et le déploiement des services backend et frontend.
+This directory contains all the DevOps configuration for the Transcendence project.
 
-    Orchestration des services : Utilisation de Docker et de Docker Compose pour créer des environnements de développement, de test et de production reproductibles, facilitant ainsi la gestion des différents services de l'application (backend, frontend, base de données, etc.).
+## 🚀 Quick Start
 
-    Surveillance des performances : Intégration des outils Prometheus et Grafana pour collecter des métriques sur l'infrastructure et les services, permettant une visualisation et une analyse en temps réel de l'état et des performances de l'application.
+### Development Environment
 
-    Gestion des environnements : Configuration des variables d'environnement pour assurer que l'application fonctionne correctement dans différents environnements (développement, staging, production) avec des configurations spécifiques.
+1. **Clone the repository and navigate to the project root**
+2. **Start the development environment:**
+   ```bash
+   cd devops
+   docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up -d
+   ```
 
-    Sécurisation de l'infrastructure : Assurer la gestion des secrets et des configurations sensibles avec des outils comme Docker secrets et des variables d'environnement sécurisées.
+3. **Check services status:**
+   ```bash
+   docker-compose ps
+   ```
 
-Cette partie DevOps vise à simplifier les workflows, augmenter l'efficacité et garantir une surveillance continue afin de permettre une gestion fluide et rapide de l'infrastructure et du cycle de vie de l'application.
+### Production Deployment
+
+```bash
+cd devops
+docker-compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d
+```
+
+## 📁 Structure Overview
+
+- `docker/` - Docker configurations and compose files
+- `ci_cd/` - Continuous Integration and Deployment pipelines
+- `environments/` - Environment-specific configurations
+- `monitoring/` - Prometheus, Grafana, and logging setup
+- `security/` - SSL certificates and security configurations
+- `backup/` - Backup and restore scripts
+- `docs/` - Detailed documentation
 
 ## Arborescence
-/devops/
+/devops/ 
 │
-├── /docker/                                 # Configuration Docker (Dockerfiles et docker-compose)
-│   ├── docker-compose.yml                   # Fichier Docker Compose pour orchestrer les services
-│   ├── /backend/                            # Dockerfile et fichiers relatifs au backend
-│   │   ├── Dockerfile                       # Dockerfile spécifique pour l'application backend
-│   │   ├── /src/                            # Code source de l'application backend (par exemple, Node.js ou Python)
-│   │   ├── /config/                         # Configuration spécifique au backend (par exemple, fichiers de config pour DB, middleware, etc.)
-│   │   ├── /migrations/                     # Scripts pour les migrations de la base de données
-│   │   ├── .env                             # Variables d'environnement spécifiques au backend
-│   │   └── README.md                        # Documentation du backend, si nécessaire
+├── 🐳 /docker/                          # CONTENEURISATION
+│   │   📦 Transforme ton code en containers isolés et reproductibles  
 │   │
-│   ├── /frontend/                           # Dockerfile et fichiers relatifs au frontend
-│   │   ├── Dockerfile                       # Dockerfile spécifique pour l'application frontend
-│   │   ├── /src/                            # Code source de l'application frontend (par exemple, React, Vue.js)
-│   │   ├── /public/                         # Dossier public pour les assets frontend (par exemple, index.html, images)
-│   │   ├── /components/                     # Composants spécifiques au frontend
-│   │   ├── .env                             # Variables d'environnement spécifiques au frontend
-│   │   └── README.md                        # Documentation du frontend, si nécessaire
+│   ├── docker-compose.yml               # 🎼 Chef d'orchestre : démarre tous les services ensemble
+│   ├── docker-compose.dev.yml           # 🔧 Version développement (hot reload, debug)
+│   ├── docker-compose.prod.yml          # 🚀 Version production (optimisée, sécurisée)
 │   │
-│   └── .dockerignore                        # Ignorer certains fichiers lors de la construction des images
-│
-├── /ci_cd/                                  # Configurations et scripts liés à CI/CD
-│   ├── /github_actions/                     # Fichiers pour GitHub Actions (ou .gitlab-ci.yml pour GitLab CI)
-│   │   ├── build.yml                        # Pipeline pour construire et tester les services
-│   │   ├── deploy.yml                       # Pipeline pour le déploiement
-│   ├── /scripts/                            # Scripts utilitaires pour la CI/CD (ex: déploiement automatique)
-│   │   ├── build.sh                         # Script pour la construction des images Docker
-│   │   ├── deploy.sh                        # Script de déploiement pour la production/staging
-│
-├── /environments/                           # Fichiers pour la gestion des environnements (dev, staging, prod)
-│   ├── .env.dev                             # Variables d'environnement pour le développement
-│   ├── .env.prod                            # Variables d'environnement pour la production
-│   └── .env.staging                         # Variables d'environnement pour le staging
-│
-├── /monitoring/                             # Configuration de la surveillance et du logging
-│   ├── /prometheus/                         # Fichiers de configuration pour Prometheus
-│   │   └── prometheus.yml                   # Fichier de configuration de Prometheus
+│   ├── /backend/                        # 🔧 MODULE 1: Configuration Backend Framework
+│   │   ├── Dockerfile                   # 📋 Instructions pour créer l'image backend
+│   │   ├── Dockerfile.dev               # 📋 Version développement avec hot reload
+│   │   ├── healthcheck.sh               # 🏥 Vérifie si le backend répond correctement
+│   │   └── entrypoint.sh                # 🚪 Script de démarrage (migrations, etc.)
 │   │
-│   └── /grafana/                            # Configuration de Grafana et des dashboards
-│       ├── grafana.ini                      # Configuration de Grafana (datasources, accès, etc.)
-│       ├── dashboards/                      # Dossier contenant des fichiers JSON pour les dashboards de Grafana
-│       │   ├── docker-dashboard.json        # Exemple de dashboard JSON pour Grafana
-│       │   └── api-performance-dashboard.json # Dashboard pour surveiller la performance de l'API
-│       ├── provisioning/                    # Dossier pour configurer les datasources et les dashboards
-│       │   ├── datasources.yml              # Fichier de configuration des datasources (par exemple, Prometheus)
-│       │   └── dashboards/                  # Dossier pour provisionner les dashboards automatiquement à l’aide de Grafana
-│       └── README.md                        # Documentation spécifique à la configuration de Grafana
+│   ├── /frontend/                       # 🎨 MODULE 2: Configuration Frontend Framework  
+│   │   ├── Dockerfile                   # 📋 Build production avec Nginx
+│   │   ├── Dockerfile.dev               # 📋 Développement avec Vite HMR
+│   │   ├── nginx.conf                   # 🌐 Configuration serveur web
+│   │   └── healthcheck.sh               # 🏥 Vérifie si le frontend charge
+│   │
+│   ├── /database/                       # 💾 Configuration Base de Données
+│   │   └── init/01-create-databases.sql # 🏗️ Crée les DBs au premier démarrage
+│   │
+│   └── /nginx/                          # 🌐 Reverse Proxy (point d'entrée unique)
+│       ├── nginx.conf                   # ⚡ Route les requêtes vers les bons services
+│       └── ssl/                         # 🔒 Certificats HTTPS
 │
-└── README.md                                # Documentation de la configuration DevOps (explications générales)
+├── 🚀 /ci_cd/                           # INTÉGRATION & DÉPLOIEMENT CONTINU
+│   │   🔄 Automatise tests, build et déploiement à chaque commit
+│   │
+│   ├── /github_actions/                 # 🤖 Pipelines automatiques GitHub
+│   │   ├── ci.yml                       # ✅ Tests automatiques à chaque push
+│   │   ├── cd-staging.yml               # 🎭 Déploie vers staging automatiquement
+│   │   └── cd-production.yml            # 🚀 Déploie vers production avec validation
+│   │
+│   └── /scripts/                        # 🛠️ Scripts réutilisables
+│       ├── build.sh                     # 🏗️ Construit toutes les images Docker
+│       ├── test.sh                      # 🧪 Lance tous les tests
+│       ├── deploy-staging.sh            # 🎭 Déploiement staging
+│       └── deploy-production.sh         # 🚀 Déploiement production
+│
+├── 🌍 /environments/                    # GESTION ENVIRONNEMENTS
+│   │   ⚙️ Configuration différente selon dev/staging/prod
+│   │
+│   ├── .env.dev                         # 🔧 Variables développement (DB locale, debug ON)
+│   ├── .env.staging                     # 🎭 Variables staging (DB staging, tests E2E)
+│   ├── .env.prod                        # 🚀 Variables production (DB prod, optimisations)
+│   │
+│   ├── /secrets/                        # 🔐 Mots de passe et clés chiffrés
+│   │   ├── dev/                         # 🔐 Secrets développement
+│   │   ├── staging/                     # 🔐 Secrets staging  
+│   │   └── prod/                        # 🔐 Secrets production
+│   │
+│   └── /config/                         # ⚙️ Configurations spécifiques par env
+│
+├── 📊 /monitoring/                      # SURVEILLANCE & MÉTRIQUES
+│   │   👀 Surveille la santé et performance de tous tes services
+│   │
+│   ├── /prometheus/                     # 📈 Collecte des métriques
+│   │   ├── prometheus.yml               # ⚙️ Quelles métriques collecter et où
+│   │   ├── rules/backend-alerts.yml     # 🚨 Alertes si API lente ou en panne
+│   │   └── targets/                     # 🎯 Services à surveiller
+│   │
+│   ├── /grafana/                        # 📊 Dashboards visuels
+│   │   ├── dashboards/                  # 📈 Graphiques temps réel
+│   │   │   ├── backend-performance.json # 📊 Performance API (temps réponse, erreurs)
+│   │   │   ├── frontend-metrics.json    # 📊 Métriques utilisateur (load time, errors)
+│   │   │   └── database-monitoring.json # 📊 Performance DB (requêtes, connexions)
+│   │   └── provisioning/                # 🤖 Configuration automatique
+│   │
+│   ├── /logging/                        # 📝 Centralisation des logs
+│   │   ├── /elasticsearch/              # 🔍 Stockage et indexation des logs
+│   │   ├── /kibana/                     # 📊 Interface de recherche dans les logs
+│   │   └── /fluentd/                    # 📡 Collecte logs de tous les containers
+│   │
+│   └── /alerting/                       # 🚨 Système d'alertes
+│       ├── alertmanager.yml             # 🚨 Quand et comment alerter
+│       └── notification-templates/      # 📧 Templates Slack/Email/Discord
+│
+├── 🔒 /security/                        # SÉCURITÉ
+│   │   🛡️ Protection contre les vulnérabilités et attaques
+│   │
+│   ├── /ssl/                            # 🔐 Certificats HTTPS
+│   │   ├── letsencrypt-setup.sh         # 🤖 Génération automatique SSL
+│   │   └── ssl-renew.sh                 # 🔄 Renouvellement automatique
+│   │
+│   ├── /scanning/                       # 🔍 Scan sécurité
+│   │   ├── security-scan.sh             # 🔍 Cherche vulnérabilités dans le code
+│   │   ├── docker-scan.sh               # 🔍 Scan images Docker
+│   │   └── dependency-check.sh          # 🔍 Vulnérabilités dans les dépendances
+│   │
+│   └── /policies/                       # 📋 Règles de sécurité
+│       ├── network-policy.yml           # 🌐 Restrictions réseau
+│       └── access-control.yml           # 🔐 Contrôle d'accès
+│
+├── 💾 /backup/                          # SAUVEGARDE & RESTAURATION
+│   │   💼 Protège tes données contre la perte
+│   │
+│   ├── /scripts/                        # 🤖 Scripts automatisés
+│   │   ├── backup-all.sh                # 💾 Sauvegarde complète (DB + fichiers)
+│   │   ├── backup-database.sh           # 🗄️ DB uniquement
+│   │   ├── restore-all.sh               # ↩️ Restauration complète
+│   │   └── verify-backup.sh             # ✅ Vérifie intégrité backup
+│   │
+│   ├── /cron/                           # ⏰ Planification automatique
+│   │   ├── daily-backup.cron            # 📅 Sauvegarde quotidienne
+│   │   └── weekly-backup.cron           # 📅 Sauvegarde hebdomadaire
+│   │
+│   └── /retention/                      # 🗂️ Gestion anciens backups
+│       └── cleanup-old-backups.sh       # 🧹 Supprime les vieux backups
+│
+├── ⚡ /performance/                     # OPTIMISATION PERFORMANCE
+│   │   🏃‍♂️ Assure que ton app est rapide et réactive
+│   │
+│   ├── /testing/                        # 🧪 Tests de charge
+│   │   ├── k6-tests/load-test.js        # 📈 Simule 1000 utilisateurs simultanés
+│   │   ├── stress-test.js               # 💪 Teste limites du système
+│   │   └── benchmark.sh                 # 📊 Compare performances avant/après
+│   │
+│   └── /optimization/                   # ⚡ Configurations optimisées
+│       ├── nginx-tuning.conf            # 🌐 Nginx haute performance
+│       ├── postgres-tuning.sql          # 🗄️ DB optimisée
+│       └── backend-optimization.yml     # 🔧 Backend optimisé
+│
+├── 🚀 /deployment/                      # STRATÉGIES DÉPLOIEMENT
+│   │   🎯 Déploie sans casser la production
+│   │
+│   ├── /strategies/                     # 📋 Différentes méthodes
+│   │   ├── blue-green/                  # 🔵🟢 Deux environnements identiques
+│   │   ├── rolling/                     # 🔄 Mise à jour progressive
+│   │   └── canary/                      # 🐦 Test sur petit % utilisateurs
+│   │
+│   └── /infrastructure/                 # 🏗️ Infrastructure as Code
+│       ├── terraform/                   # ☁️ Provisioning cloud automatique
+│       └── ansible/                     # 🤖 Configuration serveurs
+│
+├── 🛠️ /tools/                          # OUTILS UTILITAIRES
+│   │   🔧 Scripts pour simplifier le développement
+│   │
+│   ├── /development/                    # 👨‍💻 Aide développement
+│   │   ├── setup-dev-env.sh             # 🚀 Setup complet en 1 commande
+│   │   ├── reset-dev-data.sh            # 🔄 Reset données dev
+│   │   └── generate-test-data.sh        # 🎲 Génère données de test
+│   │
+│   ├── /maintenance/                    # 🧹 Maintenance système
+│   │   ├── maintenance-mode.sh          # 🚧 Active mode maintenance
+│   │   ├── database-cleanup.sh          # 🧹 Nettoie la DB
+│   │   └── log-rotation.sh              # 📝 Rotation des logs
+│   │
+│   └── /utilities/                      # 🔧 Utilitaires divers
+│       ├── service-status.sh            # 📊 Status de tous les services
+│       ├── resource-monitor.sh          # 💻 Monitoring ressources
+│       └── port-checker.sh              # 🔌 Vérifie ports disponibles
+│
+├── 📚 /docs/                            # DOCUMENTATION
+│   │   📖 Guides pour toi et ton équipe
+│   │
+│   ├── README.md                        # 🏠 Point d'entrée documentation
+│   ├── SETUP.md                         # 🚀 Installation pas à pas
+│   ├── DEPLOYMENT.md                    # 🚀 Guide déploiement
+│   ├── MONITORING.md                    # 📊 Comment utiliser le monitoring
+│   ├── TROUBLESHOOTING.md               # 🔧 Résolution problèmes courants
+│   │
+│   └── /runbooks/                       # 📋 Procédures d'urgence
+│       ├── database-down.md             # 🚨 Que faire si DB en panne
+│       ├── high-cpu-usage.md            # 🚨 CPU à 100%
+│       └── ssl-certificate-expiry.md    # 🚨 Certificat SSL expiré
+│
+└── ⚙️ /config/                         # CONFIGURATIONS GLOBALES
+    │   🎛️ Configurations partagées
+    │
+    ├── .gitignore                       # 🙈 Fichiers à ignorer par Git
+    ├── Makefile                         # 🔨 Commandes raccourcies
+    └── /templates/                      # 📋 Templates réutilisables
+
+## 🛠️ Available Scripts
+
+### Build Services
+```bash
+./ci_cd/scripts/build.sh
+```
+
+### Run Tests
+```bash
+./ci_cd/scripts/test.sh
+```
+
+### Deploy to Staging
+```bash
+./ci_cd/scripts/deploy-staging.sh
+```
+
+## 📊 Monitoring
+
+- **Grafana**: http://localhost:3001 (admin/admin)
+- **Prometheus**: http://localhost:9090
+
+## 🔧 Configuration
+
+Copy `.env.example` to `.env.dev` and fill in your environment variables:
+
+```bash
+cp environments/.env.example environments/.env.dev
+```
+
+## 📚 Documentation
+
+For detailed documentation, see the `docs/` directory:
+
+- [Setup Guide](docs/SETUP.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)  
+- [Monitoring Guide](docs/MONITORING.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+## 🆘 Need Help?
+
+Check the troubleshooting guide or create an issue in the project repository.

@@ -1,0 +1,44 @@
+# Environment files with secrets
+environments/.env.dev
+environments/.env.staging
+environments/.env.prod
+environments/.env.test
+environments/secrets/*/
+
+# SSL certificates and keys
+security/ssl/certs/
+security/ssl/private/
+security/backup-security/keys/
+
+# Logs
+*.log
+logs/
+
+# Backup files
+backup/backups/
+*.backup
+*.sql.gz
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes data
+volumes/
+
+# Monitoring data
+monitoring/grafana/data/
+monitoring/prometheus/data/
+monitoring/elasticsearch/data/
+
+# Local override files
+docker-compose.override.yml
+config.local.yml

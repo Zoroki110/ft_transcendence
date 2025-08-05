@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      dockerfile: ../devops/docker/backend/Dockerfile
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes: []  # No volume mounts in production
+
+  frontend:
+    build:
+      dockerfile: ../devops/docker/frontend/Dockerfile
+    restart: unless-stopped
+    volumes: []  # No volume mounts in production
+
+  database:
+    environment:
+      - POSTGRES_DB=transcendence_prod
+    restart: unless-stopped
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_prod_data:

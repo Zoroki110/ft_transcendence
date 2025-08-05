@@ -1,19 +1,45 @@
-FROM node:18
+# Production Dockerfile for Backend (NestJS)
+FROM node:18-alpine AS builder
 
-# Définir le répertoire de travail dans le conteneur
 WORKDIR /app
 
-# Copier le package.json et package-lock.json (si présent) dans le conteneur
+# Copy package files
 COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
 
-# Installer les dépendances
-RUN npm install
-
-# Copier tout le reste du code
+# Copy source code
 COPY . .
 
-# Exposer le port 3000
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+# Install dumb-init for proper process handling
+RUN apk add --no-cache dumb-init
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+
+# Copy health check script
+COPY ../devops/docker/backend/healthcheck.sh ./
+RUN chmod +x healthcheck.sh
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 -G nodejs
+
+USER nestjs
+
 EXPOSE 3000
 
-# Démarrer l'application
-CMD ["npm", "run", "start"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ./healthcheck.sh
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/main"]

@@ -1,0 +1,22 @@
+# Development Dockerfile for Frontend (React/Vue with Vite)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy health check script
+COPY ../devops/docker/frontend/healthcheck.sh ./
+RUN chmod +x healthcheck.sh
+
+EXPOSE 5173
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ./healthcheck.sh
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
