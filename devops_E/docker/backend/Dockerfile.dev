@@ -1,0 +1,26 @@
+# Development Dockerfile for Backend (NestJS)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install development dependencies
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy health check and wait scripts
+COPY ../devops/docker/backend/healthcheck.sh ./
+COPY ../devops/docker/backend/wait-for-it.sh ./
+COPY ../devops/docker/backend/entrypoint.sh ./
+
+RUN chmod +x healthcheck.sh wait-for-it.sh entrypoint.sh
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ./healthcheck.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["npm", "run", "start:dev"]

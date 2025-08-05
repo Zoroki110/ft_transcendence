@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      dockerfile: ../devops/docker/backend/Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    volumes:
+      - ../../backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      dockerfile: ../devops/docker/frontend/Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - VITE_HMR_HOST=0.0.0.0
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+
+  database:
+    environment:
+      - POSTGRES_DB=transcendence_dev
+      - POSTGRES_PASSWORD=dev_password
+    ports:
+      - "5433:5432"  # Different port for dev

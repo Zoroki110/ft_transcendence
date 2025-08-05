@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Backend service (NestJS/Django)
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: ../devops/docker/backend/Dockerfile
+    container_name: transcendence-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ../environments/.env.dev
+    volumes:
+      - ../../backend/src:/app/src
+    depends_on:
+      - database
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD", "./healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service (React/Vue)
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../devops/docker/frontend/Dockerfile.dev
+    container_name: transcendence-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ../../frontend/src:/app/src
+      - ../../frontend/public:/app/public
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database service (PostgreSQL)
+  database:
+    image: postgres:15-alpine
+    container_name: transcendence-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=transcendence
+      - POSTGRES_USER=transcendence
+      - POSTGRES_PASSWORD=password
+    env_file:
+      - ../environments/.env.dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcendence"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx reverse proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: transcendence-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl/certs:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - transcendence-network
+
+volumes:
+  postgres_data:
+
+networks:
+  transcendence-network:
+    driver: bridge

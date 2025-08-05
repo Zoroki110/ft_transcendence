@@ -1,16 +1,39 @@
-FROM node:18
+# Production Dockerfile for Frontend (React/Vue with Vite)
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copier le fichier package.json et installer les dépendances
-COPY package.json ./
-RUN npm install
+# Copy package files
+COPY package*.json ./
+RUN npm ci
 
-# Copier tout le reste du code
+# Copy source code
 COPY . .
 
-# Exposer le port de l'application
-EXPOSE 3000
+# Build the application
+RUN npm run build
 
-# Lancer l'application
-CMD ["npm", "run", "start"]
+# Production stage with Nginx
+FROM nginx:alpine AS production
+
+# Copy built application
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY ../devops/docker/frontend/nginx.conf /etc/nginx/nginx.conf
+
+# Copy health check script
+COPY ../devops/docker/frontend/healthcheck.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# Copy entrypoint script
+COPY ../devops/docker/frontend/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD /usr/local/bin/healthcheck.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

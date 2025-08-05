@@ -1,7 +1,40 @@
+#!/bin/bash
+
+# 🔑 Script de génération des secrets pour .env.dev
+# Usage: ./generate-env-secrets.sh
+
+set -e
+
+echo "🔑 Génération des secrets sécurisés pour .env.dev"
+echo "================================================="
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# Function to generate random string
+generate_secret() {
+    openssl rand -base64 32 | tr -d "=+/" | cut -c1-${1:-32}
+}
+
+# Function to generate hex string
+generate_hex() {
+    openssl rand -hex ${1:-16}
+}
+
+# Backup original file if it exists
+if [ -f ".env.dev" ]; then
+    cp .env.dev .env.dev.backup
+    echo -e "${YELLOW}📋 Backup créé: .env.dev.backup${NC}"
+fi
+
+# Generate the enhanced .env.dev file
+cat > .env.dev << EOF
 # =======================================================
 # TRANSCENDENCE - Development Environment Variables
 # =======================================================
-# 🔧 Generated on: Tue 05 Aug 2025 02:11:22 PM CEST
+# 🔧 Generated on: $(date)
 # ⚠️  Remember to configure OAuth keys manually!
 # =======================================================
 
@@ -10,8 +43,8 @@ POSTGRES_HOST=database
 POSTGRES_PORT=5432
 POSTGRES_DB=transcendence_dev
 POSTGRES_USER=transcendence
-POSTGRES_PASSWORD=dev_0298f223b0df91f69bd06bea
-DATABASE_URL=postgresql://transcendence:dev_b28d92da52c802df43a0461c@database:5432/transcendence_dev
+POSTGRES_PASSWORD=dev_$(generate_hex 12)
+DATABASE_URL=postgresql://transcendence:dev_$(generate_hex 12)@database:5432/transcendence_dev
 
 # 🔧 BACKEND CONFIGURATION
 NODE_ENV=development
@@ -20,20 +53,20 @@ DEBUG=true
 LOG_LEVEL=debug
 
 # 🔐 JWT & AUTHENTICATION
-JWT_SECRET=Qo1N0tcrGnnOj46tvTGFdG5jsVDipwZj8lrcvAFVGc
+JWT_SECRET=$(generate_secret 64)
 JWT_ACCESS_TOKEN_EXPIRES_IN=24h
 JWT_REFRESH_TOKEN_EXPIRES_IN=7d
-JWT_REFRESH_SECRET=Kvf5mOqCjiCvMFKWy011MKvZPqGqMWCahmVvTi9Jvas
+JWT_REFRESH_SECRET=$(generate_secret 64)
 
 # 🍪 SESSION & COOKIES
-SESSION_SECRET=vGBMagVzqq2EmDz8J1zDuhZekg3HYy6ObmLXgMt8g0
-COOKIE_SECRET=qq9b1QzoUGcfNpma7lWZlqGAX16fVDoa
+SESSION_SECRET=$(generate_secret 48)
+COOKIE_SECRET=$(generate_secret 32)
 COOKIE_SECURE=false
 COOKIE_HTTP_ONLY=true
 COOKIE_MAX_AGE=86400000
 
 # 🔒 ENCRYPTION & SECURITY
-ENCRYPTION_KEY=G2IGfiUHbiVMuDeL0pFDBpf7z3vsXCxS
+ENCRYPTION_KEY=$(generate_secret 32)
 BCRYPT_ROUNDS=10
 PASSWORD_MIN_LENGTH=8
 RATE_LIMIT_WINDOW_MS=900000
@@ -78,7 +111,7 @@ PROMETHEUS_METRICS_PATH=/metrics
 
 # 📈 GRAFANA
 GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=admin_e6f75c77c5e8c3bb
+GRAFANA_ADMIN_PASSWORD=admin_$(generate_hex 8)
 GRAFANA_PORT=3001
 GRAFANA_DOMAIN=localhost
 
@@ -158,3 +191,38 @@ COMPOSE_DOCKER_CLI_BUILD=1
 APP_URL=http://localhost:80
 API_URL=http://localhost:3000
 WEBSOCKET_URL=ws://localhost:3002
+EOF
+
+echo -e "${GREEN}✅ Fichier .env.dev généré avec succès!${NC}"
+echo ""
+echo "🔑 Secrets générés automatiquement:"
+echo "   - JWT_SECRET (64 caractères)"
+echo "   - JWT_REFRESH_SECRET (64 caractères)"  
+echo "   - SESSION_SECRET (48 caractères)"
+echo "   - COOKIE_SECRET (32 caractères)"
+echo "   - ENCRYPTION_KEY (32 caractères)"
+echo "   - POSTGRES_PASSWORD (24 caractères)"
+echo "   - GRAFANA_ADMIN_PASSWORD (16 caractères)"
+echo ""
+echo -e "${YELLOW}⚠️  N'oublie pas de configurer manuellement:${NC}"
+echo "   - OAUTH_42_CLIENT_ID (sur intra.42.fr)"
+echo "   - OAUTH_42_CLIENT_SECRET (sur intra.42.fr)"
+echo "   - GOOGLE_CLIENT_ID (optionnel)"
+echo "   - GOOGLE_CLIENT_SECRET (optionnel)"
+echo ""
+echo "📋 Variables ajoutées pour Transcendence:"
+echo "   🎮 Configuration Game Engine (WebSocket, rooms)"
+echo "   🏆 Système de tournois"
+echo "   🔄 Authentification 2FA"
+echo "   📤 Upload de fichiers (avatars)"
+echo "   🌍 Internationalisation (multi-langues)"
+echo "   ⚡ Optimisations performance"
+echo "   🏥 Health checks"
+echo "   📝 Logging avancé"
+echo ""
+echo -e "${GREEN}🚀 Prochaines étapes:${NC}"
+echo "1. Configurer les clés OAuth 42"
+echo "2. Tester: docker-compose config"
+echo "3. Démarrer: ./tools/development/setup-dev-env.sh"
+echo ""
+echo "📖 Guide OAuth 42: https://profile.intra.42.fr/oauth/applications"
