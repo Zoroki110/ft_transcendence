@@ -1,17 +1,16 @@
-version: '3.8'
 
 services:
   backend:
     build:
-      dockerfile: ../devops/docker/backend/Dockerfile
+      dockerfile: ../devops_E/docker/backend_a/Dockerfile
     environment:
       - NODE_ENV=production
     restart: unless-stopped
     volumes: []  # No volume mounts in production
 
-  frontend:
+  frontend_b:
     build:
-      dockerfile: ../devops/docker/frontend/Dockerfile
+      dockerfile: ../devops_E/docker/frontend/Dockerfile
     restart: unless-stopped
     volumes: []  # No volume mounts in production
 

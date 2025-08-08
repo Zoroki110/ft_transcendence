@@ -15,6 +15,6 @@ docker build -f devops/docker/frontend/Dockerfile -t transcendence/frontend:late
 
 # Build nginx
 echo "🌐 Building nginx..."
-docker build -f devops/docker/nginx/Dockerfile -t transcendence/nginx:latest ./devops/docker/nginx
+docker build -f devops/docker/nginx/Dockerfile -t transcendence/nginx:latest ./devops_E/docker/nginx
 
 echo "✅ All services built successfully!"

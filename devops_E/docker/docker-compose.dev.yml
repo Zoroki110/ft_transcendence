@@ -1,9 +1,8 @@
-version: '3.8'
 
 services:
   backend:
     build:
-      dockerfile: ../devops/docker/backend/Dockerfile.dev
+      dockerfile: ../devops_E/docker/backend_a/Dockerfile.dev
     environment:
       - NODE_ENV=development
       - DEBUG=true
@@ -11,14 +10,14 @@ services:
       - ../../backend:/app
       - /app/node_modules
 
-  frontend:
+  frontend_b:
     build:
-      dockerfile: ../devops/docker/frontend/Dockerfile.dev
+      dockerfile: ../devops_E/docker/frontend/Dockerfile.dev
     environment:
       - NODE_ENV=development
       - VITE_HMR_HOST=0.0.0.0
     volumes:
-      - ../../frontend:/app
+      - ../../frontend_b:/app
       - /app/node_modules
 
   database:
