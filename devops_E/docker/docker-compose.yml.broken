@@ -39,6 +39,13 @@ services:
     networks:
       - transcendence-network
 
+volumes:
+  postgres_data:
+
+networks:
+  transcendence-network:
+    driver: bridge
+
   frontend_b:
     build:
       context: ../../frontend_b
@@ -51,8 +58,8 @@ services:
       VITE_APP_TITLE: Transcendence Dev
       VITE_NODE_ENV: development
     volumes:
-      - ../../frontend_b/src:/app/src
-      - ../../frontend_b/public:/app/public
+      - ../../frontend_b/src:/app/src:cached
+      - ../../frontend_b/public:/app/public:cached
     networks:
       - transcendence-network
     depends_on:
@@ -62,10 +69,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-volumes:
-  postgres_data:
-
-networks:
-  transcendence-network:
-    driver: bridge
