@@ -1,63 +1,13 @@
-version: '3.8'
-
 services:
-  # Backend service (NestJS/Django)
-  backend:
-    build:
-      context: ../../backend
-      dockerfile: ../devops/docker/backend/Dockerfile
-    container_name: transcendence-backend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-    env_file:
-      - ../environments/.env.dev
-    volumes:
-      - ../../backend/src:/app/src
-    depends_on:
-      - database
-    networks:
-      - transcendence-network
-    healthcheck:
-      test: ["CMD", "./healthcheck.sh"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Frontend service (React/Vue)
-  frontend:
-    build:
-      context: ../../frontend
-      dockerfile: ../devops/docker/frontend/Dockerfile.dev
-    container_name: transcendence-frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=http://localhost:3000
-    volumes:
-      - ../../frontend/src:/app/src
-      - ../../frontend/public:/app/public
-    networks:
-      - transcendence-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Database service (PostgreSQL)
   database:
     image: postgres:15-alpine
     container_name: transcendence-db
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=transcendence
-      - POSTGRES_USER=transcendence
-      - POSTGRES_PASSWORD=password
-    env_file:
-      - ../environments/.env.dev
+      POSTGRES_DB: transcendence_dev
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
@@ -69,21 +19,23 @@ services:
       timeout: 10s
       retries: 5
 
-  # Nginx reverse proxy
-  nginx:
+  backend_a:
     build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: transcendence-nginx
+      context: ../../backend_a
+      dockerfile: ../devops_E/docker/backend/Dockerfile
+    container_name: transcendence-backend-a
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl/certs:/etc/nginx/ssl
+      - "3000:3000"
+    environment:
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: transcendence_dev
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
+      DATABASE_URL: postgresql://transcendence:dev_secure_f8a9c2e1b4d7@database:5432/transcendence_dev
+      NODE_ENV: development
     depends_on:
-      - backend
-      - frontend
+      - database
     networks:
       - transcendence-network
 

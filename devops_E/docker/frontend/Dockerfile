@@ -20,14 +20,14 @@ FROM nginx:alpine AS production
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY ../devops/docker/frontend/nginx.conf /etc/nginx/nginx.conf
+COPY ../devops_E/docker/frontend/nginx.conf /etc/nginx/nginx.conf
 
 # Copy health check script
-COPY ../devops/docker/frontend/healthcheck.sh /usr/local/bin/
+COPY ../devops_E/docker/frontend/healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/healthcheck.sh
 
 # Copy entrypoint script
-COPY ../devops/docker/frontend/entrypoint.sh /usr/local/bin/
+COPY ../devops_E/docker/frontend/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80
