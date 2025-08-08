@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
 import { User } from './user.entity';
 
 @Entity()
@@ -12,12 +12,12 @@ export class Match {
   @ManyToOne(() => User, user => user.matchesAsPlayer2)
   player2: User;
 
-  @Column()
-  score1: number;
+  @Column({ default: 0 })
+  player1Score: number;
 
-  @Column()
-  score2: number;
+  @Column({ default: 0 })
+  player2Score: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  playedAt: Date;
+  createdAt: Date;
 }
