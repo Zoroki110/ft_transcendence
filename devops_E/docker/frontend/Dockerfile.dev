@@ -1,5 +1,4 @@
-# Development Dockerfile for Frontend (React/Vue with Vite)
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -8,15 +7,13 @@ RUN apk add --no-cache curl
 
 # Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy health check script
-COPY ../devops/docker/frontend/healthcheck.sh ./
-RUN chmod +x healthcheck.sh
+# Copy source code
+COPY . .
 
 EXPOSE 5173
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD ./healthcheck.sh
-
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev"]
