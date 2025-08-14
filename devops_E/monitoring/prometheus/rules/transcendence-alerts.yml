@@ -1,0 +1,21 @@
+groups:
+- name: transcendence.alerts
+  rules:
+  
+  - alert: ServiceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "🚨 Service {{ $labels.job }} is DOWN"
+      description: "Service {{ $labels.job }} has been down for more than 1 minute"
+      
+  - alert: HighMemoryUsage
+    expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "⚠️ High memory usage on {{ $labels.name }}"
+      description: "Container {{ $labels.name }} is using high memory"
