@@ -37,5 +37,17 @@ export class AuthService {
     return { access_token, refresh_token };
   }
 
+  generateTwoFAToken(user: any) {
+    const payload = { sub: user.id, username: user.username, need2fa: true };
+    return this.jwtService.sign(payload, {
+      secret: process.env.JWT_2FA_TOKEN_SECRET,
+      expiresIn: process.env.JWT_2FA_TOKEN_EXPIRATION || '5m',
+    });
+  }
+
+  verifyTwoFAToken(twofaToken: string) {
+    return this.jwtService.verify(twofaToken, { secret: process.env.JWT_2FA_TOKEN_SECRET });
+  }
+
   // Optional: you could also verify/refresh a token here
 }

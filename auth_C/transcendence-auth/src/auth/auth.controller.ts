@@ -26,11 +26,21 @@ export class AuthController {
   @Get('42/callback')
   @UseGuards(AuthGuard('42'))
   async callback(@Req() req) {
+
     const user = await this.userService.findOrCreate(req.user);
+	if (user.twoFactorEnabled) {
+      const twofa_token = this.authService.generateTwoFAToken(user);
+      return {
+        status: '2FA_REQUIRED',
+        user: { id: user.id, username: user.username, twoFactorEnabled: true },
+        twofa_token,
+      };
+    }
+
     const token = this.authService.generateTokens(user);
     return {
       message: 'Authenticated successfully',
-      user,
+      user: { id: user.id, username: user.username, twoFactorEnabled: false },
       access_token: token,
     };
   }
@@ -49,6 +59,7 @@ export class AuthController {
     });
 
     const user = await this.userService.findById(payload.sub);
+	if (!user) throw new UnauthorizedException();
     const tokens = this.authService.generateTokens(user);
     return tokens;
   } catch (err) {
