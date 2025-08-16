@@ -1,29 +1,39 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { GameModule } from './game/game.module';
 import { ChatModule } from './chat/chat.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      autoLoadEntities: true,
-      synchronize: true, // À désactiver en prod
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        type: 'postgres',
+        host: cfg.get<string>('DB_HOST', 'localhost'),
+        port: parseInt(cfg.get<string>('DB_PORT', '5432'), 10),
+        username: cfg.get('DB_USER') ?? cfg.get('DB_USERNAME'),
+        password: cfg.get('DB_PASS') ?? cfg.get('DB_PASSWORD'),
+        database: cfg.get<string>('DB_NAME', 'transcendance'),
+        autoLoadEntities: true,
+        // true uniquement en dev si TYPEORM_SYNC=true dans .env
+        synchronize:
+          process.env.NODE_ENV !== 'production' &&
+          cfg.get<string>('TYPEORM_SYNC') === 'true',
+        // logging: true,
+      }),
     }),
     UsersModule,
     AuthModule,
     GameModule,
     ChatModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
