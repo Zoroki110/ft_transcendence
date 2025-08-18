@@ -1,0 +1,10 @@
+{
+  "id": null,
+  "uid": "hello-world",
+  "title": "Hello Grafana",
+  "timezone": "",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [],
+  "time": { "from": "now-6h", "to": "now" }
+}

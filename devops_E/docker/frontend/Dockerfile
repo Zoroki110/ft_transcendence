@@ -1,39 +1,49 @@
-# Production Dockerfile for Frontend (React/Vue with Vite)
-FROM node:18-alpine AS builder
+# Multi-stage Dockerfile pour Vite - Production optimisée
+
+# ====================================
+# Stage 1: Build
+# ====================================
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Copy package files pour cache optimal
 COPY package*.json ./
-RUN npm ci
+
+# Install dependencies
+RUN npm ci --only=production=false && \
+    npm cache clean --force
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build pour production avec Vite
 RUN npm run build
 
-# Production stage with Nginx
+# ====================================
+# Stage 2: Production avec Nginx
+# ====================================
 FROM nginx:alpine AS production
 
-# Copy built application
+# Copy built assets depuis builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY ../devops_E/docker/frontend/nginx.conf /etc/nginx/nginx.conf
+# Copy configuration Nginx optimisée pour SPA
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy health check script
-COPY ../devops_E/docker/frontend/healthcheck.sh /usr/local/bin/
+COPY healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/healthcheck.sh
 
-# Copy entrypoint script
-COPY ../devops_E/docker/frontend/entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
+# Expose port
 EXPOSE 80
 
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD /usr/local/bin/healthcheck.sh
+    CMD /usr/local/bin/healthcheck.sh
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
