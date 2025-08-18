@@ -1,35 +1,28 @@
 // src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module';
-import { FtStrategy } from './oauth/ft.strategy';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt/jwt.strategy';
-import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 
 @Module({
   imports: [
     ConfigModule,
-    PassportModule,
-    UsersModule,
+    UsersModule, // important pour injecter UsersService dans AuthService
+    PassportModule.register({ session: false }),
     JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
-      }),
       inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        secret: cfg.get('JWT_ACCESS_SECRET') ?? cfg.get('JWT_SECRET') ?? 'change-me',
+        signOptions: { expiresIn: cfg.get('JWT_ACCESS_TTL') ?? '15m' },
+      }),
     }),
   ],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    FtStrategy,
-    JwtStrategy,
-    JwtAuthGuard,
-  ],
+  exports: [JwtModule],
 })
 export class AuthModule {}
