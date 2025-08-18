@@ -1,0 +1,25 @@
+{
+  "navigation": {
+    "home": "Home",
+    "tournaments": "Tournaments",
+    "profile": "Profile",
+    "game": "Play"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "language": "Language",
+    "welcome": "Welcome to Transcendance"
+  },
+  "test": {
+    "title": "Internationalization Test",
+    "description": "This is a test to verify that i18n is working correctly.",
+    "switchLanguage": "Switch language to see the translation in action!",
+    "formatExamples": "Formatting Examples:",
+    "date": "Date",
+    "number": "Number",
+    "navigation": "Navigation"
+  }
+}
