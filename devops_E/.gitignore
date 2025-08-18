@@ -42,3 +42,5 @@ monitoring/elasticsearch/data/
 # Local override files
 docker-compose.override.yml
 config.local.yml
+.env
+*.env.local
