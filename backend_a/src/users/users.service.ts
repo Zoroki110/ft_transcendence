@@ -104,4 +104,9 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     await this.userRepo.delete(id);
   }
+
+  async findOneRawByEmail(email: string) {
+  return this.userRepo.findOne({ where: { email } }); // avec password
+}
+
 }

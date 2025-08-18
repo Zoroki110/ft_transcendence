@@ -1,17 +1,11 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Put,
-  Delete,
-  ParseIntPipe,
+  Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe, UseGuards, Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 
 @ApiTags('users')
 @Controller('users')
@@ -21,6 +15,14 @@ export class UsersController {
   @Get()
   findAll() {
     return this.usersService.findAll();
+  }
+
+  // ✅ doit être avant `/:id`
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('me')
+  me(@Req() req) {
+    return this.usersService.findOne(req.user.sub);
   }
 
   @Get(':id')
