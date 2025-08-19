@@ -6,18 +6,20 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
 
-  // ✅ doit être avant `/:id`
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('me')
@@ -35,13 +37,23 @@ export class UsersController {
     return this.usersService.create(dto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto, @Req() req) {
+    if (req.user.sub != id) {
+      throw new ForbiddenException('You can only update your own profile');
+    }
     return this.usersService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    if (req.user.sub != id) {
+      throw new ForbiddenException('You can only delete your own profile');
+    }
     return this.usersService.remove(id);
   }
 }
