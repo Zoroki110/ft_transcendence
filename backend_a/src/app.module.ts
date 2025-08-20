@@ -10,6 +10,7 @@ import { ChatModule } from './chat/chat.module';
 import { HealthController } from './health/health.controller';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { TournamentsModule } from './tournaments/tournaments.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { APP_GUARD } from '@nestjs/core';
     AuthModule,
     GameModule,
     ChatModule,
+    TournamentsModule,
   ],
   providers: [
     {
