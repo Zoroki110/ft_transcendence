@@ -51,6 +51,7 @@ export class Match {
   finishedAt: Date;
 
   @ManyToOne(() => Tournament, (tournament) => tournament.matches, { nullable: true })
+  @JoinColumn({ name: 'tournament_id' })
   tournament: Tournament;
 
   @Column({ name: 'tournament_id', nullable: true })
