@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Unique } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  OneToMany, 
+  Unique,
+  CreateDateColumn,
+  UpdateDateColumn
+} from 'typeorm';
 import { Match } from './match.entity';
 import { ChatMessage } from './chat-message.entity';
 
@@ -9,14 +17,35 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 50 })
   username: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 50 })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   password: string;
+
+  @Column({ nullable: true, length: 255})
+  avatar: string;
+
+  @Column({ nullable: true, length: 50})
+  provider: string;
+
+  @Column({ nullable: true, length: 100})
+  providerId: string;
+
+  @Column({ default: false })
+  twoFactorEnabled: boolean;
+
+  @Column({ nullable: true })
+  twoFactorSecret: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @CreateDateColumn()
+  updateAt: Date;
 
   @OneToMany(() => Match, match => match.player1)
   matchesAsPlayer1: Match[];

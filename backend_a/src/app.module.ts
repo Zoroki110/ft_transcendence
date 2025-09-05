@@ -8,10 +8,17 @@ import { AuthModule } from './auth/auth.module';
 import { GameModule } from './game/game.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthController } from './health/health.controller';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { TournamentsModule } from './tournaments/tournaments.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
@@ -33,6 +40,13 @@ import { HealthController } from './health/health.controller';
     AuthModule,
     GameModule,
     ChatModule,
+    TournamentsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass:ThrottlerGuard,
+    },
   ],
   controllers: [HealthController],
 })
