@@ -15,11 +15,90 @@
   },
   "test": {
     "title": "Internationalization Test",
-    "description": "This is a test to verify that i18n is working correctly.",
-    "switchLanguage": "Switch language to see the translation in action!",
-    "formatExamples": "Formatting Examples:",
+    "description": "This is a test to verify that i18n works correctly.",
+    "switchLanguage": "Change language to see translation in action!",
+    "formatExamples": "Formatting examples:",
     "date": "Date",
     "number": "Number",
     "navigation": "Navigation"
+  },
+  "tournaments": {
+    "title": "Tournaments",
+    "create": "Create Tournament",
+    "view": "View",
+    "join": "Join",
+    "leave": "Leave",
+    "generateBrackets": "Generate Brackets",
+    "myTournaments": "My Tournaments",
+    "created": "Created",
+    "participated": "Participated",
+    "creator": "Creator",
+    "participants": "Participants",
+    "maxParticipants": "Max Participants",
+    "type": "Type",
+    "status": "Status",
+    "brackets": "Brackets",
+    "round": "Round",
+    "final": "Final",
+    "started": "Started",
+    "notStarted": "Not Started",
+    "registered": "registered",
+    "spotsRemaining": "spots remaining",
+    "noTournaments": "No tournaments found",
+    "noParticipants": "No participants",
+    "noBrackets": "Brackets not generated yet",
+    "notFound": "Tournament not found",
+    "registrationInfo": "Registration Information",
+    "overview": "Overview",
+    "details": "Details",
+    "dates": "Dates",
+    "registrationStart": "Registration Start",
+    "registrationEnd": "Registration End",
+    "startDate": "Start Date",
+    "noCreatedTournaments": "You haven't created any tournaments",
+    "noParticipatedTournaments": "You're not participating in any tournaments",
+    "createFirst": "Create your first tournament",
+    "findTournaments": "Find tournaments",
+    "filter": {
+      "all": "All",
+      "open": "Open",
+      "inProgress": "In Progress",
+      "completed": "Completed"
+    },
+    "status": {
+      "draft": "Draft",
+      "open": "Open",
+      "full": "Full",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "types": {
+      "single_elimination": "Single Elimination",
+      "double_elimination": "Double Elimination",
+      "round_robin": "Round Robin"
+    },
+    "matchStatus": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "finished": "Finished"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "participants": "Participants",
+      "brackets": "Brackets"
+    },
+    "form": {
+      "name": "Tournament Name",
+      "namePlaceholder": "Enter tournament name",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe your tournament...",
+      "type": "Tournament Type",
+      "maxParticipants": "Maximum Participants",
+      "registrationStart": "Registration Start",
+      "registrationEnd": "Registration End",
+      "startDate": "Start Date",
+      "create": "Create Tournament"
+    }
   }
 }

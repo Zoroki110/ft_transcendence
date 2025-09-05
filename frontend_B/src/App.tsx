@@ -1,20 +1,35 @@
 import React from 'react';
-import I18nTest from './components/i18n/I18nTest';
-import { useTranslations } from './hooks/useTranslations';
-import './styles/app.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import TournamentList from './components/tournaments/TournamentList';
+import CreateTournament from './components/tournaments/CreateTournament';
+import TournamentDetail from './components/tournaments/TournamentDetail';
+import MyTournaments from './components/tournaments/MyTournaments';
+
+// Composant Home temporaire
+const Home = () => (
+  <div style={{ padding: '20px' }}>
+    <h1>Accueil Transcendance</h1>
+    <nav style={{ marginTop: '20px' }}>
+      <a href="/tournaments" style={{ marginRight: '20px' }}>Tournois</a>
+      <a href="/tournaments/create" style={{ marginRight: '20px' }}>Créer un tournoi</a>
+      <a href="/tournaments/my">Mes tournois</a>
+    </nav>
+  </div>
+);
 
 function App() {
-  const { t } = useTranslations();
-
   return (
-    <div className="App">
-      <header className="app-header">
-        <h1>{t('common.welcome')}</h1>
-      </header>
-      <main>
-        <I18nTest />
-      </main>
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/tournaments" element={<TournamentList />} />
+          <Route path="/tournaments/create" element={<CreateTournament />} />
+          <Route path="/tournaments/my" element={<MyTournaments />} />
+          <Route path="/tournaments/:id" element={<TournamentDetail />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
