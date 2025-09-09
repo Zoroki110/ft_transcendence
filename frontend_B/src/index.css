@@ -1,0 +1,86 @@
+/* CSS Moderne - Pas de Tailwind */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000000;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+.container { 
+  max-width: 1200px; 
+  margin: 0 auto; 
+  padding: 0 1rem; 
+}
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.text-center { text-align: center; }
+.relative { position: relative; }
+.min-h-screen { min-height: 100vh; }
+.w-full { width: 100%; }
+.grid { display: grid; }
+.gap-8 { gap: 2rem; }
+
+.text-white { color: #ffffff; }
+.text-gray-400 { color: #9ca3af; }
+.text-cyan-400 { color: #22d3ee; }
+.bg-black { background-color: #000000; }
+
+.text-xl { font-size: 1.25rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-6xl { font-size: 3.75rem; }
+.font-bold { font-weight: 700; }
+
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+.py-16 { padding-top: 4rem; padding-bottom: 4rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-8 { margin-bottom: 2rem; }
+
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-2xl { border-radius: 1rem; }
+
+.text-gradient {
+  background: linear-gradient(45deg, #06b6d4, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #06b6d4, #8b5cf6);
+  color: #000000;
+}
+
+.card {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  transition: all 0.5s ease;
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
