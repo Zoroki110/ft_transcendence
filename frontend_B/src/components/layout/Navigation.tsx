@@ -8,38 +8,48 @@ const Navigation: React.FC = () => {
   const location = useLocation();
   
   const navItems = [
-    { path: '/', label: t('navigation.home'), icon: '🏠' },
-    { path: '/tournaments', label: t('navigation.tournaments'), icon: '🏆' },
-    { path: '/profile', label: t('navigation.profile'), icon: '👤' },
-    { path: '/game', label: t('navigation.game'), icon: '🎮' },
+    { path: '/', label: 'Accueil', icon: '🏠', color: '#00d4ff' },
+    { path: '/tournaments', label: 'Tournois', icon: '🏆', color: '#ff6b35' },
+    { path: '/profile', label: 'Profil', icon: '👤', color: '#39ff14' },
+    { path: '/game', label: 'Pong Arena', icon: '🎮', color: '#ff073a' }
   ];
   
   return (
-    <nav className="nav-gaming">
-      <div className="nav-container-gaming">
-        <Link to="/" className="nav-logo-gaming">
-          <span className="logo-icon">⚡</span>
-          TRANSCENDENCE
+    <nav className="nav-gaming-ultimate">
+      <div className="nav-container-ultimate">
+        {/* Logo Gaming */}
+        <Link to="/" className="nav-logo-ultimate">
+          <span className="logo-icon-ultimate">⚡</span>
+          <span className="logo-text-ultimate">TRANSCENDENCE</span>
+          <div className="logo-pulse-ultimate"></div>
         </Link>
         
-        <div className="nav-links-gaming">
-          {navItems.map((item) => (
+        {/* Navigation Items Gaming */}
+        <div className="nav-links-ultimate">
+          {navItems.map((item, index) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`nav-link-gaming ${location.pathname === item.path ? 'active' : ''}`}
+              className={`nav-link-ultimate ${location.pathname === item.path ? 'active' : ''}`}
+              style={{'--glow-color': item.color, '--delay': `${index * 0.1}s`} as React.CSSProperties}
+              data-text={item.label}
             >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-text">{item.label}</span>
-              <div className="nav-glow"></div>
+              <span className="nav-icon-ultimate">{item.icon}</span>
+              <span className="nav-text-ultimate">{item.label}</span>
+              <div className="nav-bg-ultimate"></div>
+              <div className="nav-glow-ultimate"></div>
             </Link>
           ))}
-          
-          <div className="language-wrapper">
-            <LanguageSelector />
-          </div>
+        </div>
+        
+        {/* Language Selector Gaming */}
+        <div className="language-wrapper-ultimate">
+          <LanguageSelector />
         </div>
       </div>
+      
+      {/* Scanning effect */}
+      <div className="nav-scanner-ultimate"></div>
     </nav>
   );
 };
