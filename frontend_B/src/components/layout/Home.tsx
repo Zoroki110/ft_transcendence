@@ -32,13 +32,13 @@ const Home: React.FC = () => {
           <div className="floating-shape shape-1"></div>
           <div className="floating-shape shape-2"></div>
           <div className="floating-shape shape-3"></div>
-          <div className="pong-animation">
-            <div className="paddle paddle-left"></div>
-            <div className="ball"></div>
-            <div className="paddle paddle-right"></div>
-          </div>
         </div>
       </section>
+
+      {/* Pong élargi, hors container limité */}
+      <div className="pong-animation-parent">
+        <canvas className="pong-animation" />
+      </div>
 
       {/* Main Content pour les autres sections */}
       <main className="main-content home-content">

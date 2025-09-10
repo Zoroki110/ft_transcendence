@@ -5,6 +5,10 @@
   box-sizing: border-box;
 }
 
+:root {
+  --nav-height: 72px;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
@@ -24,7 +28,9 @@ body {
 }
 
 .main-content {
-  padding-top: 5rem; /* Pour compenser la navigation fixe */
+  padding-top: calc(var(--nav-height) + 1rem); /* Pour compenser la navigation fixe */
+  position: relative;
+  z-index: 1;
 }
 
 /* Hero Section pour la page d'accueil */
@@ -32,36 +38,52 @@ body {
 /* Correction pour la hero section */
 .hero-section {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--nav-height));
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   overflow: hidden;
   margin-top: 0;
-  padding-top: 8rem; /* Ajustez cette valeur selon la hauteur de votre navigation */
+  padding-top: calc(var(--nav-height) + 2rem); /* Ajustez cette valeur selon la hauteur de votre navigation */
+  padding-bottom: 3rem;
+  z-index: 2;
 }
 
 .hero-content {
   text-align: center;
-  z-index: 2;
+  z-index: 3;
   position: relative;
   max-width: 800px;
-  padding: 2rem;
+  padding: 2rem 1rem 2rem 1rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content > :first-child {
+  margin-top: 0;
 }
 
 .hero-title {
+  display: block;
+  width: 100%;
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 800;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   animation: fadeInUp 1s ease-out;
 }
 
 .hero-subtitle {
+  display: block;
+  width: 100%;
   font-size: clamp(1.1rem, 2vw, 1.3rem);
-  margin-bottom: 3rem;
+  margin-bottom: 2.5rem;
   opacity: 0.9;
   animation: fadeInUp 1s ease-out 0.2s both;
 }
@@ -161,13 +183,48 @@ body {
 }
 
 /* Pong Animation */
+.pong-animation-parent {
+  width: 100vw;
+  max-width: 100%;
+  margin-left: calc(-50vw + 50%);
+  position: relative;
+  left: 50%;
+  right: 50%;
+  display: flex;
+  justify-content: center;
+  background: transparent;
+}
+
+./* Animation Pong élargie */
 .pong-animation {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 300px;
-  height: 150px;
+  width: 80vw; /* Utilise 80% de la largeur de l'écran */
+  max-width: 1000px; /* Limite maximale */
+  min-width: 400px; /* Largeur minimale */
+  height: 200px;
+  opacity: 0.3;
+}
+
+/* Ajustement des raquettes pour la nouvelle largeur */
+@keyframes ball {
+  0% { transform: translate(-50%, -50%) translateX(-40vw); } /* Ajusté à la nouvelle largeur */
+  50% { transform: translate(-50%, -50%) translateX(40vw) translateY(-30px); }
+  100% { transform: translate(-50%, -50%) translateX(-40vw); }
+}
+
+/* Alternative plus large encore */
+.pong-animation-wide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw; /* 90% de la largeur */
+  max-width: 1400px;
+  min-width: 500px;
+  height: 250px;
   opacity: 0.3;
 }
 
@@ -227,6 +284,9 @@ body {
 .features-section {
   padding: 5rem 0;
   background: white;
+  position: relative;
+  z-index: 2;
+  margin-top: 0;
 }
 
 .section-title {
@@ -245,6 +305,8 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   margin-top: 4rem;
+  position: relative;
+  z-index: 2;
 }
 
 .feature-card {
@@ -1605,4 +1667,21 @@ select:focus {
   .section-title {
     font-size: 1.5rem;
   }
+}
+
+.dynamic-nav {
+  height: var(--nav-height);
+  line-height: var(--nav-height);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.97);
+  box-shadow: 0 2px 12px rgba(102,126,234,0.07);
+}
+
+/* Debug utilitaire, à retirer après test */
+.dynamic-nav.debug, .hero-section.debug {
+  outline: 2px dashed rgba(255,0,0,0.5);
 }
