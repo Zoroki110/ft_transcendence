@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "containers-performance",
+    "title": "🐳 Transcendence - Containers Performance",
+    "description": "Performance détaillée des containers Docker",
+    "tags": ["containers", "docker", "performance"],
+    "timezone": "browser",
+    "editable": true,
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "refresh": "15s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "💾 Memory Usage by Container",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\".*transcendence.*\"} / 1024 / 1024",
+            "legendFormat": "{{name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MB",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "🔥 CPU Usage by Container",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\".*transcendence.*\"}[5m]) * 100",
+            "legendFormat": "{{name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      }
+    ]
+  }
+}
