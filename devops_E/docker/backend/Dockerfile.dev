@@ -11,9 +11,9 @@ COPY package*.json ./
 RUN npm install
 
 # Copy health check and wait scripts
-COPY ../devops/docker/backend/healthcheck.sh ./
-COPY ../devops/docker/backend/wait-for-it.sh ./
-COPY ../devops/docker/backend/entrypoint.sh ./
+COPY ../devops_E/docker/backend/healthcheck.sh ./
+COPY ../devops_E/docker/backend/wait-for-it.sh ./
+COPY ../devops_E/docker/backend/entrypoint.sh ./
 
 RUN chmod +x healthcheck.sh wait-for-it.sh entrypoint.sh
 

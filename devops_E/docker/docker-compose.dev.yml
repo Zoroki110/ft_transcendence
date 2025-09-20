@@ -2,7 +2,7 @@
 services:
   backend:
     build:
-      dockerfile: ../devops_E/docker/backend_a/Dockerfile.dev
+      dockerfile: ../devops_E/docker/backend/Dockerfile.dev
     environment:
       - NODE_ENV=development
       - DEBUG=true
