@@ -3,5 +3,5 @@
 
 set -e
 echo "🏗️ Building all services..."
-docker-compose -f devops_E/docker/docker-compose.yml build
+docker-compose -f docker/docker-compose.yml build
 echo "✅ Build completed!"
