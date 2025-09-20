@@ -1,4 +1,5 @@
 services:
+  # 🗄️ DATABASE (Shared by all services)
   database:
     image: postgres:15-alpine
     container_name: transcendence-db
@@ -7,10 +8,10 @@ services:
     environment:
       POSTGRES_DB: transcendence_dev
       POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
+      - ./docker/database/init:/docker-entrypoint-initdb.d
     networks:
       - transcendence-network
     healthcheck:
@@ -19,11 +20,12 @@ services:
       timeout: 10s
       retries: 5
 
+  # 🔧 BACKEND SERVICE (Partie A) - CHEMINS CORRIGÉS
   backend_a:
     build:
-      context: ../../backend_a
-      dockerfile: ../devops_E/docker/backend/Dockerfile
-    container_name: transcendence-backend-a
+      context: ../backend_a                                    # ← 1 niveau (cohérent avec volumes)
+      dockerfile: ../devops_E/docker/backend/Dockerfile.dev    # ← Utilise .dev pour développement
+    container_name: transcendence-backend
     ports:
       - "3000:3000"
     environment:
@@ -31,16 +33,151 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: transcendence_dev
       POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
-      DATABASE_URL: postgresql://transcendence:dev_secure_f8a9c2e1b4d7@database:5432/transcendence_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: postgresql://transcendence:${POSTGRES_PASSWORD}@database:5432/transcendence_dev
       NODE_ENV: development
+      JWT_SECRET: ${JWT_SECRET:-default_jwt_secret}
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - transcendence-network
+    volumes:
+      - ../backend_a:/app
+      - /app/node_modules
+
+  # 🎨 FRONTEND SERVICE VITE (Module 2) - CHEMINS CORRIGÉS
+  frontend_b:
+    image: node:20-alpine
+    container_name: transcendence-frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      # Utilise le chemin absolu complet
+      - /home/edou/code/42/ft_transcendence/frontend_b:/app
+    networks:
+      - transcendence-network
+    command: 
+      - sh
+      - -c
+      - |
+        echo "=== NOUVEAU TEST AVEC CHEMIN ABSOLU ==="
+        echo "Contenu de /app:"
+        ls -la /app/
+        if [ -f /app/package.json ]; then
+          echo "=== package.json trouvé ! ==="
+          cat /app/package.json
+          echo "=== Installation npm ==="
+          apk add --no-cache curl
+          npm install
+          echo "=== Démarrage Vite ==="
+          npm run dev
+        else
+          echo "❌ package.json toujours absent"
+          echo "Attente pour debug..."
+          sleep infinity
+        fi
+
+  # 🌐 NGINX REVERSE PROXY
+  nginx:
+    image: nginx:alpine
+    container_name: transcendence-nginx
+    ports:
+      - "8081:80"
+      - "8443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend_a
+      - frontend_b
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+
+  # 📦 REDIS (Cache & Sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: transcendence-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 📊 PROMETHEUS (Metrics)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: transcendence-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+
+  # 📈 GRAFANA (Dashboards)
+  grafana:
+    image: grafana/grafana-oss:12.1.1
+    container_name: transcendence-grafana
+    ports:
+      - "3004:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
     networks:
       - transcendence-network
 
+  # 📦 CADVISOR (Container metrics)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: transcendence-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    networks:
+      - transcendence-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   transcendence-network:

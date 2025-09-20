@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcendence - DevOps Frontend Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px; text-align: center; }
+        .card { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; margin: 20px 0; backdrop-filter: blur(10px); }
+        .success { color: #4CAF50; font-size: 1.2em; }
+        .info { color: #2196F3; }
+        button { background: #4CAF50; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 10px; }
+        button:hover { background: #45a049; }
+        #api-status { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Transcendence</h1>
+        <div class="card">
+            <h2>✅ Frontend DevOps Infrastructure</h2>
+            <p class="success">Frontend Docker container is running successfully!</p>
+            <p><strong>Environment:</strong> <span id="env">Development</span></p>
+            <p><strong>API URL:</strong> <span id="api-url"></span></p>
+            <p><strong>Build Tool:</strong> Vite + React</p>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 Backend Connection Test</h2>
+            <button onclick="testBackend()">Test Backend API</button>
+            <div id="api-status"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🚀 DevOps Features</h2>
+            <div class="info">
+                ✅ Docker multi-stage build<br>
+                ✅ Vite hot reload configured<br>
+                ✅ Nginx production ready<br>
+                ✅ Environment variables injection<br>
+                ✅ API proxy configuration<br>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Display environment variables
+        document.getElementById('api-url').textContent = import.meta.env.VITE_API_URL || 'http://localhost:3000'\;
+        
+        async function testBackend() {
+            const statusDiv = document.getElementById('api-status');
+            statusDiv.innerHTML = '⏳ Testing backend connection...';
+            
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'\;
+                const response = await fetch(`${apiUrl}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDiv.innerHTML = `
+                        <div style="color: #4CAF50; margin-top: 15px;">
+                            ✅ Backend connection successful!<br>
+                            <small>Response: ${JSON.stringify(data)}</small>
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div style="color: #ff9800; margin-top: 15px;">
+                            ⚠️ Backend responded with status: ${response.status}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div style="color: #f44336; margin-top: 15px;">
+                        ❌ Backend connection failed:<br>
+                        <small>${error.message}</small><br>
+                        <small>Check that backend is running on ${import.meta.env.VITE_API_URL || 'http://localhost:3000'}</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-test backend on load
+        setTimeout(testBackend, 1000);
+    </script>
+</body>
+</html>
