@@ -1,0 +1,476 @@
+/* Navigation.module.css */
+
+:root {
+  /* Gaming Color Palette */
+  --primary-bg: #0a0a0a;
+  --secondary-bg: #1a1a1a;
+  --accent-blue: #00d4ff;
+  --accent-orange: #ff6b35;
+  --accent-purple: #b967db;
+  --accent-green: #00ff88;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  
+  /* Effects */
+  --glow-primary: 0 0 20px var(--accent-blue);
+  --glow-secondary: 0 0 20px var(--accent-orange);
+  --border-gaming: 2px solid var(--accent-blue);
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-medium: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* Spacing */
+  --nav-padding: clamp(1rem, 5vw, 2rem);
+  --item-spacing: clamp(1rem, 3vw, 2rem);
+}
+
+.navigation {
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: var(--border-gaming);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 
+    0 4px 20px rgba(0, 212, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  
+  /* Scanlines effect */
+  background-image: 
+    linear-gradient(
+      90deg,
+      transparent 50%,
+      rgba(0, 212, 255, 0.03) 50%
+    );
+  background-size: 4px 4px;
+  animation: scanlines 20s linear infinite;
+}
+
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+.navContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--nav-padding);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+/* Logo Section */
+.logoSection {
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  text-decoration: none;
+  position: relative;
+  display: block;
+}
+
+.logoText {
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 900;
+  color: var(--text-primary);
+  text-shadow: 
+    0 0 5px #fff,
+    0 0 10px var(--accent-blue),
+    0 0 15px var(--accent-blue),
+    0 0 20px var(--accent-blue);
+  animation: logo-pulse 4s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes logo-pulse {
+  0%, 100% { 
+    text-shadow: 
+      0 0 5px #fff,
+      0 0 10px var(--accent-blue),
+      0 0 15px var(--accent-blue),
+      0 0 20px var(--accent-blue);
+  }
+  50% { 
+    text-shadow: 
+      0 0 8px #fff,
+      0 0 16px var(--accent-orange),
+      0 0 24px var(--accent-orange),
+      0 0 32px var(--accent-orange);
+  }
+}
+
+.logoPulse {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border: 2px solid var(--accent-blue);
+  border-radius: 8px;
+  animation: pulse-border 3s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+@keyframes pulse-border {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% { 
+    transform: scale(1.05);
+    opacity: 0.6;
+  }
+}
+
+/* Navigation Menu */
+.navMenu {
+  display: flex;
+  list-style: none;
+  gap: var(--item-spacing);
+  margin: 0;
+  padding: 0;
+}
+
+.navItem {
+  position: relative;
+  animation: slide-in-gaming 0.6s ease-out;
+  animation-delay: var(--animation-delay);
+  animation-fill-mode: both;
+}
+
+@keyframes slide-in-gaming {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all var(--transition-medium);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.navLink::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--glow-color, var(--accent-blue)),
+    transparent
+  );
+  opacity: 0.3;
+  transition: left var(--transition-medium);
+}
+
+.navLink:hover,
+.navLink.active {
+  border-color: var(--glow-color, var(--accent-blue));
+  box-shadow: 
+    0 0 20px var(--glow-color, var(--accent-blue)),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.navLink:hover::before,
+.navLink.active::before {
+  left: 100%;
+}
+
+.navIcon {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 0 5px var(--glow-color, var(--accent-blue)));
+}
+
+.navText {
+  position: relative;
+}
+
+.navGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--glow-color, var(--accent-blue));
+  opacity: 0;
+  border-radius: 12px;
+  filter: blur(10px);
+  transition: opacity var(--transition-medium);
+  z-index: -1;
+}
+
+.navLink:hover .navGlow,
+.navLink.active .navGlow {
+  opacity: 0.2;
+}
+
+/* User Section */
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userProfile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  backdrop-filter: blur(10px);
+}
+
+.userAvatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.userAvatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--accent-blue);
+  box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.onlineIndicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--accent-green);
+  border: 2px solid var(--primary-bg);
+  border-radius: 50%;
+  animation: pulse-online 2s ease-in-out infinite;
+}
+
+@keyframes pulse-online {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 var(--accent-green);
+    opacity: 1;
+  }
+  50% { 
+    box-shadow: 0 0 0 4px transparent;
+    opacity: 0.8;
+  }
+}
+
+.username {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.logoutBtn,
+.loginBtn {
+  background: linear-gradient(45deg, var(--accent-orange), #ff8500);
+  border: 1px solid var(--accent-orange);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-medium);
+  text-decoration: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.logoutBtn:hover,
+.loginBtn:hover {
+  box-shadow: 0 0 20px var(--accent-orange);
+  transform: translateY(-1px);
+}
+
+/* Mobile Hamburger */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 4px;
+  padding: 0.5rem;
+  z-index: 3;
+}
+
+.hamburgerLine {
+  width: 25px;
+  height: 3px;
+  background: var(--accent-blue);
+  transition: all var(--transition-medium);
+  box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.hamburger.active .hamburgerLine:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active .hamburgerLine:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active .hamburgerLine:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
+/* Scanning Line Effect */
+.scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    var(--accent-blue), 
+    transparent);
+  animation: scanline-sweep 4s linear infinite;
+}
+
+@keyframes scanline-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+/* Glitch Effect */
+.navigation.glitching .logoText {
+  animation: glitch-text 0.3s ease-out;
+}
+
+@keyframes glitch-text {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .navMenu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    height: 100vh;
+    width: 300px;
+    background: rgba(10, 10, 10, 0.98);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: right var(--transition-slow);
+    backdrop-filter: blur(20px);
+    border-left: var(--border-gaming);
+  }
+  
+  .navMenu.active {
+    right: 0;
+  }
+  
+  .hamburger {
+    display: flex;
+  }
+  
+  .navLink {
+    width: 200px;
+    justify-content: center;
+    margin: 0.5rem 0;
+  }
+  
+  .userSection {
+    position: absolute;
+    top: 1rem;
+    right: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navContainer {
+    padding: 1rem;
+  }
+  
+  .logoText {
+    font-size: 1.5rem;
+  }
+  
+  .userProfile {
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .username {
+    display: none;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .navigation,
+  .logoText,
+  .logoPulse,
+  .navItem,
+  .onlineIndicator,
+  .scanline {
+    animation: none !important;
+  }
+  
+  .navLink,
+  .logoutBtn,
+  .loginBtn {
+    transition: none !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .navigation {
+    background: #000000;
+    border-bottom: 2px solid #ffffff;
+  }
+  
+  .navLink {
+    border: 2px solid #ffffff;
+    background: #000000;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.navLink:focus,
+.logoutBtn:focus,
+.loginBtn:focus {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
