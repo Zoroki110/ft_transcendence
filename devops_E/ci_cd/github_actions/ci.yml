@@ -32,28 +32,28 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
+        cache-dependency-path: backend_a/package-lock.json
     
     - name: Install backend dependencies
       run: |
-        cd backend
+        cd backend_a
         npm ci
     
     - name: Run backend linter
       run: |
-        cd backend
+        cd backend_a
         npm run lint
     
     - name: Run backend tests
       run: |
-        cd backend
+        cd backend_a
         npm run test
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/transcendence_test
     
     - name: Run backend e2e tests
       run: |
-        cd backend
+        cd backend_a
         npm run test:e2e
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/transcendence_test
@@ -69,26 +69,26 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: frontend_b/package-lock.json
     
     - name: Install frontend dependencies
       run: |
-        cd frontend
+        cd frontend_b
         npm ci
     
     - name: Run frontend linter
       run: |
-        cd frontend
+        cd frontend_b
         npm run lint
     
     - name: Run frontend tests
       run: |
-        cd frontend
+        cd frontend_b
         npm run test
     
     - name: Build frontend
       run: |
-        cd frontend
+        cd frontend_b
         npm run build
 
   build-images:
@@ -112,7 +112,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./backend
-        file: ./devops/docker/backend/Dockerfile
+        file: ./devops/docker/backend_a/Dockerfile
         push: true
         tags: |
           ghcr.io/${{ github.repository }}/backend:latest
@@ -122,7 +122,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./frontend
-        file: ./devops/docker/frontend/Dockerfile
+        file: ./devops/docker/frontend_b/Dockerfile
         push: true
         tags: |
           ghcr.io/${{ github.repository }}/frontend:latest

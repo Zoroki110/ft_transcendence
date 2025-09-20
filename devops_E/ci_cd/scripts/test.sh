@@ -7,14 +7,14 @@ echo "🧪 Running tests for Transcendence..."
 
 # Backend tests
 echo "🔧 Running backend tests..."
-cd backend
+cd backend_a
 npm run test
 npm run test:e2e
 cd ..
 
 # Frontend tests
 echo "🎨 Running frontend tests..."
-cd frontend
+cd frontend_b
 npm run test
 cd ..
 
