@@ -6,3 +6,6 @@ node_modules/
 .vite/
 dist/
 build/
+node_modules/
+.vite/
+dist/
