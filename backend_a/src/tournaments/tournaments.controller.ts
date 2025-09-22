@@ -28,6 +28,7 @@ import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { JoinTournamentDto } from './dto/join-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { ApiThrottle } from '../common/decorators/api-throttle.decorator';
 
 @ApiTags('tournaments')
 @Controller('tournaments')
@@ -39,6 +40,7 @@ export class TournamentsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @ApiThrottle({ limit: 5, ttl: 600000 }) 
   @ApiOperation({ summary: 'Créer un nouveau tournoi' })
   @ApiResponse({ status: 201, description: 'Tournoi créé avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -49,6 +51,7 @@ export class TournamentsController {
   }
 
   @Get()
+  @ApiThrottle({ limit: 5, ttl: 600000 }) 
   @ApiOperation({ summary: 'Lister tous les tournois avec filtres et pagination' })
   @ApiResponse({ status: 200, description: 'Liste des tournois récupérée avec succès' })
   @ApiQuery({ name: 'status', required: false, description: 'Filtrer par status' })

@@ -8,7 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { GameModule } from './game/game.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthController } from './health/health.controller';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { CustomThrottleGuard } from './common/guards/custom-throttle.guard'; 
 import { APP_GUARD } from '@nestjs/core';
 import { TournamentsModule } from './tournaments/tournaments.module';
 
@@ -17,7 +18,7 @@ import { TournamentsModule } from './tournaments/tournaments.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 100,
+      limit: 30,
     }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -45,7 +46,7 @@ import { TournamentsModule } from './tournaments/tournaments.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass:ThrottlerGuard,
+      useClass: CustomThrottleGuard,
     },
   ],
   controllers: [HealthController],
