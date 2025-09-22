@@ -1,3 +1,4 @@
+// backend_a/src/entities/user.entity.ts
 import { 
   Entity, 
   PrimaryGeneratedColumn, 
@@ -9,6 +10,7 @@ import {
 } from 'typeorm';
 import { Match } from './match.entity';
 import { ChatMessage } from './chat-message.entity';
+import { Friendship } from './friendship.entity';
 
 @Entity()
 @Unique(['username'])
@@ -27,7 +29,7 @@ export class User {
   password: string;
 
   @Column({ nullable: true, length: 255})
-  avatar: string;
+  avatar?: string;
 
   @Column({ nullable: true, length: 50})
   provider: string;
@@ -41,11 +43,39 @@ export class User {
   @Column({ nullable: true })
   twoFactorSecret: string;
 
+  // ===== NOUVEAUX CHAMPS POUR CAHIER DES CHARGES =====
+
+  // Statut en ligne
+  @Column({ default: false })
+  isOnline: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSeen: Date;
+
+  // Statistiques de jeu
+  @Column({ default: 0 })
+  gamesWon: number;
+
+  @Column({ default: 0 })
+  gamesLost: number;
+
+  @Column({ default: 0 })
+  tournamentsWon: number;
+
+  @Column({ default: 0 })
+  totalScore: number;
+
+  // Display name pour les tournois
+  @Column({ nullable: true, length: 100 })
+  displayName: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
-  @CreateDateColumn()
-  updateAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  // ===== RELATIONS =====
 
   @OneToMany(() => Match, match => match.player1)
   matchesAsPlayer1: Match[];
@@ -55,4 +85,22 @@ export class User {
 
   @OneToMany(() => ChatMessage, message => message.sender)
   messages: ChatMessage[];
+
+  // Relations d'amitié
+  @OneToMany(() => Friendship, friendship => friendship.requester)
+  sentFriendRequests: Friendship[];
+
+  @OneToMany(() => Friendship, friendship => friendship.addressee)
+  receivedFriendRequests: Friendship[];
+
+  // ===== MÉTHODES UTILITAIRES =====
+
+  get winRate(): number {
+    const totalGames = this.gamesWon + this.gamesLost;
+    return totalGames > 0 ? (this.gamesWon / totalGames) * 100 : 0;
+  }
+
+  get totalGames(): number {
+    return this.gamesWon + this.gamesLost;
+  }
 }

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Req, UseGuards, BadRequestException } from
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { ApiThrottle } from '../common/decorators/api-throttle.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -11,6 +12,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @ApiThrottle({ limit: 5, ttl: 900000 }) //5 tentatives -> 15 min
   async login(@Body() body: { email?: string; password?: string }) {
     if (!body?.email || !body?.password) {
       throw new BadRequestException('email and password are required');
@@ -20,10 +22,12 @@ export class AuthController {
 
   @Get('42')
   @UseGuards(AuthGuard('42'))
+  @ApiThrottle({ limit: 10, ttl: 60000 })
   async loginWith42() {}
 
   @Get('42/callback')
   @UseGuards(AuthGuard('42'))
+  @ApiThrottle({ limit: 10, ttl: 60000 })
   async callback(@Req() req) {
     const user = await this.usersService.findOrCreate(req.user);
     const token = this.authService.generateJwt(user);
