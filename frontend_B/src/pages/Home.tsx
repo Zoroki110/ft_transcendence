@@ -1,35 +1,70 @@
+// frontend_B/src/pages/Home.tsx - PAGE D'ACCUEIL SIMPLE ET FONCTIONNELLE
+
 import React from 'react';
-import { useTranslations } from '../hooks/useTranslations';
+import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
-  const { t } = useTranslations();
-  
   return (
-    <div className="hero-section">
-      <h1 className="main-title">TRANSCENDENCE</h1>
-      <p style={{ fontSize: '1.2rem', color: 'rgba(0, 212, 255, 0.8)', marginBottom: '3rem' }}>
-        Welcome to Transcendance dans l'univers du combat ultime
-      </p>
-      
-      <div className="section-card">
-        <h2 className="section-title">🏆 Tournois Épiques</h2>
-        <p className="section-subtitle">Participez aux tournois les plus intenses</p>
-        <button className="btn-neon-orange">Voir les Tournois</button>
-      </div>
-      
-      <div className="section-card">
-        <h2 className="section-title">⚔️ Créer l'Arène</h2>
-        <p className="section-subtitle">Organisez votre propre tournoi</p>
-        <button className="btn-neon-orange">Créer un Tournoi</button>
-      </div>
-      
-      <div className="pong-container">
-        <div className="pong-field">
-          <div className="paddle paddle-left"></div>
-          <div className="paddle paddle-right"></div>
-          <div className="ball"></div>
+    <div>
+      {/* Hero Section */}
+      <section className="page-header">
+        <div className="container text-center">
+          <h1 className="page-title">TRANSCENDENCE</h1>
+          <p className="page-subtitle">
+            Bienvenue dans l'arène du Pong nouvelle génération
+          </p>
         </div>
-      </div>
+      </section>
+
+      {/* Actions principales */}
+      <section className="container">
+        <div className="grid grid-2 mb-8">
+          <div className="card text-center">
+            <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>🏆 Tournois</h2>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--gray-700)' }}>
+              Participez aux tournois en cours ou consultez les résultats
+            </p>
+            <Link to="/tournaments" className="btn btn-primary">
+              Voir les tournois
+            </Link>
+          </div>
+
+          <div className="card text-center">
+            <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>⚔️ Créer</h2>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--gray-700)' }}>
+              Organisez votre propre tournoi et invitez vos amis
+            </p>
+            <Link to="/create-tournament" className="btn btn-success">
+              Créer un tournoi
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats rapides */}
+        <div className="card">
+          <h3 style={{ marginBottom: '1rem' }}>📊 Statistiques rapides</h3>
+          <div className="grid grid-3">
+            <div className="text-center">
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                1,247
+              </div>
+              <div style={{ color: 'var(--gray-700)' }}>Joueurs actifs</div>
+            </div>
+            <div className="text-center">
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
+                89
+              </div>
+              <div style={{ color: 'var(--gray-700)' }}>Tournois organisés</div>
+            </div>
+            <div className="text-center">
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>
+                5,432
+              </div>
+              <div style={{ color: 'var(--gray-700)' }}>Parties jouées</div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

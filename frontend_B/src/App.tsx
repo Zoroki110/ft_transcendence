@@ -1,35 +1,39 @@
+// frontend_B/src/App.tsx - AVEC USERPROVIDER AJOUTÉ
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navigation from './components/layout/Navigation';
+import { TournamentProvider } from './contexts/TournamentContext';
+import { UserProvider } from './contexts/UserContext';
+import Navigation from './components/Navigation';
 import Home from './pages/Home';
-import TournamentList from './pages/tournaments/TournamentList';
-import CreateTournament from './pages/tournaments/CreateTournament';
-import MyTournaments from './components/layout/MyTournaments';
-import Game from './components/layout/Game';
-import Profile from './components/layout/Profile';
-import { useTranslations } from './hooks/useTranslations';
-import './styles/app.css';
+import Tournaments from './pages/Tournaments';
+import CreateTournament from './pages/CreateTournament';
+import TournamentDetail from './pages/TournamentDetail';
+import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
+import './App.css';
 
 function App() {
-  const { t } = useTranslations();
-
   return (
-    <Router>
-      <div className="App">
-        <Navigation />
-        
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/game" element={<Game />} />
-            <Route path="/tournaments" element={<TournamentList />} />
-            <Route path="/create-tournament" element={<CreateTournament />} />
-            <Route path="/my-tournaments" element={<MyTournaments />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <UserProvider>
+      <TournamentProvider>
+        <Router>
+          <div className="app">
+            <Navigation />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/tournaments/:id" element={<TournamentDetail />} />
+                <Route path="/create-tournament" element={<CreateTournament />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+              </Routes>
+            </main>
+          </div>
+        </Router>
+      </TournamentProvider>
+    </UserProvider>
   );
 }
 
