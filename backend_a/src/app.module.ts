@@ -8,18 +8,11 @@ import { AuthModule } from './auth/auth.module';
 import { GameModule } from './game/game.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthController } from './health/health.controller';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { CustomThrottleGuard } from './common/guards/custom-throttle.guard'; 
-import { APP_GUARD } from '@nestjs/core';
 import { TournamentsModule } from './tournaments/tournaments.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 30,
-    }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
@@ -30,11 +23,9 @@ import { TournamentsModule } from './tournaments/tournaments.module';
         password: cfg.get('DB_PASS') ?? cfg.get('DB_PASSWORD'),
         database: cfg.get<string>('DB_NAME', 'transcendance'),
         autoLoadEntities: true,
-        // true uniquement en dev si TYPEORM_SYNC=true dans .env
         synchronize:
           process.env.NODE_ENV !== 'production' &&
           cfg.get<string>('TYPEORM_SYNC') === 'true',
-        // logging: true,
       }),
     }),
     UsersModule,
@@ -43,12 +34,7 @@ import { TournamentsModule } from './tournaments/tournaments.module';
     ChatModule,
     TournamentsModule,
   ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: CustomThrottleGuard,
-    },
-  ],
+  providers: [],
   controllers: [HealthController],
 })
 export class AppModule {}

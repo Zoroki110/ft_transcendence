@@ -1,6 +1,6 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { CustomThrottleGuard } from '../guards/custom-throttle.guard';
+/*import { CustomThrottleGuard } from '../guards/custom-throttle.guard';*/
 
 interface ThrottleConfig {
   limit: number;  // Nombre max de requêtes
@@ -15,6 +15,6 @@ export function ApiThrottle(config: ThrottleConfig) {
         ttl: config.ttl,
       }
     }),
-    UseGuards(CustomThrottleGuard),
+   /* UseGuards(CustomThrottleGuard),*/
   );
 }

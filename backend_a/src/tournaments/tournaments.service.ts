@@ -29,16 +29,13 @@ export class TournamentsService {
   // ===== CRUD BASIQUE =====
 
   async create(createTournamentDto: CreateTournamentDto, creatorId: number): Promise<Tournament> {
-    // Vérifier que le créateur existe
     const creator = await this.userRepository.findOne({ where: { id: creatorId } });
     if (!creator) {
       throw new NotFoundException('Créateur introuvable');
     }
 
-    // Valider les dates
     this.validateDates(createTournamentDto);
 
-    // Créer le tournoi
     const tournament = this.tournamentRepository.create({
       ...createTournamentDto,
       creator,
@@ -59,7 +56,6 @@ export class TournamentsService {
       .leftJoinAndSelect('tournament.participants', 'participants')
       .leftJoinAndSelect('tournament.winner', 'winner');
 
-    // Filtres
     if (status) {
       queryBuilder.andWhere('tournament.status = :status', { status });
     }
@@ -70,15 +66,11 @@ export class TournamentsService {
       queryBuilder.andWhere('tournament.isPublic = :isPublic', { isPublic });
     }
 
-    // Pagination
     const offset = (page - 1) * limit;
     queryBuilder.skip(offset).take(limit);
-
-    // Tri par date de création décroissante
     queryBuilder.orderBy('tournament.createdAt', 'DESC');
 
     const [tournaments, total] = await queryBuilder.getManyAndCount();
-
     return { tournaments, total };
   }
 
@@ -98,15 +90,11 @@ export class TournamentsService {
   async update(id: number, updateTournamentDto: UpdateTournamentDto, userId: number): Promise<Tournament> {
     const tournament = await this.findOne(id);
 
-    // Vérifier que l'utilisateur a le droit de modifier
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut modifier ce tournoi');
     }
 
-    // Valider les changements
     this.validateUpdate(tournament, updateTournamentDto);
-
-    // Appliquer les modifications
     Object.assign(tournament, updateTournamentDto);
 
     return await this.tournamentRepository.save(tournament);
@@ -115,12 +103,10 @@ export class TournamentsService {
   async remove(id: number, userId: number): Promise<void> {
     const tournament = await this.findOne(id);
 
-    // Vérifier que l'utilisateur a le droit de supprimer
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut supprimer ce tournoi');
     }
 
-    // Ne pas permettre la suppression si le tournoi a commencé
     if (tournament.status === TournamentStatus.IN_PROGRESS) {
       throw new BadRequestException('Impossible de supprimer un tournoi en cours');
     }
@@ -138,7 +124,6 @@ export class TournamentsService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    // Vérifications
     if (!tournament.isRegistrationOpen) {
       throw new BadRequestException('Les inscriptions ne sont pas ouvertes pour ce tournoi');
     }
@@ -147,17 +132,14 @@ export class TournamentsService {
       throw new BadRequestException('Le tournoi est complet');
     }
 
-    // Vérifier si l'utilisateur est déjà inscrit
     const isAlreadyParticipant = tournament.participants.some(p => p.id === userId);
     if (isAlreadyParticipant) {
       throw new ConflictException('Vous êtes déjà inscrit à ce tournoi');
     }
 
-    // Ajouter le participant
     tournament.participants.push(user);
     tournament.currentParticipants = tournament.participants.length;
 
-    // Changer le statut si le tournoi est plein
     if (tournament.isFull) {
       tournament.status = TournamentStatus.FULL;
     } else if (tournament.status === TournamentStatus.DRAFT) {
@@ -170,16 +152,13 @@ export class TournamentsService {
   async leaveTournament(tournamentId: number, userId: number): Promise<Tournament> {
     const tournament = await this.findOne(tournamentId);
 
-    // Ne pas permettre de quitter si le tournoi a commencé
     if (tournament.status === TournamentStatus.IN_PROGRESS) {
       throw new BadRequestException('Impossible de quitter un tournoi en cours');
     }
 
-    // Retirer le participant
     tournament.participants = tournament.participants.filter(p => p.id !== userId);
     tournament.currentParticipants = tournament.participants.length;
 
-    // Ajuster le statut
     if (tournament.status === TournamentStatus.FULL) {
       tournament.status = TournamentStatus.OPEN;
     }
@@ -187,50 +166,382 @@ export class TournamentsService {
     return await this.tournamentRepository.save(tournament);
   }
 
-  async getMatchesWithPlayers(tournamentId: number): Promise<Match[]> {
-    return await this.matchRepository.find({
-      where: { tournamentId },
-      relations: ['player1', 'player2'],
-    });
-  }
   // ===== GESTION DES BRACKETS =====
 
   async generateBrackets(tournamentId: number, userId: number): Promise<Tournament> {
     const tournament = await this.findOne(tournamentId);
-
-    // Vérifications
+    
+    // ADD THIS DEBUG BLOCK
+    console.log('=== GENERATE BRACKETS DEBUG ===');
+    console.log('Tournament ID:', tournament.id);
+    console.log('Tournament status:', tournament.status);
+    console.log('Current participants:', tournament.currentParticipants);
+    console.log('Bracket generated:', tournament.bracketGenerated);
+    console.log('Can start result:', tournament.canStart);
+    
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut générer les brackets');
     }
-
+  
     if (!tournament.canStart) {
+      console.log('CANSTART FAILED - Status:', tournament.status, 'Participants:', tournament.currentParticipants, 'BracketGenerated:', tournament.bracketGenerated);
       throw new BadRequestException('Le tournoi ne peut pas encore commencer');
     }
-
-    if (tournament.bracketGenerated) {
+  
+    if (tournament.bracketGenerated && tournament.matches.length > 0) {
       throw new BadRequestException('Les brackets ont déjà été générés');
     }
-
-    // Générer les matches selon le type de tournoi
-    let matches: Partial<Match>[] = [];
-
+  
+    console.log('Participants before generating matches:', tournament.participants.length);
+  
+    let matches: Match[] = [];
     if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
       matches = this.generateSingleEliminationMatches(tournament.participants, tournament.id);
     } else {
       throw new BadRequestException('Type de tournoi non supporté pour le moment');
     }
-
-    // Sauvegarder les matches
-    await this.matchRepository.save(matches);
-
-    // Mettre à jour le tournoi
+  
+    console.log('Generated matches:', matches.length);
+  
+    // Sauvegarder les matches avec validation
+    try {
+      if (matches.length > 0) {
+        const savedMatches = await this.matchRepository.save(matches);
+        console.log('Successfully saved matches:', savedMatches.length);
+        console.log('Saved match IDs:', savedMatches.map(m => m.id));
+    
+        // FORCE UPDATE tournament_id with raw SQL (individual updates)
+        for (const match of savedMatches) {
+          await this.matchRepository.query(
+            'UPDATE match SET tournament_id = $1 WHERE id = $2',
+            [tournamentId, match.id]
+          );
+        }
+        console.log('Force updated tournament_id for matches:', savedMatches.map(m => m.id));
+      } else {
+        console.error('No matches generated!');
+      }
+    } catch (error) {
+      console.error('Error saving matches:', error);
+      throw new BadRequestException('Failed to create matches');
+    }
+  
     tournament.bracketGenerated = true;
     tournament.status = TournamentStatus.IN_PROGRESS;
-
+  
     return await this.tournamentRepository.save(tournament);
   }
 
+  async getBrackets(tournamentId: number) {
+    const tournament = await this.findOne(tournamentId);
+    
+    if (!tournament.bracketGenerated) {
+      throw new BadRequestException('Les brackets ne sont pas encore générés');
+    }
+
+    const matches = await this.getMatchesWithPlayers(tournamentId);
+    
+    // Organiser les matches par round
+    const bracketsByRound = matches.reduce((acc, match) => {
+      const round = match.round || 1;
+      if (!acc[round]) {
+        acc[round] = [];
+      }
+      acc[round].push({
+        id: match.id,
+        player1: match.player1?.username || 'TBD',
+        player2: match.player2?.username || 'TBD',
+        player1Score: match.player1Score || 0,
+        player2Score: match.player2Score || 0,
+        status: match.status,
+        bracketPosition: match.bracketPosition,
+      });
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    return {
+      tournamentId,
+      tournamentName: tournament.name,
+      status: tournament.status,
+      type: tournament.type,
+      totalRounds: Object.keys(bracketsByRound).length,
+      brackets: bracketsByRound
+    };
+  }
+
+  async getMatchesWithPlayers(tournamentId: number): Promise<Match[]> {
+    return await this.matchRepository.find({
+      where: { tournament: { id: tournamentId } },  // Changed this line
+      relations: ['player1', 'player2', 'tournament'],
+    });
+  }
+
+  // ===== PROGRESSION DES MATCHES =====
+
+  async advanceWinner(
+    tournamentId: number, 
+    matchId: number, 
+    winnerId: number, 
+    player1Score: number, 
+    player2Score: number, 
+    userId: number
+  ): Promise<any> {
+    const tournament = await this.findOne(tournamentId);
+    
+    if (tournament.creatorId !== userId) {
+      throw new ForbiddenException('Seul le créateur peut faire avancer les gagnants');
+    }
+
+    const match = await this.matchRepository.findOne({
+      where: { id: matchId, tournament: { id: tournamentId } },
+      relations: ['player1', 'player2'],
+    });
+
+    if (!match) {
+      throw new NotFoundException('Match introuvable');
+    }
+
+    if (match.status === 'finished') {
+      throw new BadRequestException('Ce match est déjà terminé');
+    }
+
+    if (winnerId !== match.player1.id && winnerId !== match.player2.id) {
+      throw new BadRequestException('Le gagnant doit être un des joueurs du match');
+    }
+
+    // Mettre à jour le match
+    match.player1Score = player1Score;
+    match.player2Score = player2Score;
+    match.status = 'finished';
+    match.finishedAt = new Date();
+
+    await this.matchRepository.save(match);
+
+    // Déterminer le gagnant
+    const winner = winnerId === match.player1.id ? match.player1 : match.player2;
+
+    // Créer le match suivant ou déclarer le champion
+    const result = await this.createNextRoundMatch(tournament, match, winner);
+
+    return {
+      message: result.isChampion ? 'Tournoi terminé !' : 'Match terminé avec succès',
+      match: {
+        id: match.id,
+        winner: winner.username,
+        finalScore: `${player1Score} - ${player2Score}`,
+        status: 'finished',
+      },
+      ...result,
+    };
+  }
+
+  private async createNextRoundMatch(tournament: Tournament, completedMatch: Match, winner: User): Promise<any> {
+    const currentRound = completedMatch.round;
+    const nextRound = currentRound + 1;
+    
+    // Vérifier si tous les matches du round actuel sont terminés
+    const currentRoundMatches = await this.matchRepository.find({
+      where: { tournament: { id: tournament.id }, round: currentRound },
+    });
+    
+    const completedCurrentRoundMatches = currentRoundMatches.filter(m => m.status === 'finished');
+    
+    // Si tous les matches du round actuel sont terminés
+    if (completedCurrentRoundMatches.length === currentRoundMatches.length) {
+      const winners = await Promise.all(
+        completedCurrentRoundMatches.map(async (match) => {
+          const fullMatch = await this.matchRepository.findOne({
+            where: { id: match.id },
+            relations: ['player1', 'player2'],
+          });
+          if (!fullMatch) {
+            throw new Error(`Match with id ${match.id} not found`);
+          }
+          return fullMatch.player1Score > fullMatch.player2Score ? fullMatch.player1 : fullMatch.player2;
+        })
+      );
+      
+      // S'il ne reste qu'un gagnant, c'est le champion
+      if (winners.length === 1) {
+        tournament.winnerId = winners[0].id;
+        tournament.winner = winners[0];
+        tournament.status = TournamentStatus.COMPLETED;
+        tournament.endDate = new Date();
+        
+        // Mettre à jour les stats du champion
+        await this.userRepository.update(winners[0].id, {
+          tournamentsWon: () => 'tournamentsWon + 1'
+        });
+        
+        await this.tournamentRepository.save(tournament);
+        
+        return {
+          isChampion: true,
+          champion: {
+            id: winners[0].id,
+            username: winners[0].username,
+          },
+        };
+      }
+      
+      // Créer les matches du round suivant
+      const nextRoundMatches: Partial<Match>[] = [];
+      for (let i = 0; i < winners.length; i += 2) {
+        if (i + 1 < winners.length) {
+          nextRoundMatches.push({
+            player1: winners[i],
+            player2: winners[i + 1],
+            tournament: { id: tournament.id } as Tournament,
+            round: nextRound,
+            bracketPosition: Math.floor(i / 2),
+            status: 'pending',
+          });
+        }
+      }
+      
+      if (nextRoundMatches.length > 0) {
+        await this.matchRepository.save(nextRoundMatches);
+        return {
+          isChampion: false,
+          nextRoundCreated: true,
+          nextRound: nextRound,
+          matchesCreated: nextRoundMatches.length,
+        };
+      }
+    }
+    
+    return {
+      isChampion: false,
+      waitingForOtherMatches: true,
+    };
+  }
+
+  // ===== STATISTIQUES ET LEADERBOARD =====
+
+  async getTournamentStats(tournamentId: number): Promise<any> {
+    const tournament = await this.findOne(tournamentId);
+    
+    const completedMatches = await this.matchRepository.count({
+      where: { tournament: { id: tournamentId }, status: 'finished' }
+    });
+
+    const totalMatches = await this.matchRepository.count({
+      where: { tournament: { id: tournamentId } }
+    });
+
+    return {
+      tournament: {
+        id: tournament.id,
+        name: tournament.name,
+        status: tournament.status,
+        participants: tournament.currentParticipants,
+        maxParticipants: tournament.maxParticipants,
+        bracketGenerated: tournament.bracketGenerated,
+      },
+      progress: {
+        completedMatches,
+        totalMatches,
+        percentComplete: totalMatches > 0 ? Math.round((completedMatches / totalMatches) * 100) : 0,
+      },
+      currentRound: await this.getCurrentRound(tournamentId),
+    };
+  }
+
+  async getLeaderboard(tournamentId: number) {
+    const tournament = await this.findOne(tournamentId);
+    const matches = await this.getMatchesWithPlayers(tournamentId);
+    
+    const stats = new Map<number, {
+      user: User;
+      wins: number;
+      losses: number;
+      totalScore: number;
+      eliminated: boolean;
+      finalRound: number;
+    }>();
+
+    // Initialiser les stats
+    tournament.participants.forEach(participant => {
+      stats.set(participant.id, {
+        user: participant,
+        wins: 0,
+        losses: 0,
+        totalScore: 0,
+        eliminated: false,
+        finalRound: 0
+      });
+    });
+
+    // Calculer les stats depuis les matches
+    matches.forEach(match => {
+      if (match.status === 'finished' && match.player1 && match.player2) {
+        const player1Stats = stats.get(match.player1.id);
+        const player2Stats = stats.get(match.player2.id);
+        
+        if (player1Stats && player2Stats) {
+          player1Stats.totalScore += match.player1Score || 0;
+          player2Stats.totalScore += match.player2Score || 0;
+          player1Stats.finalRound = Math.max(player1Stats.finalRound, match.round || 1);
+          player2Stats.finalRound = Math.max(player2Stats.finalRound, match.round || 1);
+          
+          if (match.player1Score > match.player2Score) {
+            player1Stats.wins++;
+            player2Stats.losses++;
+            player2Stats.eliminated = true;
+          } else {
+            player2Stats.wins++;
+            player1Stats.losses++;
+            player1Stats.eliminated = true;
+          }
+        }
+      }
+    });
+
+    // Convertir en array et trier
+    const leaderboard = Array.from(stats.values())
+      .sort((a, b) => {
+        if (a.finalRound !== b.finalRound) {
+          return b.finalRound - a.finalRound;
+        }
+        if (a.wins !== b.wins) {
+          return b.wins - a.wins;
+        }
+        return b.totalScore - a.totalScore;
+      })
+      .map((stat, index) => ({
+        position: index + 1,
+        user: {
+          id: stat.user.id,
+          username: stat.user.username,
+          avatar: stat.user.avatar
+        },
+        wins: stat.wins,
+        losses: stat.losses,
+        totalScore: stat.totalScore,
+        finalRound: stat.finalRound,
+        eliminated: stat.eliminated,
+        isChampion: tournament.winnerId === stat.user.id
+      }));
+
+    return {
+      tournamentId,
+      tournamentName: tournament.name,
+      status: tournament.status,
+      leaderboard
+    };
+  }
+
   // ===== MÉTHODES UTILITAIRES =====
+
+  private async getCurrentRound(tournamentId: number): Promise<number> {
+    const result = await this.matchRepository
+      .createQueryBuilder('match')
+      .select('MAX(match.round)', 'maxRound')
+      .where('match.tournamentId = :tournamentId', { tournamentId })
+      .getRawOne();
+    
+    return result?.maxRound || 0;
+  }
 
   private validateDates(dto: CreateTournamentDto): void {
     const now = new Date();
@@ -261,53 +572,37 @@ export class TournamentsService {
     }
   }
 
-  private generateSingleEliminationMatches(participants: User[], tournamentId: number): Partial<Match>[] {
-    const matches: Partial<Match>[] = [];
-    const shuffledParticipants = [...participants].sort(() => Math.random() - 0.5);
-
-    // Premier tour
-    for (let i = 0; i < shuffledParticipants.length; i += 2) {
-      if (i + 1 < shuffledParticipants.length) {
-        matches.push({
-          player1: shuffledParticipants[i],
-          player2: shuffledParticipants[i + 1],
-          tournamentId,
+  private generateSingleEliminationMatches(participants: User[], tournamentId: number): Match[] {
+    console.log('=== MATCH GENERATION DEBUG ===');
+    console.log('Participants received:', participants.length);
+    console.log('Participant details:', participants.map(p => ({ id: p.id, username: p.username })));
+    
+    const matches: Match[] = [];
+    
+    for (let i = 0; i < participants.length; i += 2) {
+      if (i + 1 < participants.length) {
+        // Use the repository to create the match properly
+        const match = this.matchRepository.create({
+          player1: { id: participants[i].id } as User,
+          player2: { id: participants[i + 1].id } as User,
           round: 1,
           bracketPosition: Math.floor(i / 2),
           status: 'pending',
+          player1Score: 0,
+          player2Score: 0,
+        });
+
+        match.tournament = { id: tournamentId } as Tournament;  
+        
+        matches.push(match);
+        console.log(`Created match ${matches.length}:`, {
+          player1: participants[i].username,
+          player2: participants[i + 1].username
         });
       }
     }
-
-    return matches;
-  }
-
-  // ===== MÉTHODES UTILITAIRES PUBLIQUES =====
-
-  async getTournamentStats(tournamentId: number): Promise<any> {
-    const tournament = await this.findOne(tournamentId);
     
-    const completedMatches = await this.matchRepository.count({
-      where: { tournamentId, status: 'finished' }
-    });
-
-    const totalMatches = await this.matchRepository.count({
-      where: { tournamentId }
-    });
-
-    return {
-      tournament: {
-        id: tournament.id,
-        name: tournament.name,
-        status: tournament.status,
-        participants: tournament.currentParticipants,
-        maxParticipants: tournament.maxParticipants,
-      },
-      progress: {
-        completedMatches,
-        totalMatches,
-        percentComplete: totalMatches > 0 ? Math.round((completedMatches / totalMatches) * 100) : 0,
-      }
-    };
+    console.log('Total matches to save:', matches.length);
+    return matches;
   }
 }
