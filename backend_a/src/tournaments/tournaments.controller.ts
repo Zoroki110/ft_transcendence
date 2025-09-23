@@ -28,7 +28,6 @@ import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { JoinTournamentDto } from './dto/join-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
-import { ApiThrottle } from '../common/decorators/api-throttle.decorator';
 
 @ApiTags('tournaments')
 @Controller('tournaments')
@@ -40,7 +39,6 @@ export class TournamentsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiThrottle({ limit: 5, ttl: 600000 }) 
   @ApiOperation({ summary: 'Créer un nouveau tournoi' })
   @ApiResponse({ status: 201, description: 'Tournoi créé avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
@@ -51,7 +49,6 @@ export class TournamentsController {
   }
 
   @Get()
-  @ApiThrottle({ limit: 5, ttl: 600000 }) 
   @ApiOperation({ summary: 'Lister tous les tournois avec filtres et pagination' })
   @ApiResponse({ status: 200, description: 'Liste des tournois récupérée avec succès' })
   @ApiQuery({ name: 'status', required: false, description: 'Filtrer par status' })
@@ -170,39 +167,88 @@ export class TournamentsController {
   }
 
   @Get(':id/brackets')
-  @ApiOperation({ summary: 'Visualiser les brackets d\'un tournoi' })
+  @ApiOperation({ summary: 'Visualiser l\'arbre du tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
-  @ApiResponse({ status: 200, description: 'Brackets du tournoi' })
+  @ApiResponse({ status: 200, description: 'Arbre du tournoi' })
+  @ApiResponse({ status: 400, description: 'Brackets pas encore générés' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   async getBrackets(@Param('id', ParseIntPipe) id: number) {
-  const tournament = await this.tournamentsService.findOne(id);
-  const matches = await this.tournamentsService.getMatchesWithPlayers(id);
-  
+    return this.tournamentsService.getBrackets(id);
+  }
+
+  @Get(':id/matches')
+  @ApiOperation({ summary: 'Lister tous les matches d\'un tournoi' })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({ status: 200, description: 'Liste des matches avec détails' })
+  @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
+  async getMatches(@Param('id', ParseIntPipe) id: number) {
+    const matches = await this.tournamentsService.getMatchesWithPlayers(id);
+    
     return {
       tournamentId: id,
-      tournamentName: tournament.name,
-      bracketGenerated: tournament.bracketGenerated,
-      matches: matches.map(match => ({  // ← CORRECTION ICI
+      totalMatches: matches.length,
+      matches: matches.map(match => ({
         id: match.id,
         player1: match.player1?.username || 'TBD',
         player2: match.player2?.username || 'TBD',
-        player1Score: match.player1Score,
-        player2Score: match.player2Score,
+        player1Score: match.player1Score || 0,
+        player2Score: match.player2Score || 0,
         status: match.status,
         round: match.round,
         bracketPosition: match.bracketPosition,
-    })),
-  };
-}
+        createdAt: match.createdAt,
+        finishedAt: match.finishedAt,
+      })),
+    };
+  }
+
   // ===== STATISTIQUES =====
 
   @Get(':id/stats')
-  @ApiOperation({ summary: 'Statistiques d\'un tournoi' })
+  @ApiOperation({ summary: 'Statistiques du tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
-  @ApiResponse({ status: 200, description: 'Statistiques du tournoi' })
+  @ApiResponse({ status: 200, description: 'Statistiques détaillées du tournoi' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   getStats(@Param('id', ParseIntPipe) id: number) {
     return this.tournamentsService.getTournamentStats(id);
+  }
+
+  @Get(':id/leaderboard')
+  @ApiOperation({ summary: 'Classement du tournoi' })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({ status: 200, description: 'Leaderboard avec positions et stats' })
+  @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
+  async getLeaderboard(@Param('id', ParseIntPipe) id: number) {
+    return this.tournamentsService.getLeaderboard(id);
+  }
+
+  // ===== PROGRESSION DES MATCHES =====
+
+  @Post(':id/advance-winner/:matchId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Faire avancer le gagnant d\'un match' })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiParam({ name: 'matchId', description: 'ID du match' })
+  @ApiResponse({ status: 200, description: 'Gagnant avancé avec succès' })
+  @ApiResponse({ status: 400, description: 'Match déjà terminé ou données invalides' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Seul le créateur peut faire avancer' })
+  @ApiResponse({ status: 404, description: 'Match introuvable' })
+  async advanceWinner(
+    @Param('id', ParseIntPipe) tournamentId: number,
+    @Param('matchId', ParseIntPipe) matchId: number,
+    @Body() body: { winnerId: number; player1Score: number; player2Score: number },
+    @Req() req,
+  ) {
+    return this.tournamentsService.advanceWinner(
+      tournamentId, 
+      matchId, 
+      body.winnerId, 
+      body.player1Score, 
+      body.player2Score, 
+      req.user.sub
+    );
   }
 
   // ===== ENDPOINTS UTILITAIRES =====
@@ -214,12 +260,9 @@ export class TournamentsController {
   @ApiResponse({ status: 200, description: 'Liste de mes tournois' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   async getMyTournaments(@Req() req, @Query() query: TournamentQueryDto) {
-    // Récupérer les tournois créés par l'utilisateur
     const createdQuery = { ...query };
     const createdTournaments = await this.tournamentsService.findAll(createdQuery);
 
-    // Pour simplifier, on retourne tous les tournois
-    // Dans une vraie app, on ferait une requête spécifique
     return {
       created: createdTournaments.tournaments.filter(t => t.creatorId === req.user.sub),
       participated: createdTournaments.tournaments.filter(t => 

@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+/*import { Injectable, ExecutionContext } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Injectable()
@@ -11,4 +11,4 @@ export class CustomThrottleGuard extends ThrottlerGuard {
     
     return `${ip}-${userId}`;
   }
-}
+}*/

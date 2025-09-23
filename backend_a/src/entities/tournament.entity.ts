@@ -127,9 +127,8 @@ export class Tournament {
 
 	get canStart(): boolean {
 		return (
-			this.status == TournamentStatus.FULL &&
-			this.currentParticipants >= 2 &&
-			!this.bracketGenerated
+		  this.currentParticipants >= 2 &&
+		  (!this.bracketGenerated || this.matches.length === 0)  // Allow if no actual matches exist
 		);
-	}
+	  }
 }
