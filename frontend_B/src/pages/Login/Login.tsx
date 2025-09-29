@@ -1,17 +1,29 @@
-// frontend_B/src/pages/Login/Login.tsx
-import React, { useState } from 'react';
+// frontend_B/src/pages/Login/Login.tsx - CORRIGÉ AVEC CONTEXTE UTILISATEUR
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import { authAPI } from '../../services/api';
 import './Login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login: contextLogin, register: contextRegister, isLoggedIn, loading: userLoading, error: userError } = useUser();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showTwoFA, setShowTwoFA] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
+
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/');
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,18 +31,43 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await authAPI.login(email, password);
-      
-      if (response.data.requires2FA) {
-        setShowTwoFA(true);
-        setIsLoading(false);
-        return;
+      const success = await contextLogin(email, password);
+      if (success) {
+        navigate('/');
+      } else {
+        // Erreur gérée par le contexte, mais on peut vérifier userError
+        setError(userError || 'Erreur de connexion');
       }
-
-      localStorage.setItem('access_token', response.data.access_token);
-      navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
+      setError('Erreur de connexion');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    console.log('🔄 Début handleRegister:', { username, email });
+
+    try {
+      const success = await contextRegister(username, email, password);
+      console.log('📥 Résultat contextRegister:', success);
+
+      if (success) {
+        console.log('✅ Inscription réussie, redirection vers /');
+        navigate('/');
+      } else {
+        const errorMsg = userError || 'Erreur d\'inscription';
+        console.log('❌ Inscription échouée:', errorMsg);
+        setError(errorMsg);
+      }
+    } catch (err: any) {
+      console.error('❌ Exception dans handleRegister:', err);
+      setError('Erreur d\'inscription: ' + err.message);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -76,11 +113,13 @@ const Login: React.FC = () => {
             
             {!showTwoFA ? (
               <div className="card">
-                <h2 className="login-title">Se connecter</h2>
+                <h2 className="login-title">
+                  {isRegisterMode ? 'S\'inscrire' : 'Se connecter'}
+                </h2>
 
-                {error && (
+                {(error || userError) && (
                   <div className="login-error">
-                    {error}
+                    {error || userError}
                   </div>
                 )}
 
@@ -117,7 +156,22 @@ const Login: React.FC = () => {
                   <span>ou</span>
                 </div>
 
-                <form onSubmit={handleLogin} className="login-form">
+                <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="login-form">
+                  {isRegisterMode && (
+                    <div className="form-group">
+                      <label htmlFor="username" className="form-label">Nom d'utilisateur</label>
+                      <input
+                        id="username"
+                        type="text"
+                        className="input"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                        placeholder="votre_nom"
+                      />
+                    </div>
+                  )}
+
                   <div className="form-group">
                     <label htmlFor="email" className="form-label">Email</label>
                     <input
@@ -147,16 +201,34 @@ const Login: React.FC = () => {
                   <button
                     type="submit"
                     className="btn btn-primary btn-full"
-                    disabled={isLoading}
+                    disabled={isLoading || userLoading}
                   >
-                    {isLoading ? '⏳ Connexion...' : '🔐 Se connecter'}
+                    {isLoading || userLoading
+                      ? '⏳ Chargement...'
+                      : isRegisterMode
+                        ? '📝 S\'inscrire'
+                        : '🔐 Se connecter'
+                    }
                   </button>
                 </form>
 
                 <div className="login-footer">
-                  <a href="/forgot-password" className="login-link">
-                    Mot de passe oublié ?
-                  </a>
+                  <button
+                    type="button"
+                    className="login-link"
+                    onClick={() => {
+                      setIsRegisterMode(!isRegisterMode);
+                      setError('');
+                      setEmail('');
+                      setPassword('');
+                      setUsername('');
+                    }}
+                  >
+                    {isRegisterMode
+                      ? 'Déjà un compte ? Se connecter'
+                      : 'Pas de compte ? S\'inscrire'
+                    }
+                  </button>
                 </div>
               </div>
 

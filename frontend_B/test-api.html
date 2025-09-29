@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Backend</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4f4dd; }
+        .error { background: #f4d4d4; }
+        button { padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test API Backend</h1>
+
+    <h2>Tests de connexion</h2>
+    <button onclick="testHealth()">Test Health</button>
+    <button onclick="testTournaments()">Test Tournaments</button>
+    <button onclick="testUsers()">Test Users</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        function logResult(test, success, data, error = null) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <strong>${success ? '✅' : '❌'} ${test}</strong><br>
+                ${success ?
+                    `<pre>${JSON.stringify(data, null, 2)}</pre>` :
+                    `<span style="color: red;">${error}</span>`
+                }
+            `;
+            results.appendChild(div);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                logResult('Health Check', response.ok, data);
+            } catch (error) {
+                logResult('Health Check', false, null, error.message);
+            }
+        }
+
+        async function testTournaments() {
+            try {
+                const response = await fetch(`${API_BASE}/tournaments`);
+                const data = await response.json();
+                logResult('Tournaments API', response.ok, data);
+            } catch (error) {
+                logResult('Tournaments API', false, null, error.message);
+            }
+        }
+
+        async function testUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/users`);
+                const data = await response.json();
+                logResult('Users API', response.ok, data);
+            } catch (error) {
+                logResult('Users API', false, null, error.message);
+            }
+        }
+
+        // Test automatique au chargement
+        window.onload = function() {
+            console.log('🔗 Testing API connections...');
+            testHealth();
+        }
+    </script>
+</body>
+</html>
