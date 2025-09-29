@@ -1,40 +1,45 @@
 // frontend_B/src/pages/Profile/Profile.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import { userAPI } from '../../services/api';
 import './Profile.css';
 
-interface UserProfile {
-  id: number;
-  username: string;
-  email: string;
-  displayName?: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
+interface UserStats {
+  gamesWon: number;
+  gamesLost: number;
+  totalGames: number;
+  winRate: number;
+  tournamentsWon: number;
+  totalScore: number;
 }
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, stats, loading: userLoading } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localStats, setLocalStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const loadStats = async () => {
+      // Charger les stats seulement si on a un user
+      if (!user) return;
+      
       try {
         setIsLoading(true);
-        const response = await userAPI.getProfile();
-        setProfile(response.data);
+        const response = await userAPI.getMyStats();
+        setLocalStats(response.data);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Erreur de chargement');
+        console.log('Stats not available yet:', err.response?.data?.message);
+        // On ignore l'erreur des stats pour l'instant
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, []);
+    loadStats();
+  }, [user]); // Plus besoin de loadProfile
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -44,7 +49,7 @@ const Profile: React.FC = () => {
     });
   };
 
-  if (isLoading) {
+  if (userLoading || isLoading) {
     return (
       <div className="profile-loading">
         <div className="loading-icon">⏳</div>
@@ -53,7 +58,7 @@ const Profile: React.FC = () => {
     );
   }
 
-  if (error || !profile) {
+  if (error || !user) {
     return (
       <div className="profile-error">
         <div className="error-icon">⚠️</div>
@@ -68,11 +73,11 @@ const Profile: React.FC = () => {
         <div className="container">
           <div className="profile-header-content">
             <div className="profile-avatar-large">
-              {profile.avatar || '😀'}
+              {user.avatar || '😀'}
             </div>
             <div className="profile-header-info">
-              <h1 className="page-title">{profile.displayName || profile.username}</h1>
-              <p className="page-subtitle">@{profile.username}</p>
+              <h1 className="page-title">{user.displayName || user.username}</h1>
+              <p className="page-subtitle">@{user.username}</p>
             </div>
           </div>
         </div>
@@ -87,37 +92,37 @@ const Profile: React.FC = () => {
             <div className="profile-info-list">
               <div className="profile-info-item">
                 <strong>👤 Nom d'utilisateur :</strong><br />
-                <span className="profile-info-value">{profile.username}</span>
+                <span className="profile-info-value">{user.username}</span>
               </div>
               
               <div className="profile-info-item">
                 <strong>✉️ Email :</strong><br />
-                <span className="profile-info-value">{profile.email}</span>
+                <span className="profile-info-value">{user.email}</span>
               </div>
               
               <div className="profile-info-item">
                 <strong>🏷️ Nom d'affichage :</strong><br />
                 <span className="profile-info-value">
-                  {profile.displayName || 'Non défini'}
+                  {user.displayName || 'Non défini'}
                 </span>
               </div>
               
               <div className="profile-info-item">
                 <strong>😀 Avatar :</strong><br />
-                <span className="profile-avatar-display">{profile.avatar || '😀'}</span>
+                <span className="profile-avatar-display">{user.avatar || '😀'}</span>
               </div>
               
               <div className="profile-info-item profile-info-item-divider">
                 <strong>📅 Membre depuis :</strong><br />
                 <span className="profile-info-value">
-                  {formatDate(profile.createdAt)}
+                  {formatDate(user.createdAt)}
                 </span>
               </div>
               
               <div className="profile-info-item">
                 <strong>🔄 Dernière mise à jour :</strong><br />
                 <span className="profile-info-value">
-                  {formatDate(profile.updatedAt)}
+                  {formatDate(user.updatedAt)}
                 </span>
               </div>
             </div>
@@ -135,13 +140,42 @@ const Profile: React.FC = () => {
           <div className="card">
             <h2 className="profile-section-title">📊 Statistiques</h2>
             
-            <div className="profile-stats-placeholder">
-              <div className="placeholder-icon">📊</div>
-              <p>Les statistiques seront disponibles prochainement</p>
-              <p className="placeholder-info">
-                Endpoint /users/me/stats à implémenter dans le backend
-              </p>
-            </div>
+            {user ? (
+              <div className="profile-stats-grid">
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{user.gamesWon || 0}</div>
+                  <div className="profile-stat-label">🏆 Victoires</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{user.gamesLost || 0}</div>
+                  <div className="profile-stat-label">❌ Défaites</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{user.totalGames || 0}</div>
+                  <div className="profile-stat-label">🎮 Total Parties</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{(user.winRate || 0).toFixed(1)}%</div>
+                  <div className="profile-stat-label">📈 Taux de Victoire</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{user.tournamentsWon || 0}</div>
+                  <div className="profile-stat-label">🏆 Tournois Gagnés</div>
+                </div>
+                <div className="profile-stat-item">
+                  <div className="profile-stat-value">{user.totalScore || 0}</div>
+                  <div className="profile-stat-label">⭐ Score Total</div>
+                </div>
+              </div>
+            ) : (
+              <div className="profile-stats-placeholder">
+                <div className="placeholder-icon">📊</div>
+                <p>Aucune statistique disponible</p>
+                <p className="placeholder-info">
+                  Jouez des parties pour voir vos statistiques !
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

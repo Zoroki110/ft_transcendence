@@ -1,8 +1,9 @@
 // frontend_B/src/contexts/UserContext.tsx - CONNECTÉ AUX APIS BACKEND
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { userAPI, authAPI } from '../services/api';
 import { User, UpdateUserDto, UserStats, DashboardData } from '../types';
+import { normalizeUserData, isValidUserData } from '../utils/userUtils';
 
 interface UserContextType {
   user: User | null;
@@ -52,13 +53,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState<boolean>(false);
 
-  // Charger le profil utilisateur au démarrage si connecté
-  useEffect(() => {
-    if (isLoggedIn && !user) {
-      loadProfile();
-    }
-  }, [isLoggedIn]);
+  // Le chargement du profil se fera lors de la première utilisation du contexte
+  // via les composants qui appellent loadProfile explicitement
 
   // Connexion
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -69,30 +67,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const response = await authAPI.login(email, password);
       const { user: userData, access_token } = response.data;
 
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
+      if (!isValidUserData(userData)) {
+        throw new Error('Données utilisateur invalides reçues du serveur');
+      }
 
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
+      const completeUser = normalizeUserData(userData);
 
       localStorage.setItem('access_token', access_token);
       setUser(completeUser);
@@ -130,35 +109,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       const { user: userData, access_token } = response.data;
 
-      if (!userData || !access_token) {
+      if (!userData || !access_token || !isValidUserData(userData)) {
         console.error('❌ Données manquantes:', { userData, access_token });
         throw new Error('Données utilisateur ou token manquant');
       }
 
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
-
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
+      const completeUser = normalizeUserData(userData);
 
       localStorage.setItem('access_token', access_token);
       setUser(completeUser);
@@ -190,6 +146,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setStats(null);
       setIsLoggedIn(false);
       setError(null);
+      setProfileLoaded(false);
 
       console.log('🚪 Déconnexion réussie');
     } catch (err) {
@@ -198,38 +155,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   // Charger le profil
-  const loadProfile = async (): Promise<void> => {
+  const loadProfile = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       const response = await userAPI.getMyProfile();
       const userData = response.data;
 
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
+      if (!isValidUserData(userData)) {
+        throw new Error('Données utilisateur invalides reçues du serveur');
+      }
 
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
+      const completeUser = normalizeUserData(userData);
 
       setUser(completeUser);
+      setProfileLoaded(true);
       console.log('👤 Profil chargé:', completeUser.username);
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de chargement du profil';
@@ -243,7 +182,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Charger le profil automatiquement au démarrage si connecté (une seule fois)
+  useEffect(() => {
+    if (isLoggedIn && !user && !profileLoaded && !loading) {
+      setProfileLoaded(true);
+      loadProfile();
+    }
+  }, [isLoggedIn, user, profileLoaded, loading, loadProfile]);
 
   // Charger les statistiques
   const loadStats = async (): Promise<void> => {
