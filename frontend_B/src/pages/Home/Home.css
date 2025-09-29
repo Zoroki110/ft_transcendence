@@ -1,0 +1,91 @@
+/* frontend_B/src/pages/Home/Home.css */
+
+/* Hero Section */
+.home-hero {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.home-hero-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.home-hero-subtitle {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+}
+
+.home-hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Features Section */
+.home-features {
+  padding: 3rem 0;
+}
+
+.home-section-title {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.home-feature-card {
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.home-feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.home-feature-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.home-feature-description {
+  color: var(--gray-600);
+  font-size: 0.9rem;
+}
+
+/* CTA Section */
+.home-cta {
+  text-align: center;
+  padding: 3rem;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  margin-bottom: 3rem;
+}
+
+.home-cta-title {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.home-cta-subtitle {
+  color: var(--gray-600);
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+.home-cta-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Button Sizes */
+.btn-large {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+}
