@@ -16,30 +16,35 @@ interface UserStats {
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, stats, loading: userLoading } = useUser();
+  const { user, stats, loading: userLoading, loadProfile } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localStats, setLocalStats] = useState<UserStats | null>(null);
 
+  // Charger le profil une seule fois au montage
   useEffect(() => {
-    const loadStats = async () => {
-      // Charger les stats seulement si on a un user
-      if (!user) return;
-      
-      try {
-        setIsLoading(true);
-        const response = await userAPI.getMyStats();
-        setLocalStats(response.data);
-      } catch (err: any) {
-        console.log('Stats not available yet:', err.response?.data?.message);
-        // On ignore l'erreur des stats pour l'instant
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!user) {
+      loadProfile();
+    }
+  }, []); // Tableau de dépendances vide = une seule fois
 
-    loadStats();
-  }, [user]); // Plus besoin de loadProfile
+  // Charger les stats quand user est disponible
+  useEffect(() => {
+    if (user) {
+      const loadStats = async () => {
+        try {
+          setIsLoading(true);
+          const response = await userAPI.getMyStats();
+          setLocalStats(response.data);
+        } catch (err: any) {
+          console.log('Stats not available yet:', err.response?.data?.message);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadStats();
+    }
+  }, [user]); // Se déclenche quand user change
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
