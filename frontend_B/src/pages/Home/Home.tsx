@@ -1,6 +1,7 @@
 // frontend_B/src/pages/Home/Home.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Debug from '../../components/Debug';
 import './Home.css';
 
 const Home: React.FC = () => {
@@ -91,6 +92,9 @@ const Home: React.FC = () => {
             </Link>
           </div>
         </div>
+
+        {/* Composant de debug en développement */}
+        {import.meta.env.DEV && <Debug />}
       </div>
     </div>
   );

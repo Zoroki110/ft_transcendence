@@ -72,11 +72,15 @@ const Navigation: React.FC = () => {
   const formatStats = () => {
     if (!user) return null;
 
+    // Calcul sécurisé du taux de victoire
+    const totalGames = (user.gamesWon || 0) + (user.gamesLost || 0);
+    const winRate = totalGames > 0 ? ((user.gamesWon || 0) / totalGames) * 100 : 0;
+
     return {
-      gamesText: user.totalGames === 0 ? 'Aucune partie' : `${user.totalGames} parties`,
-      winsText: user.gamesWon === 0 ? 'Aucune victoire' : `${user.gamesWon} victoires`,
-      winRateText: user.totalGames === 0 ? '0%' : `${user.winRate.toFixed(1)}%`,
-      tournamentsText: user.tournamentsWon === 0 ? 'Aucun tournoi' : `${user.tournamentsWon} tournois`
+      gamesText: totalGames === 0 ? 'Aucune partie' : `${totalGames} parties`,
+      winsText: (user.gamesWon || 0) === 0 ? 'Aucune victoire' : `${user.gamesWon} victoires`,
+      winRateText: `${winRate.toFixed(1)}%`,
+      tournamentsText: (user.tournamentsWon || 0) === 0 ? 'Aucun tournoi' : `${user.tournamentsWon} tournois`
     };
   };
 

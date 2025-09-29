@@ -1,70 +1,57 @@
-// frontend_B/src/pages/Tournaments/Tournaments.tsx
-import React, { useState, useEffect } from 'react';
+// frontend_B/src/pages/Tournaments/Tournaments.tsx - CORRIGÉ AVEC HOOK
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { tournamentAPI } from '../../services/api';
+import { useTournaments } from '../../hooks/useTournaments';
+import { Tournament } from '../../types';
 import './Tournaments.css';
 
-interface Tournament {
-  id: number;
-  name: string;
-  description: string;
-  type: 'single_elimination' | 'double_elimination' | 'round_robin';
-  status: 'pending' | 'in_progress' | 'completed';
-  maxParticipants: number;
-  currentParticipants: number;
-  createdAt: string;
-  creator: {
-    username: string;
-  };
-}
-
 const Tournaments: React.FC = () => {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
     type: 'all',
     search: ''
   });
 
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        setIsLoading(true);
-        const params: any = {};
+  // Utiliser le hook corrigé
+  const {
+    tournaments,
+    loading: isLoading,
+    error,
+    updateQuery
+  } = useTournaments();
 
-        if (filters.status !== 'all') {
-          params.status = filters.status;
-        }
-        if (filters.type !== 'all') {
-          params.type = filters.type;
-        }
+  // Mettre à jour les filtres API quand les filtres locaux changent
+  const handleStatusChange = (status: string) => {
+    setFilters(prev => ({ ...prev, status }));
+    if (status !== 'all') {
+      updateQuery({ status: status as any });
+    } else {
+      updateQuery({ status: undefined });
+    }
+  };
 
-        const response = await tournamentAPI.getTournaments(params);
-        setTournaments(response.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Erreur de chargement');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const handleTypeChange = (type: string) => {
+    setFilters(prev => ({ ...prev, type }));
+    if (type !== 'all') {
+      updateQuery({ type: type as any });
+    } else {
+      updateQuery({ type: undefined });
+    }
+  };
 
-    fetchTournaments();
-  }, [filters.status, filters.type]);
-
-  const filteredTournaments = tournaments.filter(tournament => 
-    tournament.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-    tournament.description.toLowerCase().includes(filters.search.toLowerCase())
+  const filteredTournaments = tournaments.filter(tournament =>
+    (tournament.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+    (tournament.description || '').toLowerCase().includes(filters.search.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      pending: { text: '⏳ En attente', color: 'var(--warning)' },
+      waiting: { text: '⏳ En attente', color: 'var(--warning)' },
       in_progress: { text: '▶️ En cours', color: 'var(--success)' },
-      completed: { text: '✅ Terminé', color: 'var(--gray-600)' }
+      finished: { text: '✅ Terminé', color: 'var(--gray-600)' },
+      cancelled: { text: '❌ Annulé', color: 'var(--danger)' }
     };
-    return badges[status as keyof typeof badges] || badges.pending;
+    return badges[status as keyof typeof badges] || badges.waiting;
   };
 
   const getTypeName = (type: string) => {
@@ -101,12 +88,13 @@ const Tournaments: React.FC = () => {
               <select
                 className="input"
                 value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                onChange={(e) => handleStatusChange(e.target.value)}
               >
                 <option value="all">📊 Tous</option>
-                <option value="pending">⏳ En attente</option>
+                <option value="waiting">⏳ En attente</option>
                 <option value="in_progress">▶️ En cours</option>
-                <option value="completed">✅ Terminés</option>
+                <option value="finished">✅ Terminés</option>
+                <option value="cancelled">❌ Annulés</option>
               </select>
             </div>
 
@@ -115,7 +103,7 @@ const Tournaments: React.FC = () => {
               <select
                 className="input"
                 value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                onChange={(e) => handleTypeChange(e.target.value)}
               >
                 <option value="all">🎮 Tous</option>
                 <option value="single_elimination">🏆 Élimination simple</option>
@@ -199,7 +187,7 @@ const Tournaments: React.FC = () => {
 
                   <div className="tournament-card-footer">
                     <span className="tournament-creator">
-                      Par {tournament.creator.username}
+                      Par {tournament.creator?.username || 'Inconnu'}
                     </span>
                     <Link 
                       to={`/tournaments/${tournament.id}`} 

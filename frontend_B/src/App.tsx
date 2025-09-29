@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { TournamentProvider } from './contexts/TournamentContext';
 import { UserProvider } from './contexts/UserContext';
 import Navigation from './components/Navigation';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import Home from './pages/Home/Home';
@@ -17,18 +18,21 @@ import Game from './pages/Game/Game';
 import Login from './pages/Login/Login';
 import Settings from './pages/Settings/Settings';
 import History from './pages/History/History';
+import APITest from './pages/APITest/APITest';
+import TestSignup from './pages/TestSignup';
 
 import './App.css';
 
 function App() {
   return (
-    <UserProvider>
-      <TournamentProvider>
-        <Router>
-          <div className="app">
-            <Navigation />
-            <main className="main-content">
-              <Routes>
+    <ErrorBoundary>
+      <UserProvider>
+        <TournamentProvider>
+          <Router>
+            <div className="app">
+              <Navigation />
+              <main className="main-content">
+                <Routes>
                 {/* Pages publiques */}
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
@@ -48,12 +52,17 @@ function App() {
                 
                 {/* Classement */}
                 <Route path="/leaderboard" element={<Leaderboard />} />
+
+                {/* Page de test des APIs */}
+                <Route path="/api-test" element={<APITest />} />
+                <Route path="/test-signup" element={<TestSignup />} />
               </Routes>
             </main>
           </div>
         </Router>
       </TournamentProvider>
     </UserProvider>
+    </ErrorBoundary>
   );
 }
 
