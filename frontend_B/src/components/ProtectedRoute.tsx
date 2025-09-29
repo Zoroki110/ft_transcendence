@@ -9,11 +9,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isLoggedIn, loading, user } = useUser();
+  const { isLoggedIn, loading } = useUser();
   const location = useLocation();
 
   // Afficher un loader pendant la vérification de l'authentification
-  if (loading || (isLoggedIn && !user)) {
+  if (loading) {
     return (
       <div className="protected-route-loading">
         <div className="loading-spinner">⏳</div>
@@ -23,7 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // Rediriger vers login si pas connecté
-  if (!isLoggedIn || !user) {
+  if (!isLoggedIn) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

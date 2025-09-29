@@ -53,7 +53,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState<boolean>(false);
 
   // Le chargement du profil se fera lors de la première utilisation du contexte
   // via les composants qui appellent loadProfile explicitement
@@ -146,7 +145,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setStats(null);
       setIsLoggedIn(false);
       setError(null);
-      setProfileLoaded(false);
 
       console.log('🚪 Déconnexion réussie');
     } catch (err) {
@@ -168,7 +166,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const completeUser = normalizeUserData(userData);
 
       setUser(completeUser);
-      setProfileLoaded(true);
       console.log('👤 Profil chargé:', completeUser.username);
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de chargement du profil';
@@ -184,13 +181,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   }, []);
 
-  // Charger le profil automatiquement au démarrage si connecté (une seule fois)
-  useEffect(() => {
-    if (isLoggedIn && !user && !profileLoaded && !loading) {
-      setProfileLoaded(true);
-      loadProfile();
-    }
-  }, [isLoggedIn, user, profileLoaded, loading, loadProfile]);
+  // Le chargement du profil se fait maintenant à la demande via loadProfile()
+  // Plus de chargement automatique pour éviter les boucles
 
   // Charger les statistiques
   const loadStats = async (): Promise<void> => {
