@@ -21,12 +21,13 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [localStats, setLocalStats] = useState<UserStats | null>(null);
 
-  // Charger le profil une seule fois au montage
+  // Charger le profil UNE SEULE FOIS au montage
   useEffect(() => {
-    if (!user) {
+    if (!user && !userLoading) {
       loadProfile();
     }
-  }, []); // Tableau de dépendances vide = une seule fois
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // On veut vraiment l'exécuter qu'une seule fois
 
   // Charger les stats quand user est disponible
   useEffect(() => {
@@ -44,7 +45,7 @@ const Profile: React.FC = () => {
       };
       loadStats();
     }
-  }, [user]); // Se déclenche quand user change
+  }, [user]);
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('fr-FR', {

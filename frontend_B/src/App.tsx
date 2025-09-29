@@ -6,7 +6,7 @@ import { TournamentProvider } from './contexts/TournamentContext';
 import { UserProvider } from './contexts/UserContext';
 import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
-import OnlineStatusManager from './components/OnlineStatusManager';
+// import OnlineStatusManager from './components/OnlineStatusManager'; // ← DÉSACTIVÉ temporairement
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
@@ -32,7 +32,7 @@ function App() {
         <TournamentProvider>
           <Router>
             <div className="app">
-              <OnlineStatusManager />
+              {/* <OnlineStatusManager /> */}
               <Navigation />
               <main className="main-content">
                 <Routes>
