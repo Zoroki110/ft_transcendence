@@ -1,35 +1,59 @@
+// frontend_B/src/App.tsx - AVEC TOUTES LES ROUTES
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navigation from './components/layout/Navigation';
-import Home from './pages/Home';
-import TournamentList from './pages/tournaments/TournamentList';
-import CreateTournament from './pages/tournaments/CreateTournament';
-import MyTournaments from './components/layout/MyTournaments';
-import Game from './components/layout/Game';
-import Profile from './components/layout/Profile';
-import { useTranslations } from './hooks/useTranslations';
-import './styles/app.css';
+import { TournamentProvider } from './contexts/TournamentContext';
+import { UserProvider } from './contexts/UserContext';
+import Navigation from './components/Navigation';
+
+// Pages
+import Home from './pages/Home/Home';
+import Tournaments from './pages/Tournaments/Tournaments';
+import CreateTournament from './pages/CreatTournament/CreateTournament';
+import TournamentDetail from './pages/TournamentDetail/TournamentDetail';
+import Profile from './pages/Profile/Profile';
+import Leaderboard from './pages/Leaderboard/Leaderboard';
+import Game from './pages/Game/Game';
+import Login from './pages/Login/Login';
+import Settings from './pages/Settings/Settings';
+import History from './pages/History/History';
+
+import './App.css';
 
 function App() {
-  const { t } = useTranslations();
-
   return (
-    <Router>
-      <div className="App">
-        <Navigation />
-        
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/game" element={<Game />} />
-            <Route path="/tournaments" element={<TournamentList />} />
-            <Route path="/create-tournament" element={<CreateTournament />} />
-            <Route path="/my-tournaments" element={<MyTournaments />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <UserProvider>
+      <TournamentProvider>
+        <Router>
+          <div className="app">
+            <Navigation />
+            <main className="main-content">
+              <Routes>
+                {/* Pages publiques */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                
+                {/* Tournois */}
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/tournaments/:id" element={<TournamentDetail />} />
+                <Route path="/create-tournament" element={<CreateTournament />} />
+                
+                {/* Jeu */}
+                <Route path="/game/:gameId" element={<Game />} />
+                
+                {/* Utilisateur */}
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/history" element={<History />} />
+                
+                {/* Classement */}
+                <Route path="/leaderboard" element={<Leaderboard />} />
+              </Routes>
+            </main>
+          </div>
+        </Router>
+      </TournamentProvider>
+    </UserProvider>
   );
 }
 
