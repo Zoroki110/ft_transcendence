@@ -6,6 +6,8 @@ import { TournamentProvider } from './contexts/TournamentContext';
 import { UserProvider } from './contexts/UserContext';
 import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
+// import OnlineStatusManager from './components/OnlineStatusManager'; // ← DÉSACTIVÉ temporairement
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Home from './pages/Home/Home';
@@ -30,6 +32,7 @@ function App() {
         <TournamentProvider>
           <Router>
             <div className="app">
+              {/* <OnlineStatusManager /> */}
               <Navigation />
               <main className="main-content">
                 <Routes>
@@ -40,15 +43,16 @@ function App() {
                 {/* Tournois */}
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/tournaments/:id" element={<TournamentDetail />} />
-                <Route path="/create-tournament" element={<CreateTournament />} />
+                <Route path="/create-tournament" element={<ProtectedRoute><CreateTournament /></ProtectedRoute>} />
                 
                 {/* Jeu */}
+                <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
                 <Route path="/game/:gameId" element={<Game />} />
                 
-                {/* Utilisateur */}
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/history" element={<History />} />
+                {/* Utilisateur - Routes protégées */}
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
                 
                 {/* Classement */}
                 <Route path="/leaderboard" element={<Leaderboard />} />

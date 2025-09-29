@@ -1,5 +1,6 @@
 // frontend_B/src/pages/Settings/Settings.tsx
 import React, { useState, useEffect } from 'react';
+import { useUser } from '../../contexts/UserContext';
 import { userAPI, authAPI } from '../../services/api';
 import './Settings.css';
 
@@ -11,15 +12,15 @@ interface UserSettings {
 }
 
 const Settings: React.FC = () => {
+  const { user, loading: userLoading, updateProfile: contextUpdateProfile } = useUser();
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
-  const [userId, setUserId] = useState<number | null>(null);
   const [settings, setSettings] = useState<UserSettings>({
     username: '',
     displayName: '',
     email: '',
     avatar: '😀'
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
@@ -28,36 +29,37 @@ const Settings: React.FC = () => {
   const avatars = ['😀', '😎', '🎮', '🕹️', '👤', '🎯', '🏆', '⚡', '🔥', '💎'];
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const response = await userAPI.getProfile();
-        setUserId(response.data.id);
-        setSettings({
-          username: response.data.username,
-          displayName: response.data.displayName || '',
-          email: response.data.email,
-          avatar: response.data.avatar || '😀'
-        });
-      } catch (err: any) {
-        setMessage({ type: 'error', text: 'Erreur de chargement' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSettings();
-  }, []);
+    if (user) {
+      setSettings({
+        username: user.username,
+        displayName: user.displayName || '',
+        email: user.email,
+        avatar: user.avatar || '😀'
+      });
+      setTwoFAEnabled(false); // TODO: récupérer le vrai statut 2FA du backend
+    }
+  }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!user) return;
     
     setIsSaving(true);
     setMessage(null);
 
     try {
-      await userAPI.updateProfile(userId, settings);
-      setMessage({ type: 'success', text: 'Paramètres sauvegardés !' });
+      // Utiliser la méthode du contexte pour mettre à jour le profil
+      const success = await contextUpdateProfile({
+        username: settings.username,
+        email: settings.email,
+        displayName: settings.displayName || null
+      });
+
+      if (success) {
+        setMessage({ type: 'success', text: 'Paramètres sauvegardés !' });
+      } else {
+        setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
+      }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur de sauvegarde' });
     } finally {
@@ -88,7 +90,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (userLoading || !user) {
     return (
       <div className="settings-loading">
         <div className="loading-icon">⏳</div>

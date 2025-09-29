@@ -357,19 +357,25 @@ const Navigation: React.FC = () => {
               )}
             </div>
           ) : (
-            <button className="login-button" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              transition: 'all 0.2s ease'
-            }}>
+            <button 
+              className="login-button" 
+              onClick={() => navigate('/login')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: '#667eea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#5a67d8'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#667eea'}
+            >
               <span>🔐</span>
               <span>Se connecter</span>
             </button>

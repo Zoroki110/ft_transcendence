@@ -1,5 +1,31 @@
 /* frontend_B/src/pages/Login/Login.css */
 
+/* Already logged in message */
+.already-logged-message {
+  text-align: center;
+  padding: 2rem;
+}
+
+.success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.already-logged-message h2 {
+  color: var(--success);
+  margin-bottom: 1rem;
+}
+
+.already-logged-message p {
+  margin-bottom: 0.5rem;
+  color: var(--gray-600);
+}
+
+.already-logged-message .form-actions {
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
 .login-container {
   display: flex;
   justify-content: center;
