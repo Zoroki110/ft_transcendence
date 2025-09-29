@@ -55,7 +55,17 @@ export class AuthController {
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        avatar: user.avatar,
+        displayName: user.displayName,
+        gamesWon: user.gamesWon,
+        gamesLost: user.gamesLost,
+        tournamentsWon: user.tournamentsWon,
+        totalScore: user.totalScore,
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
       access_token 
     };

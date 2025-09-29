@@ -1,8 +1,9 @@
-// frontend_B/src/contexts/UserContext.tsx - CONNECTÉ AUX APIS BACKEND
+// frontend_B/src/contexts/UserContext.tsx - CORRIGÉ POUR ÉVITER LES BOUCLES
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { userAPI, authAPI } from '../services/api';
 import { User, UpdateUserDto, UserStats, DashboardData } from '../types';
+import { normalizeUserData, isValidUserData } from '../utils/userUtils';
 
 interface UserContextType {
   user: User | null;
@@ -53,15 +54,88 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger le profil utilisateur au démarrage si connecté
-  useEffect(() => {
-    if (isLoggedIn && !user) {
-      loadProfile();
+  // Déconnexion - DÉFINIE EN PREMIER
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      localStorage.removeItem('access_token');
+      setUser(null);
+      setStats(null);
+      setIsLoggedIn(false);
+      setError(null);
+      console.log('Déconnexion réussie');
+    } catch (err) {
+      console.error('Erreur lors de la déconnexion:', err);
     }
-  }, [isLoggedIn]);
+  }, []);
+
+  // Charger le profil
+  const loadProfile = useCallback(async (): Promise<void> => {
+    if (loading) {
+      console.log('loadProfile déjà en cours, ignorer');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Chargement du profil...');
+      
+      const response = await userAPI.getMyProfile();
+      const userData = response.data;
+
+      if (!isValidUserData(userData)) {
+        throw new Error('Données utilisateur invalides reçues du serveur');
+      }
+
+      const completeUser = normalizeUserData(userData);
+      setUser(completeUser);
+      console.log('Profil chargé:', completeUser.username);
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erreur de chargement du profil';
+      setError(message);
+      console.error('Erreur chargement profil:', message);
+
+      if (err.response?.status === 401) {
+        console.log('Erreur 401, déconnexion...');
+        await logout();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, logout]);
+
+  // Charger les statistiques
+  const loadStats = useCallback(async (): Promise<void> => {
+    try {
+      const response = await userAPI.getMyStats();
+      setStats(response.data);
+      console.log('Stats chargées:', response.data);
+    } catch (err: any) {
+      console.error('Erreur chargement stats:', err.response?.data?.message);
+    }
+  }, []);
+
+  // Charger le dashboard complet
+  const loadDashboard = useCallback(async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const response = await userAPI.getDashboard();
+      const dashboardData: DashboardData = response.data;
+
+      setUser(dashboardData.user);
+      setStats(dashboardData.stats);
+
+      console.log('Dashboard chargé:', dashboardData);
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erreur de chargement du dashboard';
+      setError(message);
+      console.error('Erreur chargement dashboard:', message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Connexion
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
@@ -69,60 +143,46 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const response = await authAPI.login(email, password);
       const { user: userData, access_token } = response.data;
 
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
+      if (!isValidUserData(userData)) {
+        throw new Error('Données utilisateur invalides reçues du serveur');
+      }
 
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
+      const completeUser = normalizeUserData(userData);
 
       localStorage.setItem('access_token', access_token);
       setUser(completeUser);
       setIsLoggedIn(true);
 
       // Charger les stats après connexion
-      await loadStats();
+      try {
+        const statsResponse = await userAPI.getMyStats();
+        setStats(statsResponse.data);
+      } catch (statsErr) {
+        console.log('Stats non disponibles');
+      }
 
-      console.log('✅ Connexion réussie:', userData.username);
+      console.log('Connexion réussie:', userData.username);
       return true;
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de connexion';
       setError(message);
-      console.error('❌ Erreur de connexion:', message);
+      console.error('Erreur de connexion:', message);
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Inscription
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = useCallback(async (username: string, email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('🔄 Début inscription:', { username, email });
+      console.log('Début inscription:', { username, email });
 
       const response = await authAPI.register(username, email, password);
-      console.log('📥 Réponse inscription:', response);
+      console.log('Réponse inscription:', response);
 
       if (!response || !response.data) {
         throw new Error('Réponse invalide du serveur');
@@ -130,46 +190,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       const { user: userData, access_token } = response.data;
 
-      if (!userData || !access_token) {
-        console.error('❌ Données manquantes:', { userData, access_token });
+      if (!userData || !access_token || !isValidUserData(userData)) {
+        console.error('Données manquantes:', { userData, access_token });
         throw new Error('Données utilisateur ou token manquant');
       }
 
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
-
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
+      const completeUser = normalizeUserData(userData);
 
       localStorage.setItem('access_token', access_token);
       setUser(completeUser);
       setIsLoggedIn(true);
 
-      console.log('✅ Inscription réussie:', userData);
+      console.log('Inscription réussie:', userData);
       return true;
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Erreur d\'inscription';
       setError(message);
-      console.error('❌ Erreur d\'inscription complète:', {
+      console.error('Erreur d\'inscription complète:', {
         error: err,
         message,
         response: err.response,
@@ -179,105 +216,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Déconnexion
-  const logout = async (): Promise<void> => {
-    try {
-      // Pas besoin d'appeler l'API pour logout simple
-      localStorage.removeItem('access_token');
-      setUser(null);
-      setStats(null);
-      setIsLoggedIn(false);
-      setError(null);
-
-      console.log('🚪 Déconnexion réussie');
-    } catch (err) {
-      console.error('❌ Erreur lors de la déconnexion:', err);
-    }
-  };
-
-  // Charger le profil
-  const loadProfile = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const response = await userAPI.getMyProfile();
-      const userData = response.data;
-
-      // Compléter les données utilisateur avec les valeurs par défaut
-      const gamesWon = userData.gamesWon || 0;
-      const gamesLost = userData.gamesLost || 0;
-      const totalGames = gamesWon + gamesLost;
-      const winRate = totalGames > 0 ? (gamesWon / totalGames) * 100 : 0;
-
-      const completeUser: User = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        displayName: userData.displayName,
-        gamesWon,
-        gamesLost,
-        tournamentsWon: userData.tournamentsWon || 0,
-        totalScore: userData.totalScore || 0,
-        isOnline: userData.isOnline || true,
-        lastSeen: userData.lastSeen,
-        createdAt: userData.createdAt || new Date().toISOString(),
-        updatedAt: userData.updatedAt,
-        // Champs calculés
-        winRate,
-        totalGames
-      };
-
-      setUser(completeUser);
-      console.log('👤 Profil chargé:', completeUser.username);
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur de chargement du profil';
-      setError(message);
-      console.error('❌ Erreur chargement profil:', message);
-
-      // Si erreur 401, déconnecter
-      if (err.response?.status === 401) {
-        await logout();
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Charger les statistiques
-  const loadStats = async (): Promise<void> => {
-    try {
-      const response = await userAPI.getMyStats();
-      setStats(response.data);
-      console.log('📊 Stats chargées:', response.data);
-    } catch (err: any) {
-      console.error('❌ Erreur chargement stats:', err.response?.data?.message);
-    }
-  };
-
-  // Charger le dashboard complet
-  const loadDashboard = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const response = await userAPI.getDashboard();
-      const dashboardData: DashboardData = response.data;
-
-      setUser(dashboardData.user);
-      setStats(dashboardData.stats);
-
-      console.log('🎯 Dashboard chargé:', dashboardData);
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur de chargement du dashboard';
-      setError(message);
-      console.error('❌ Erreur chargement dashboard:', message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   // Mettre à jour le profil
-  const updateProfile = async (data: UpdateUserDto): Promise<boolean> => {
+  const updateProfile = useCallback(async (data: UpdateUserDto): Promise<boolean> => {
     if (!user) return false;
 
     try {
@@ -285,72 +227,75 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const response = await userAPI.updateProfile(user.id, data);
       setUser(response.data);
 
-      console.log('✅ Profil mis à jour:', response.data);
+      console.log('Profil mis à jour:', response.data);
       return true;
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de mise à jour';
       setError(message);
-      console.error('❌ Erreur mise à jour profil:', message);
+      console.error('Erreur mise à jour profil:', message);
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  // Mettre à jour le statut en ligne
-  const setOnlineStatus = async (isOnline: boolean): Promise<void> => {
+  // Mettre à jour le statut en ligne - CORRECTION ICI AVEC useCallback
+  const setOnlineStatus = useCallback(async (isOnline: boolean): Promise<void> => {
     try {
       await userAPI.updateOnlineStatus(isOnline);
-      if (user) {
-        setUser({ ...user, isOnline });
-      }
-      console.log(`🟢 Statut ${isOnline ? 'en ligne' : 'hors ligne'} mis à jour`);
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, isOnline };
+      });
+      console.log(`Statut ${isOnline ? 'en ligne' : 'hors ligne'} mis à jour`);
     } catch (err) {
-      console.error('❌ Erreur mise à jour statut:', err);
+      console.error('Erreur mise à jour statut:', err);
     }
-  };
+  }, []); // Pas de dépendance user, on utilise setUser avec fonction
 
   // Upload avatar
-  const uploadAvatar = async (file: File): Promise<boolean> => {
+  const uploadAvatar = useCallback(async (file: File): Promise<boolean> => {
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append('avatar', file);
 
       const response = await userAPI.uploadAvatar(formData);
-      if (user) {
-        setUser({ ...user, avatar: response.data.avatar });
-      }
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, avatar: response.data.avatar };
+      });
 
-      console.log('✅ Avatar uploadé:', response.data);
+      console.log('Avatar uploadé:', response.data);
       return true;
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur d\'upload';
       setError(message);
-      console.error('❌ Erreur upload avatar:', message);
+      console.error('Erreur upload avatar:', message);
       return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Supprimer avatar
-  const removeAvatar = async (): Promise<boolean> => {
+  const removeAvatar = useCallback(async (): Promise<boolean> => {
     try {
       await userAPI.removeAvatar();
-      if (user) {
-        setUser({ ...user, avatar: undefined });
-      }
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return { ...prevUser, avatar: undefined };
+      });
 
-      console.log('✅ Avatar supprimé');
+      console.log('Avatar supprimé');
       return true;
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de suppression';
       setError(message);
-      console.error('❌ Erreur suppression avatar:', message);
+      console.error('Erreur suppression avatar:', message);
       return false;
     }
-  };
+  }, []);
 
   const contextValue: UserContextType = {
     user,

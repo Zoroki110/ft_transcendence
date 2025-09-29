@@ -7,7 +7,7 @@ import './Login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login: contextLogin, register: contextRegister, isLoggedIn, loading: userLoading, error: userError } = useUser();
+  const { user, login: contextLogin, register: contextRegister, isLoggedIn, loading: userLoading, error: userError, logout } = useUser();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,12 +18,16 @@ const Login: React.FC = () => {
   const [showTwoFA, setShowTwoFA] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
 
-  // Rediriger si déjà connecté
+  // Rediriger si déjà connecté (avec délai pour permettre de voir la page)
   useEffect(() => {
-    if (isLoggedIn) {
-      navigate('/');
+    if (isLoggedIn && user) {
+      const timer = setTimeout(() => {
+        navigate('/');
+      }, 2000); // 2 secondes de délai
+      
+      return () => clearTimeout(timer);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +101,48 @@ const Login: React.FC = () => {
     
     window.location.href = oauthUrls[provider];
   };
+
+  // Si déjà connecté, afficher un message différent
+  if (isLoggedIn && user) {
+    return (
+      <div className="login-page">
+        <div className="page-header">
+          <div className="container">
+            <h1 className="page-title">✅ Déjà connecté</h1>
+            <p className="page-subtitle">Vous êtes déjà connecté en tant que {user.username}</p>
+          </div>
+        </div>
+        
+        <div className="container">
+          <div className="login-container">
+            <div className="card">
+              <div className="already-logged-message">
+                <div className="success-icon">👋</div>
+                <h2>Bonjour {user.displayName || user.username} !</h2>
+                <p>Vous êtes déjà connecté à votre compte.</p>
+                <p>Vous serez redirigé vers l'accueil dans quelques secondes...</p>
+                
+                <div className="form-actions">
+                  <button
+                    onClick={() => navigate('/')}
+                    className="btn btn-primary"
+                  >
+                    🏠 Aller à l'accueil
+                  </button>
+                  <button
+                    onClick={() => logout()}
+                    className="btn btn-secondary"
+                  >
+                    🚪 Se déconnecter
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">
