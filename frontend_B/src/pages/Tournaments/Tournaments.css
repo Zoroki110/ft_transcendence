@@ -1,0 +1,149 @@
+/* frontend_B/src/pages/Tournaments/Tournaments.css */
+
+.tournaments-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tournaments-filters {
+  margin-bottom: 2rem;
+}
+
+.filters-title {
+  margin-bottom: 1rem;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* Loading & Error States */
+.tournaments-loading,
+.tournaments-error {
+  text-align: center;
+  padding: 3rem;
+}
+
+.loading-icon,
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  color: var(--danger);
+}
+
+/* Empty State */
+.tournaments-empty {
+  text-align: center;
+  padding: 3rem;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-text {
+  color: var(--gray-600);
+  margin-bottom: 1rem;
+}
+
+/* Tournament Card */
+.tournament-card {
+  transition: transform 0.2s;
+}
+
+.tournament-card:hover {
+  transform: translateY(-5px);
+}
+
+.tournament-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.tournament-name {
+  margin: 0;
+  flex: 1;
+}
+
+.tournament-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  fontSize:0.85rem;
+  font-weight: bold;
+}
+
+.tournament-description {
+  color: var(--gray-600);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Progress */
+.tournament-progress {
+  margin-bottom: 1rem;
+}
+
+.tournament-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.tournament-participants {
+  font-weight: bold;
+}
+
+.tournament-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tournament-progress-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+/* Footer */
+.tournament-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.tournament-creator {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tournaments-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .tournaments-header-content .btn {
+    width: 100%;
+  }
+}

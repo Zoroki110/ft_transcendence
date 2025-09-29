@@ -1,0 +1,125 @@
+/* frontend_B/src/pages/CreateTournament/CreateTournament.css */
+
+.create-tournament-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.form-section-title {
+  margin-bottom: 2rem;
+}
+
+.form-error-global {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  margin-top: 0.25rem;
+  text-align: right;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Type Options */
+.type-options {
+  display: grid;
+  gap: 1rem;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--gray-300);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.type-option:hover {
+  border-color: var(--primary);
+}
+
+.type-option.active {
+  border-color: var(--primary);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.type-radio {
+  cursor: pointer;
+}
+
+.type-content {
+  flex: 1;
+}
+
+.type-label {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.type-description {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+}
+
+/* Summary */
+.form-summary {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--gray-100);
+  border-radius: 8px;
+}
+
+.summary-title {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.summary-content {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.summary-empty {
+  color: var(--gray-500);
+}
+
+/* Actions */
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+  }
+}
