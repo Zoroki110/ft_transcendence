@@ -1,11 +1,4 @@
-/* frontend_B/src/components/Navigation.css - FICHIER COMPLET */
-
-/* Variables pour cohérence */
-:root {
-  --nav-height: 70px;
-  --nav-primary: #667eea;
-  --nav-secondary: #764ba2;
-}
+/* frontend_B/src/components/Navigation.css - AVEC TES VARIABLES CSS */
 
 /* Navigation de base */
 .navigation {
@@ -16,7 +9,8 @@
   z-index: 1000;
   background: var(--white);
   border-bottom: 1px solid var(--gray-200);
-  height: var(--nav-height);
+  height: 70px;
+  box-shadow: var(--shadow);
 }
 
 .nav-container {
@@ -41,6 +35,10 @@
 
 .brand-icon {
   font-size: 1.5rem;
+}
+
+.brand-text {
+  color: var(--gray-900);
 }
 
 .nav-links {
@@ -68,7 +66,7 @@
 
 .nav-link.active {
   background: var(--primary);
-  color: white;
+  color: var(--white);
 }
 
 .nav-user {
@@ -103,7 +101,7 @@
   width: 36px;
   height: 36px;
   background: var(--primary);
-  color: white;
+  color: var(--white);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -133,11 +131,11 @@
   top: 100%;
   right: 0;
   width: 280px;
-  background: white;
+  background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  z-index: 1001;
   margin-top: 0.5rem;
   animation: dropdownSlide 0.2s ease-out;
   overflow: hidden;
@@ -160,8 +158,8 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-secondary) 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--white);
 }
 
 .dropdown-avatar {
@@ -259,7 +257,7 @@
 }
 
 .stat-text {
-  color: var(--gray-600);
+  color: var(--gray-500);
 }
 
 .stat-text strong {
@@ -267,14 +265,14 @@
   font-weight: 600;
 }
 
-/* Login Button (si pas connecté) */
+/* Login Button */
 .login-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: var(--primary);
-  color: white;
+  color: var(--white);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -283,7 +281,7 @@
 }
 
 .login-button:hover {
-  background: #5a67d8;
+  background: var(--secondary);
   transform: translateY(-1px);
 }
 
@@ -332,7 +330,11 @@
   }
 }
 
-/* Style pour éviter les conflits */
+/* Éviter les conflits */
 .profile-dropdown * {
   box-sizing: border-box;
+}
+
+.profile-dropdown .dropdown-item {
+  font-family: inherit;
 }

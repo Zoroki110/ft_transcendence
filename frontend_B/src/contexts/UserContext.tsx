@@ -1,4 +1,4 @@
-// frontend_B/src/contexts/UserContext.tsx - GESTION DU PROFIL UTILISATEUR
+// frontend_B/src/contexts/UserContext.tsx - AVEC FONCTION LOGOUT
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
@@ -40,6 +40,7 @@ interface UserContextType {
   simulateGameWin: () => void;
   simulateGameLoss: () => void;
   simulateTournamentWin: () => void;
+  logout: () => void; // 🆕 Fonction de déconnexion
 }
 
 const UserContext = createContext<UserContextType | null>(null);
@@ -81,6 +82,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     totalGames: 0,
   });
 
+  // État de connexion
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+
   // Mettre à jour le profil
   const updateProfile = (data: UpdateProfileData) => {
     if (!user) return;
@@ -92,6 +96,22 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       console.log('👤 Profil mis à jour:', updated);
       return updated;
     });
+  };
+
+  // 🆕 Fonction de déconnexion
+  const logout = () => {
+    console.log('🚪 Déconnexion de l\'utilisateur');
+    setIsLoggedIn(false);
+    setUser(null);
+    
+    // TODO: Appeler l'API de déconnexion
+    // await fetch('/api/auth/logout', { method: 'POST' });
+    
+    // TODO: Supprimer le token du localStorage
+    // localStorage.removeItem('authToken');
+    
+    // TODO: Rediriger vers la page de connexion si nécessaire
+    // window.location.href = '/login';
   };
 
   // Simuler une victoire (pour tester les stats)
@@ -114,7 +134,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         lastSeen: new Date().toISOString(),
       };
       
-      console.log('🎉 Victoire simulée !', updated);
+      console.log('🎉 Victoire simulée ! Nouvelles stats:', {
+        wins: updated.gamesWon,
+        total: updated.totalGames,
+        winRate: updated.winRate.toFixed(1) + '%',
+        score: updated.totalScore
+      });
+      
       return updated;
     });
   };
@@ -128,23 +154,26 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       
       const newGamesLost = prev.gamesLost + 1;
       const newTotalGames = prev.gamesWon + newGamesLost;
-      const newScore = Math.max(0, prev.totalScore - 20); // -20 points par défaite
       
       const updated = {
         ...prev,
         gamesLost: newGamesLost,
-        totalScore: newScore,
         totalGames: newTotalGames,
         winRate: newTotalGames > 0 ? (prev.gamesWon / newTotalGames) * 100 : 0,
         lastSeen: new Date().toISOString(),
       };
       
-      console.log('😢 Défaite simulée !', updated);
+      console.log('😞 Défaite simulée ! Nouvelles stats:', {
+        losses: updated.gamesLost,
+        total: updated.totalGames,
+        winRate: updated.winRate.toFixed(1) + '%'
+      });
+      
       return updated;
     });
   };
 
-  // Simuler victoire de tournoi
+  // Simuler une victoire de tournoi
   const simulateTournamentWin = () => {
     if (!user) return;
     
@@ -158,22 +187,27 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         lastSeen: new Date().toISOString(),
       };
       
-      console.log('🏆 Tournoi gagné !', updated);
+      console.log('🏆 Tournoi gagné ! Nouvelles stats:', {
+        tournaments: updated.tournamentsWon,
+        score: updated.totalScore
+      });
+      
       return updated;
     });
   };
 
-  const value = {
+  const contextValue: UserContextType = {
     user,
-    isLoggedIn: !!user,
+    isLoggedIn,
     updateProfile,
     simulateGameWin,
     simulateGameLoss,
     simulateTournamentWin,
+    logout, // 🆕 Ajout de la fonction logout
   };
 
   return (
-    <UserContext.Provider value={value}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );
