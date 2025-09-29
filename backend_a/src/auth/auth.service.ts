@@ -26,6 +26,23 @@ export class AuthService {
   async loginWithEmail(email: string, password: string) {
     const user = await this.validateUserByEmail(email, password);
     const access_token = this.generateJwt(user);
-    return { access_token };
+    return { 
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        displayName: user.displayName,
+        gamesWon: user.gamesWon,
+        gamesLost: user.gamesLost,
+        tournamentsWon: user.tournamentsWon,
+        totalScore: user.totalScore,
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      access_token 
+    };
   }
 }

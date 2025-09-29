@@ -1,0 +1,60 @@
+/* frontend_B/src/components/StatusIndicator/StatusIndicator.css */
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  display: inline-block;
+  position: relative;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.status-indicator-small .status-dot {
+  font-size: 6px;
+}
+
+.status-indicator-medium .status-dot {
+  font-size: 8px;
+}
+
+.status-indicator-large .status-dot {
+  font-size: 12px;
+}
+
+.status-dot.online {
+  animation: pulse-online 2s infinite;
+}
+
+.status-dot.offline {
+  opacity: 0.5;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.status-indicator-small .status-label {
+  font-size: 0.75rem;
+}
+
+.status-indicator-large .status-label {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+@keyframes pulse-online {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}

@@ -1,10 +1,13 @@
 // frontend_B/src/pages/Home/Home.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import Debug from '../../components/Debug';
 import './Home.css';
 
 const Home: React.FC = () => {
+  const { isLoggedIn } = useUser();
+  
   return (
     <div className="home-page">
       <div className="home-hero">
@@ -14,8 +17,8 @@ const Home: React.FC = () => {
             Le meilleur jeu de Pong en ligne
           </p>
           <div className="home-hero-actions">
-            <Link to="/login" className="btn btn-primary btn-large">
-              🚀 Commencer à jouer
+            <Link to={isLoggedIn ? "/game" : "/login"} className="btn btn-primary btn-large">
+              🚀 {isLoggedIn ? "Commencer à jouer" : "Se connecter pour jouer"}
             </Link>
             <Link to="/tournaments" className="btn btn-secondary btn-large">
               🏆 Voir les tournois
@@ -84,8 +87,8 @@ const Home: React.FC = () => {
             Rejoignez des milliers de joueurs et montrez vos compétences
           </p>
           <div className="home-cta-actions">
-            <Link to="/login" className="btn btn-primary btn-large">
-              🚀 S'inscrire gratuitement
+            <Link to={isLoggedIn ? "/game" : "/login"} className="btn btn-primary btn-large">
+              🚀 {isLoggedIn ? "Jouer maintenant" : "S'inscrire gratuitement"}
             </Link>
             <Link to="/leaderboard" className="btn btn-secondary btn-large">
               📊 Voir le classement
