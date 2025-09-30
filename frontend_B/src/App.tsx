@@ -14,6 +14,7 @@ import Home from './pages/Home/Home';
 import Tournaments from './pages/Tournaments/Tournaments';
 import CreateTournament from './pages/CreatTournament/CreateTournament';
 import TournamentDetail from './pages/TournamentDetail/TournamentDetail';
+import ManageTournament from './pages/ManageTournament/ManageTournament';
 import Profile from './pages/Profile/Profile';
 import Leaderboard from './pages/Leaderboard/Leaderboard';
 import Game from './pages/Game/Game';
@@ -43,6 +44,7 @@ function App() {
                 {/* Tournois */}
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/tournaments/:id" element={<TournamentDetail />} />
+                <Route path="/tournaments/:id/manage" element={<ProtectedRoute><ManageTournament /></ProtectedRoute>} />
                 <Route path="/create-tournament" element={<ProtectedRoute><CreateTournament /></ProtectedRoute>} />
                 
                 {/* Jeu */}

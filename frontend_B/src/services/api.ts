@@ -194,8 +194,21 @@ export const tournamentAPI = {
     apiClient.delete(`/tournaments/${id}`),
 
   // Gestion des participants
-  joinTournament: (id: number, data?: any) =>
-    apiClient.post(`/tournaments/${id}/join`, data || {}),
+  joinTournament: async (id: number, data?: any) => {
+    console.log('🔍 DEBUG API joinTournament:', { id, data });
+    try {
+      const response = await apiClient.post(`/tournaments/${id}/join`, data || {});
+      console.log('✅ DEBUG API response:', response.data);
+      return response;
+    } catch (error: any) {
+      console.error('❌ DEBUG API error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw error;
+    }
+  },
 
   leaveTournament: (id: number) =>
     apiClient.delete(`/tournaments/${id}/leave`),

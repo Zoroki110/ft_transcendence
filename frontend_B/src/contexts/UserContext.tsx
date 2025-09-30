@@ -49,7 +49,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem('access_token') !== null;
+    const token = localStorage.getItem('access_token');
+    const isLogged = token !== null;
+    console.log('🔍 DEBUG UserContext init:', { hasToken: !!token, isLogged });
+    return isLogged;
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

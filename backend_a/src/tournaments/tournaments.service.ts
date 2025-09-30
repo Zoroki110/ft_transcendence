@@ -117,14 +117,32 @@ export class TournamentsService {
   // ===== GESTION DES PARTICIPANTS =====
 
   async joinTournament(tournamentId: number, userId: number): Promise<Tournament> {
+    console.log('🔍 DEBUG joinTournament backend:', { tournamentId, userId });
+    
     const tournament = await this.findOne(tournamentId);
+    console.log('🔍 DEBUG tournament found:', {
+      id: tournament.id,
+      status: tournament.status,
+      isRegistrationOpen: tournament.isRegistrationOpen,
+      currentParticipants: tournament.currentParticipants,
+      maxParticipants: tournament.maxParticipants
+    });
+    
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    console.log('🔍 DEBUG user found:', { userId: user?.id, username: user?.username });
 
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
     if (!tournament.isRegistrationOpen) {
+      console.log('❌ DEBUG registration not open:', {
+        status: tournament.status,
+        registrationStart: tournament.registrationStart,
+        registrationEnd: tournament.registrationEnd,
+        currentParticipants: tournament.currentParticipants,
+        maxParticipants: tournament.maxParticipants
+      });
       throw new BadRequestException('Les inscriptions ne sont pas ouvertes pour ce tournoi');
     }
 
