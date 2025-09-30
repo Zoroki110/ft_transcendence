@@ -47,7 +47,7 @@ export class TournamentsService {
     return await this.tournamentRepository.save(tournament);
   }
 
-  async findAll(query: TournamentQueryDto): Promise<{ tournaments: Tournament[]; total: number }> {
+  async findAll(query: TournamentQueryDto, userId?: number): Promise<{ tournaments: Tournament[]; total: number }> {
     const { status, type, isPublic, limit = 10, page = 1 } = query;
     
     const queryBuilder = this.tournamentRepository
@@ -64,6 +64,14 @@ export class TournamentsService {
     }
     if (isPublic !== undefined) {
       queryBuilder.andWhere('tournament.isPublic = :isPublic', { isPublic });
+    } else {
+      // Filtrage par défaut : ne montrer que les tournois publics ou ceux créés par l'utilisateur connecté
+      if (userId) {
+        queryBuilder.andWhere('(tournament.isPublic = true OR tournament.creatorId = :userId)', { userId });
+      } else {
+        // Utilisateur non connecté : uniquement les tournois publics
+        queryBuilder.andWhere('tournament.isPublic = true');
+      }
     }
 
     const offset = (page - 1) * limit;
@@ -74,7 +82,7 @@ export class TournamentsService {
     return { tournaments, total };
   }
 
-  async findOne(id: number): Promise<Tournament> {
+  async findOne(id: number, userId?: number): Promise<Tournament> {
     const tournament = await this.tournamentRepository.findOne({
       where: { id },
       relations: ['creator', 'participants', 'matches', 'winner'],
@@ -84,11 +92,26 @@ export class TournamentsService {
       throw new NotFoundException('Tournoi introuvable');
     }
 
+    // Vérifier les permissions pour les tournois privés
+    if (!tournament.isPublic) {
+      // Si le tournoi est privé, seul le créateur ou les participants peuvent le voir
+      if (!userId) {
+        throw new NotFoundException('Tournoi introuvable');
+      }
+      
+      const isCreator = tournament.creatorId === userId;
+      const isParticipant = tournament.participants?.some(p => p.id === userId);
+      
+      if (!isCreator && !isParticipant) {
+        throw new NotFoundException('Tournoi introuvable');
+      }
+    }
+
     return tournament;
   }
 
   async update(id: number, updateTournamentDto: UpdateTournamentDto, userId: number): Promise<Tournament> {
-    const tournament = await this.findOne(id);
+    const tournament = await this.findOne(id, userId);
 
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut modifier ce tournoi');
@@ -101,7 +124,7 @@ export class TournamentsService {
   }
 
   async remove(id: number, userId: number): Promise<void> {
-    const tournament = await this.findOne(id);
+    const tournament = await this.findOne(id, userId);
 
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut supprimer ce tournoi');
@@ -121,11 +144,10 @@ export class TournamentsService {
     
     // Utiliser une transaction pour garantir l'atomicité
     return await this.tournamentRepository.manager.transaction(async (transactionalEntityManager) => {
-      // Recharger le tournoi avec un verrou pour éviter les conditions de course
+      // Charger le tournoi avec toutes les relations (pas de verrou pessimiste pour éviter l'erreur FOR UPDATE)
       const tournament = await transactionalEntityManager.findOne(Tournament, {
         where: { id: tournamentId },
-        relations: ['creator', 'participants', 'matches', 'winner'],
-        lock: { mode: 'pessimistic_write' }
+        relations: ['creator', 'participants', 'matches', 'winner']
       });
 
       if (!tournament) {
@@ -218,11 +240,10 @@ export class TournamentsService {
     
     // Utiliser une transaction pour garantir l'atomicité
     return await this.tournamentRepository.manager.transaction(async (transactionalEntityManager) => {
-      // Recharger le tournoi avec un verrou pour éviter les conditions de course
+      // Charger le tournoi avec toutes les relations (pas de verrou pessimiste pour éviter l'erreur FOR UPDATE)
       const tournament = await transactionalEntityManager.findOne(Tournament, {
         where: { id: tournamentId },
-        relations: ['creator', 'participants', 'matches', 'winner'],
-        lock: { mode: 'pessimistic_write' }
+        relations: ['creator', 'participants', 'matches', 'winner']
       });
 
       if (!tournament) {
@@ -303,7 +324,7 @@ export class TournamentsService {
   // ===== GESTION DES BRACKETS =====
 
   async generateBrackets(tournamentId: number, userId: number): Promise<Tournament> {
-    const tournament = await this.findOne(tournamentId);
+    const tournament = await this.findOne(tournamentId, userId);
     
     // ADD THIS DEBUG BLOCK
     console.log('=== GENERATE BRACKETS DEBUG ===');
@@ -366,8 +387,8 @@ export class TournamentsService {
     return await this.tournamentRepository.save(tournament);
   }
 
-  async getBrackets(tournamentId: number) {
-    const tournament = await this.findOne(tournamentId);
+  async getBrackets(tournamentId: number, userId?: number) {
+    const tournament = await this.findOne(tournamentId, userId);
     
     if (!tournament.bracketGenerated) {
       throw new BadRequestException('Les brackets ne sont pas encore générés');
@@ -420,7 +441,7 @@ export class TournamentsService {
     player2Score: number, 
     userId: number
   ): Promise<any> {
-    const tournament = await this.findOne(tournamentId);
+    const tournament = await this.findOne(tournamentId, userId);
     
     if (tournament.creatorId !== userId) {
       throw new ForbiddenException('Seul le créateur peut faire avancer les gagnants');
@@ -552,8 +573,8 @@ export class TournamentsService {
 
   // ===== STATISTIQUES ET LEADERBOARD =====
 
-  async getTournamentStats(tournamentId: number): Promise<any> {
-    const tournament = await this.findOne(tournamentId);
+  async getTournamentStats(tournamentId: number, userId?: number): Promise<any> {
+    const tournament = await this.findOne(tournamentId, userId);
     
     const completedMatches = await this.matchRepository.count({
       where: { tournament: { id: tournamentId }, status: 'finished' }
@@ -581,8 +602,8 @@ export class TournamentsService {
     };
   }
 
-  async getLeaderboard(tournamentId: number) {
-    const tournament = await this.findOne(tournamentId);
+  async getLeaderboard(tournamentId: number, userId?: number) {
+    const tournament = await this.findOne(tournamentId, userId);
     const matches = await this.getMatchesWithPlayers(tournamentId);
     
     const stats = new Map<number, {
