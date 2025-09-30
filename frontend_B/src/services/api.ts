@@ -78,15 +78,6 @@ export const authAPI = {
   loginWith42: () =>
     apiClient.get('/auth/42'),
 
-  // 2FA
-  verify2FA: (code: string) =>
-    apiClient.post('/auth/twofa/verify', { code }),
-
-  enable2FA: () =>
-    apiClient.post('/auth/twofa/enable'),
-
-  disable2FA: () =>
-    apiClient.post('/auth/twofa/disable'),
 };
 
 // ===== USERS API =====
