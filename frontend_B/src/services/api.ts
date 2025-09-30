@@ -216,6 +216,10 @@ export const tournamentAPI = {
   getParticipants: (id: number) =>
     apiClient.get(`/tournaments/${id}/participants`),
 
+  // Démarrer un tournoi (génère les brackets)
+  startTournament: (id: number) =>
+    apiClient.post(`/tournaments/${id}/generate-brackets`),
+
   // Brackets et matches
   generateBrackets: (id: number) =>
     apiClient.post(`/tournaments/${id}/generate-brackets`),
