@@ -68,6 +68,7 @@ export function useTournamentActions(): UseTournamentActionsReturn {
         fullError: error.response?.data
       });
 
+
       return null;
     }
   }, []);
@@ -113,6 +114,7 @@ export function useTournamentActions(): UseTournamentActionsReturn {
         fullError: error.response?.data
       });
 
+
       return null;
     }
   }, []);
@@ -157,6 +159,7 @@ export function useTournamentActions(): UseTournamentActionsReturn {
         fullError: error.response?.data
       });
 
+
       return null;
     }
   }, []);
@@ -193,6 +196,7 @@ export function useTournamentActions(): UseTournamentActionsReturn {
         error: errorMessage,
         fullError: error.response?.data
       });
+
 
       return false;
     }
