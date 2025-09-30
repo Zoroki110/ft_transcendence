@@ -56,8 +56,9 @@ export class TournamentsController {
   @ApiQuery({ name: 'isPublic', required: false, description: 'Tournois publics seulement' })
   @ApiQuery({ name: 'limit', required: false, description: 'Nombre de résultats par page (défaut: 10)' })
   @ApiQuery({ name: 'page', required: false, description: 'Numéro de page (défaut: 1)' })
-  findAll(@Query() query: TournamentQueryDto) {
-    return this.tournamentsService.findAll(query);
+  findAll(@Query() query: TournamentQueryDto, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.findAll(query, userId);
   }
 
   @Get(':id')
@@ -65,8 +66,9 @@ export class TournamentsController {
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Tournoi trouvé' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.tournamentsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.findOne(id, userId);
   }
 
   @Patch(':id')
@@ -172,8 +174,9 @@ export class TournamentsController {
   @ApiResponse({ status: 200, description: 'Arbre du tournoi' })
   @ApiResponse({ status: 400, description: 'Brackets pas encore générés' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
-  async getBrackets(@Param('id', ParseIntPipe) id: number) {
-    return this.tournamentsService.getBrackets(id);
+  async getBrackets(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.getBrackets(id, userId);
   }
 
   @Get(':id/matches')
@@ -209,8 +212,9 @@ export class TournamentsController {
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Statistiques détaillées du tournoi' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
-  getStats(@Param('id', ParseIntPipe) id: number) {
-    return this.tournamentsService.getTournamentStats(id);
+  getStats(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.getTournamentStats(id, userId);
   }
 
   @Get(':id/leaderboard')
@@ -218,8 +222,9 @@ export class TournamentsController {
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Leaderboard avec positions et stats' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
-  async getLeaderboard(@Param('id', ParseIntPipe) id: number) {
-    return this.tournamentsService.getLeaderboard(id);
+  async getLeaderboard(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.getLeaderboard(id, userId);
   }
 
   // ===== PROGRESSION DES MATCHES =====

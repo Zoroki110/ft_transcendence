@@ -64,14 +64,15 @@ export function getTournamentPermissions(
   // Permissions de base
   const canView = true; // Tout le monde peut voir les tournois publics
   
+  // Le créateur peut toujours rejoindre son propre tournoi (sauf si complet)
   const canJoin = isLoggedIn && 
                  !isParticipant && 
-                 !isFull && 
-                 isOpen; // Le créateur peut rejoindre son propre tournoi
+                 isOpen && 
+                 (isCreator || !isFull); // Créateur peut joindre même si presque complet
                  
   const canLeave = isLoggedIn && 
                   isParticipant && 
-                  isOpen; // Le créateur peut quitter son propre tournoi
+                  isOpen; // Créateur et participants peuvent quitter si ouvert
 
   // Permissions de créateur
   const canEdit = isCreator && (tournament.status === 'draft' || tournament.status === 'open');
