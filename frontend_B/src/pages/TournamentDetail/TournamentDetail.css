@@ -51,6 +51,141 @@
   color: var(--danger);
 }
 
+/* Authentication required section */
+.auth-required {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.auth-required p {
+  margin-bottom: 1rem;
+  color: var(--warning);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* Tournament creator info */
+.tournament-creator-info {
+  margin: 1rem 0;
+}
+
+.creator-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.creator-label {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+}
+
+.creator-name {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.creator-badge {
+  background: var(--primary);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.tournament-type {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+}
+
+/* Action message */
+.action-message {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.action-message p {
+  margin: 0;
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+/* Creator actions */
+.creator-actions {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: var(--primary)08;
+  border: 1px solid var(--primary)20;
+  border-radius: 8px;
+}
+
+.creator-actions-title {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.creator-actions .btn {
+  margin-bottom: 0.5rem;
+}
+
+/* Participants sections */
+.creator-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--primary)20;
+}
+
+.creator-section-title {
+  margin: 0 0 1rem 0;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.participants-section-title {
+  margin: 0 0 1rem 0;
+  color: var(--gray-700);
+  font-size: 1rem;
+}
+
+.creator-item {
+  background: var(--primary)08;
+  border: 1px solid var(--primary)20;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.participant-badge.creator {
+  background: var(--primary);
+  color: white;
+}
+
+.you-badge {
+  background: var(--success);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+}
+
+.empty-hint {
+  color: var(--gray-500);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
 .detail-section-title {
   margin-bottom: 1.5rem;
 }

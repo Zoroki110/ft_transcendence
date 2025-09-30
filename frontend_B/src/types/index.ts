@@ -87,7 +87,7 @@ export interface Tournament {
   name: string;
   description?: string;
   type: 'single_elimination' | 'double_elimination' | 'round_robin';
-  status: 'waiting' | 'in_progress' | 'finished' | 'cancelled';
+  status: 'draft' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
   isPublic: boolean;
   maxParticipants: number;
   currentParticipants: number;
@@ -160,7 +160,7 @@ export interface Match {
   player1Score: number;
   player2Score: number;
   winner?: User;
-  status: 'waiting' | 'in_progress' | 'finished' | 'cancelled';
+  status: 'draft' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
 
   // Tournoi info
   tournamentId?: number;
@@ -305,7 +305,7 @@ export interface ProfileFormData {
 }
 
 // ===== UTILITY TYPES =====
-export type TournamentStatus = 'waiting' | 'in_progress' | 'finished' | 'cancelled';
+export type TournamentStatus = 'draft' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
 export type TournamentType = 'single_elimination' | 'double_elimination' | 'round_robin';
 export type MatchStatus = 'waiting' | 'in_progress' | 'finished' | 'cancelled';
 export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';

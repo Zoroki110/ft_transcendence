@@ -114,7 +114,7 @@ export class Tournament {
 	get isRegistrationOpen(): boolean {
 		const now = new Date();
 		return (
-			this.status == TournamentStatus.OPEN &&
+			(this.status == TournamentStatus.DRAFT || this.status == TournamentStatus.OPEN) &&
 			(!this.registrationStart || this.registrationStart <= now) &&
 			(!this.registrationEnd || this.registrationEnd >= now) &&
 			this.currentParticipants < this.maxParticipants

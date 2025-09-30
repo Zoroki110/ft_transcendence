@@ -1,4 +1,4 @@
-// frontend_B/src/hooks/useTournaments.ts - HOOK TOURNOIS CONNECTÉ AUX APIS
+// frontend_B/src/hooks/useTournaments.ts - HOOK TOURNOIS CONNECTï¿½ AUX APIS
 
 import { useState, useEffect } from 'react';
 import { tournamentAPI } from '../services/api';
@@ -22,7 +22,7 @@ export function useTournaments(initialQuery: TournamentQueryDto = {}) {
       setTournaments(response.data.tournaments);
       setTotal(response.data.total);
 
-      console.log('<Æ Tournois chargés:', response.data.tournaments.length);
+      console.log('<ï¿½ Tournois chargï¿½s:', response.data.tournaments.length);
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de chargement des tournois';
       setError(message);
@@ -56,16 +56,16 @@ export function useTournaments(initialQuery: TournamentQueryDto = {}) {
       const response = await tournamentAPI.createTournament(data);
       const newTournament = response.data;
 
-      // Ajouter à la liste locale
+      // Ajouter ï¿½ la liste locale
       setTournaments(prev => [newTournament, ...prev]);
       setTotal(prev => prev + 1);
 
-      console.log(' Tournoi créé:', newTournament.name);
+      console.log(' Tournoi crï¿½ï¿½:', newTournament.name);
       return newTournament;
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur de création de tournoi';
+      const message = err.response?.data?.message || 'Erreur de crï¿½ation de tournoi';
       setError(message);
-      console.error('L Erreur création tournoi:', message);
+      console.error('L Erreur crï¿½ation tournoi:', message);
       return null;
     } finally {
       setLoading(false);
@@ -76,21 +76,13 @@ export function useTournaments(initialQuery: TournamentQueryDto = {}) {
     try {
       await tournamentAPI.joinTournament(tournamentId);
 
-      // Mettre à jour la liste locale
-      setTournaments(prev =>
-        prev.map(t =>
-          t.id === tournamentId
-            ? { ...t, currentParticipants: t.currentParticipants + 1 }
-            : t
-        )
-      );
+      // Recharger les donnÃ©es depuis le serveur pour avoir l'Ã©tat exact
+      await loadTournaments();
 
-      console.log(' Inscription au tournoi réussie');
+      console.log(' Inscription au tournoi rï¿½ussie');
       return true;
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur d\'inscription au tournoi';
-      setError(message);
-      console.error('L Erreur inscription tournoi:', message);
+      console.error('âŒ Erreur inscription tournoi:', err.response?.data?.message || err.message);
       return false;
     }
   };
@@ -99,21 +91,13 @@ export function useTournaments(initialQuery: TournamentQueryDto = {}) {
     try {
       await tournamentAPI.leaveTournament(tournamentId);
 
-      // Mettre à jour la liste locale
-      setTournaments(prev =>
-        prev.map(t =>
-          t.id === tournamentId
-            ? { ...t, currentParticipants: Math.max(0, t.currentParticipants - 1) }
-            : t
-        )
-      );
+      // Recharger les donnÃ©es depuis le serveur pour avoir l'Ã©tat exact
+      await loadTournaments();
 
-      console.log(' Sortie du tournoi réussie');
+      console.log(' Sortie du tournoi rï¿½ussie');
       return true;
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur de sortie du tournoi';
-      setError(message);
-      console.error('L Erreur sortie tournoi:', message);
+      console.error('âŒ Erreur sortie tournoi:', err.response?.data?.message || err.message);
       return false;
     }
   };
@@ -121,10 +105,10 @@ export function useTournaments(initialQuery: TournamentQueryDto = {}) {
   // Charger les tournois au montage du composant
   useEffect(() => {
     loadTournaments();
-  }, []); // Pas de dépendance pour éviter les recharges infinies
+  }, []); // Pas de dï¿½pendance pour ï¿½viter les recharges infinies
 
   return {
-    // Données
+    // Donnï¿½es
     tournaments,
     total,
     loading,

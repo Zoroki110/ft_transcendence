@@ -2,10 +2,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournaments } from '../../hooks/useTournaments';
+import { useUser } from '../../contexts/UserContext';
+import { getTournamentPermissions } from '../../utils/tournamentPermissions';
 import { Tournament } from '../../types';
 import './Tournaments.css';
 
 const Tournaments: React.FC = () => {
+  const { user, isLoggedIn } = useUser();
   const [filters, setFilters] = useState({
     status: 'all',
     type: 'all',
@@ -17,7 +20,9 @@ const Tournaments: React.FC = () => {
     tournaments,
     loading: isLoading,
     error,
-    updateQuery
+    updateQuery,
+    joinTournament,
+    leaveTournament
   } = useTournaments();
 
   // Mettre à jour les filtres API quand les filtres locaux changent
@@ -46,12 +51,14 @@ const Tournaments: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      waiting: { text: '⏳ En attente', color: 'var(--warning)' },
-      in_progress: { text: '▶️ En cours', color: 'var(--success)' },
-      finished: { text: '✅ Terminé', color: 'var(--gray-600)' },
+      draft: { text: '📝 Brouillon', color: 'var(--gray-500)' },
+      open: { text: '🟢 Ouvert', color: 'var(--success)' },
+      full: { text: '🔴 Complet', color: 'var(--warning)' },
+      in_progress: { text: '▶️ En cours', color: 'var(--primary)' },
+      completed: { text: '✅ Terminé', color: 'var(--gray-600)' },
       cancelled: { text: '❌ Annulé', color: 'var(--danger)' }
     };
-    return badges[status as keyof typeof badges] || badges.waiting;
+    return badges[status as keyof typeof badges] || badges.draft;
   };
 
   const getTypeName = (type: string) => {
@@ -62,6 +69,54 @@ const Tournaments: React.FC = () => {
     };
     return types[type as keyof typeof types] || type;
   };
+
+  // Fonctions pour gérer l'inscription/désinscription rapide
+  const handleQuickJoin = async (tournamentId: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    console.log('🔍 DEBUG handleQuickJoin:', {
+      tournamentId,
+      isLoggedIn,
+      user: user ? { id: user.id, username: user.username } : null,
+      token: localStorage.getItem('access_token') ? 'exists' : 'missing'
+    });
+    
+    if (!isLoggedIn) {
+      alert('Vous devez être connecté pour rejoindre un tournoi');
+      return;
+    }
+
+    try {
+      const success = await joinTournament(tournamentId);
+      if (success) {
+        alert('Inscription réussie !');
+      } else {
+        alert('Erreur lors de l\'inscription');
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans handleQuickJoin:', error);
+      alert('Erreur lors de l\'inscription');
+    }
+  };
+
+  const handleQuickLeave = async (tournamentId: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+      const success = await leaveTournament(tournamentId);
+      if (success) {
+        alert('Vous avez quitté le tournoi');
+      } else {
+        alert('Erreur lors de la sortie du tournoi');
+      }
+    } catch (error) {
+      console.error('❌ Erreur dans handleQuickLeave:', error);
+      alert('Erreur lors de la sortie du tournoi');
+    }
+  };
+
 
   return (
     <div className="tournaments-page">
@@ -91,10 +146,10 @@ const Tournaments: React.FC = () => {
                 onChange={(e) => handleStatusChange(e.target.value)}
               >
                 <option value="all">📊 Tous</option>
-                <option value="waiting">⏳ En attente</option>
+                <option value="open">🟢 Ouverts</option>
+                <option value="full">🔴 Complets</option>
                 <option value="in_progress">▶️ En cours</option>
-                <option value="finished">✅ Terminés</option>
-                <option value="cancelled">❌ Annulés</option>
+                <option value="completed">✅ Terminés</option>
               </select>
             </div>
 
@@ -147,6 +202,18 @@ const Tournaments: React.FC = () => {
             {filteredTournaments.map(tournament => {
               const statusBadge = getStatusBadge(tournament.status);
               const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
+              const permissions = getTournamentPermissions(tournament, user, isLoggedIn);
+              
+              // Debug des permissions
+              console.log(`🔍 DEBUG Permissions pour tournoi ${tournament.id}:`, {
+                tournamentId: tournament.id,
+                userId: user?.id,
+                isParticipant: permissions.isParticipant,
+                canJoin: permissions.canJoin,
+                canLeave: permissions.canLeave,
+                participantsIds: tournament.participants?.map(p => p.id) || [],
+                currentParticipants: tournament.currentParticipants
+              });
 
               return (
                 <div key={tournament.id} className="card tournament-card">
@@ -172,6 +239,8 @@ const Tournaments: React.FC = () => {
                       <span>{getTypeName(tournament.type)}</span>
                       <span className="tournament-participants">
                         {tournament.currentParticipants}/{tournament.maxParticipants}
+                        {permissions.isParticipant && <span className="participant-indicator"> ✓ Inscrit</span>}
+                        {permissions.isCreator && <span className="creator-indicator"> 👑 Votre tournoi</span>}
                       </span>
                     </div>
                     <div className="tournament-progress-bar">
@@ -189,12 +258,57 @@ const Tournaments: React.FC = () => {
                     <span className="tournament-creator">
                       Par {tournament.creator?.username || 'Inconnu'}
                     </span>
-                    <Link 
-                      to={`/tournaments/${tournament.id}`} 
-                      className="btn btn-primary btn-sm"
-                    >
-                      Voir détails →
-                    </Link>
+                    <div className="tournament-actions">
+                      {/* Actions pour créateurs */}
+                      {permissions.isCreator && (
+                        <Link
+                          to={`/tournaments/${tournament.id}/manage`}
+                          className="btn btn-primary btn-sm"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Gérer votre tournoi"
+                        >
+                          ⚙️ Gérer
+                        </Link>
+                      )}
+
+                      {/* Actions pour participants */}
+                      {permissions.canJoin && (
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={(e) => handleQuickJoin(tournament.id, e)}
+                          title="Rejoindre le tournoi"
+                        >
+                          ✅ Rejoindre
+                        </button>
+                      )}
+
+                      {permissions.canLeave && (
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={(e) => handleQuickLeave(tournament.id, e)}
+                          title="Quitter le tournoi"
+                        >
+                          🚪 Quitter
+                        </button>
+                      )}
+
+                      {/* Bouton complet si le tournoi est plein */}
+                      {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled
+                          title="Tournoi complet"
+                        >
+                          🔴 Complet
+                        </button>
+                      )}
+                      <Link 
+                        to={`/tournaments/${tournament.id}`} 
+                        className="btn btn-primary btn-sm"
+                      >
+                        Voir détails →
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );
