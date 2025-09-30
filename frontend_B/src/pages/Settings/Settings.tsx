@@ -23,8 +23,6 @@ const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const avatars = ['😀', '😎', '🎮', '🕹️', '👤', '🎯', '🏆', '⚡', '🔥', '💎'];
 
@@ -36,7 +34,6 @@ const Settings: React.FC = () => {
         email: user.email,
         avatar: user.avatar || '😀'
       });
-      setTwoFAEnabled(false); // TODO: récupérer le vrai statut 2FA du backend
     }
   }, [user]);
 
@@ -67,28 +64,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const toggle2FA = async () => {
-    setIsSaving(true);
-    setMessage(null);
-
-    try {
-      if (!twoFAEnabled) {
-        const response = await authAPI.enable2FA();
-        setQrCode(response.data.qrCode);
-        setTwoFAEnabled(true);
-        setMessage({ type: 'success', text: '2FA activé ! Scannez le QR code.' });
-      } else {
-        await authAPI.disable2FA();
-        setTwoFAEnabled(false);
-        setQrCode(null);
-        setMessage({ type: 'success', text: '2FA désactivé.' });
-      }
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur 2FA' });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (userLoading || !user) {
     return (
@@ -186,36 +161,12 @@ const Settings: React.FC = () => {
               <div className="card">
                 <h2 className="settings-section-title">🔒 Sécurité</h2>
                 
-                <div className={`settings-2fa-box ${twoFAEnabled ? 'enabled' : 'disabled'}`}>
-                  <div className="settings-2fa-header">
-                    <span className="settings-2fa-icon">{twoFAEnabled ? '🔒' : '🔓'}</span>
-                    <div>
-                      <div className="settings-2fa-title">
-                        2FA {twoFAEnabled ? 'Activé' : 'Désactivé'}
-                      </div>
-                      <div className="settings-2fa-description">
-                        {twoFAEnabled ? 'Compte sécurisé' : 'Activez pour plus de sécurité'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    type="button"
-                    className={`btn ${twoFAEnabled ? 'btn-danger' : 'btn-success'}`}
-                    onClick={toggle2FA}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? '⏳...' : twoFAEnabled ? '❌ Désactiver' : '✅ Activer'}
-                  </button>
-
-                  {qrCode && (
-                    <div className="settings-2fa-qr">
-                      <p className="settings-2fa-qr-text">
-                        📱 Scannez avec votre app :
-                      </p>
-                      <img src={qrCode} alt="QR Code 2FA" className="settings-qr-image" />
-                    </div>
-                  )}
+                <div className="settings-placeholder">
+                  <div className="placeholder-icon">🔒</div>
+                  <p>Options de sécurité</p>
+                  <p className="placeholder-info">
+                    Fonctionnalités à venir...
+                  </p>
                 </div>
               </div>
             )}

@@ -90,24 +90,6 @@
   background: #009a9c;
 }
 
-.oauth-google {
-  border: 2px solid #4285f4;
-  background: white;
-  color: #4285f4;
-}
-
-.oauth-google:hover:not(:disabled) {
-  background: #f0f7ff;
-}
-
-.oauth-github {
-  background: #333;
-  color: white;
-}
-
-.oauth-github:hover:not(:disabled) {
-  background: #222;
-}
 
 /* Divider */
 .login-divider {

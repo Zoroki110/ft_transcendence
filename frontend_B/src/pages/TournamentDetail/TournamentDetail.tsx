@@ -5,6 +5,7 @@ import { tournamentAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import { Tournament } from '../../types';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
+import { useTournamentActions } from '../../hooks/useTournamentActions';
 import './TournamentDetail.css';
 
 const TournamentDetail: React.FC = () => {
@@ -14,12 +15,16 @@ const TournamentDetail: React.FC = () => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isJoining, setIsJoining] = useState(false);
-  const [isLeaving, setIsLeaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Utiliser le système de permissions
+  // Utiliser le système de permissions et actions
   const permissions = useTournamentPermissions(tournament, user, isLoggedIn);
+  const {
+    state: actionState,
+    joinTournament: hookJoinTournament,
+    leaveTournament: hookLeaveTournament,
+    startTournament: hookStartTournament,
+    deleteTournament: hookDeleteTournament
+  } = useTournamentActions();
 
   useEffect(() => {
     const fetchTournament = async () => {
@@ -44,61 +49,70 @@ const TournamentDetail: React.FC = () => {
   const handleJoin = async () => {
     if (!tournament) return;
 
-    console.log('🔍 DEBUG handleJoin:', {
+    console.log('🔍 DETAIL: Starting join process', {
       tournamentId: tournament.id,
-      tournamentStatus: tournament.status,
-      currentParticipants: tournament.currentParticipants,
-      maxParticipants: tournament.maxParticipants,
-      permissions: permissions
+      userId: user?.id,
+      permissions
     });
 
-    setIsJoining(true);
-    setMessage(null);
-
-    try {
-      await tournamentAPI.joinTournament(tournament.id);
-      setMessage({ type: 'success', text: 'Vous avez rejoint le tournoi !' });
-      
-      const response = await tournamentAPI.getTournament(tournament.id);
-      setTournament(response.data);
-    } catch (err: any) {
-      console.error('❌ Erreur inscription:', err.response?.data);
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors de l\'inscription' });
-    } finally {
-      setIsJoining(false);
+    const updatedTournament = await hookJoinTournament(tournament.id);
+    
+    if (updatedTournament) {
+      setTournament(updatedTournament);
+      console.log('✅ DETAIL: Tournament state updated after join');
     }
   };
 
   const handleLeave = async () => {
     if (!tournament) return;
 
-    setIsLeaving(true);
-    setMessage(null);
+    console.log('🔍 DETAIL: Starting leave process', {
+      tournamentId: tournament.id,
+      userId: user?.id,
+      permissions
+    });
 
-    try {
-      await tournamentAPI.leaveTournament(tournament.id);
-      setMessage({ type: 'success', text: 'Vous avez quitté le tournoi' });
-      
-      const response = await tournamentAPI.getTournament(tournament.id);
-      setTournament(response.data);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du départ' });
-    } finally {
-      setIsLeaving(false);
+    const updatedTournament = await hookLeaveTournament(tournament.id);
+    
+    if (updatedTournament) {
+      setTournament(updatedTournament);
+      console.log('✅ DETAIL: Tournament state updated after leave');
     }
   };
 
   const handleStart = async () => {
     if (!tournament) return;
 
-    try {
-      await tournamentAPI.startTournament(tournament.id);
-      setMessage({ type: 'success', text: 'Tournoi démarré !' });
-      
-      const response = await tournamentAPI.getTournament(tournament.id);
-      setTournament(response.data);
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur au démarrage' });
+    console.log('🔍 DETAIL: Starting tournament start process', {
+      tournamentId: tournament.id,
+      userId: user?.id,
+      permissions
+    });
+
+    const updatedTournament = await hookStartTournament(tournament.id);
+    
+    if (updatedTournament) {
+      setTournament(updatedTournament);
+      console.log('✅ DETAIL: Tournament state updated after start');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!tournament) return;
+
+    console.log('🔍 DETAIL: Starting tournament delete process', {
+      tournamentId: tournament.id,
+      userId: user?.id,
+      permissions
+    });
+
+    const success = await hookDeleteTournament(tournament.id);
+    
+    if (success) {
+      console.log('✅ DETAIL: Tournament deleted successfully, redirecting to tournaments list');
+      navigate('/tournaments');
+    } else {
+      console.error('❌ DETAIL: Failed to delete tournament');
     }
   };
 
@@ -191,11 +205,6 @@ const TournamentDetail: React.FC = () => {
       </div>
 
       <div className="container">
-        {message && (
-          <div className={`tournament-message tournament-message-${message.type}`}>
-            {message.text}
-          </div>
-        )}
 
         <div className="grid grid-2">
           
@@ -257,9 +266,9 @@ const TournamentDetail: React.FC = () => {
                 <button
                   className="btn btn-success btn-full"
                   onClick={handleJoin}
-                  disabled={isJoining}
+                  disabled={actionState.isJoining}
                 >
-                  {isJoining ? '⏳ Inscription...' : '✅ Rejoindre le tournoi'}
+                  {actionState.isJoining ? '⏳ Inscription...' : '✅ Rejoindre le tournoi'}
                 </button>
               )}
 
@@ -267,9 +276,9 @@ const TournamentDetail: React.FC = () => {
                 <button
                   className="btn btn-danger btn-full"
                   onClick={handleLeave}
-                  disabled={isLeaving}
+                  disabled={actionState.isLeaving}
                 >
-                  {isLeaving ? '⏳ Départ...' : '🚪 Quitter le tournoi'}
+                  {actionState.isLeaving ? '⏳ Départ...' : '🚪 Quitter le tournoi'}
                 </button>
               )}
 
@@ -281,7 +290,7 @@ const TournamentDetail: React.FC = () => {
                   {permissions.canEdit && (
                     <button
                       className="btn btn-secondary btn-full"
-                      onClick={() => navigate(`/tournaments/${tournament.id}/edit`)}
+                      onClick={() => navigate(`/tournaments/${tournament.id}/manage`)}
                     >
                       ⚙️ Modifier le tournoi
                     </button>
@@ -291,8 +300,9 @@ const TournamentDetail: React.FC = () => {
                     <button
                       className="btn btn-primary btn-full"
                       onClick={handleStart}
+                      disabled={actionState.isStarting}
                     >
-                      🚀 Démarrer le tournoi
+                      {actionState.isStarting ? '⏳ Démarrage...' : '🚀 Démarrer le tournoi'}
                     </button>
                   )}
 
@@ -300,12 +310,13 @@ const TournamentDetail: React.FC = () => {
                     <button
                       className="btn btn-danger btn-full"
                       onClick={() => {
-                        if (confirm('Êtes-vous sûr de vouloir supprimer ce tournoi ?')) {
-                          // TODO: Implémenter la suppression
+                        if (confirm('Êtes-vous sûr de vouloir supprimer ce tournoi ? Cette action est irréversible.')) {
+                          handleDelete();
                         }
                       }}
+                      disabled={actionState.isDeleting}
                     >
-                      🗑️ Supprimer le tournoi
+                      {actionState.isDeleting ? '⏳ Suppression...' : '🗑️ Supprimer le tournoi'}
                     </button>
                   )}
                 </div>

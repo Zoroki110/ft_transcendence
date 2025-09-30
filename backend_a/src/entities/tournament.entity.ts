@@ -8,6 +8,8 @@ import {
   JoinTable,
   CreateDateColumn,
   UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Match } from './match.entity';
@@ -122,13 +124,27 @@ export class Tournament {
 	}
 
 	get isFull(): boolean {
-		return this.currentParticipants >= this.maxParticipants;
+		// Toujours utiliser la longueur réelle de la liste de participants
+		const actualParticipantCount = this.participants?.length || 0;
+		return actualParticipantCount >= this.maxParticipants;
 	}
 
 	get canStart(): boolean {
+		// Toujours utiliser la longueur réelle de la liste de participants
+		const actualParticipantCount = this.participants?.length || 0;
 		return (
-		  this.currentParticipants >= 2 &&
-		  (!this.bracketGenerated || this.matches.length === 0)  // Allow if no actual matches exist
+		  actualParticipantCount >= 2 &&
+		  (!this.bracketGenerated || this.matches?.length === 0)  // Allow if no actual matches exist
 		);
 	  }
+
+	// Synchroniser automatiquement currentParticipants avec la longueur réelle
+	@BeforeInsert()
+	@BeforeUpdate()
+	syncParticipantCount() {
+		if (this.participants) {
+			this.currentParticipants = this.participants.length;
+			console.log('🔄 SYNC: currentParticipants updated to', this.currentParticipants);
+		}
+	}
 }

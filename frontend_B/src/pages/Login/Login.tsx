@@ -15,8 +15,6 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [showTwoFA, setShowTwoFA] = useState(false);
-  const [twoFACode, setTwoFACode] = useState('');
 
   // Rediriger si déjà connecté (avec délai pour permettre de voir la page)
   useEffect(() => {
@@ -76,30 +74,11 @@ const Login: React.FC = () => {
     }
   };
 
-  const handle2FA = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
 
-    try {
-      const response = await authAPI.verify2FA(twoFACode);
-      localStorage.setItem('access_token', response.data.access_token);
-      navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Code 2FA incorrect');
-      setIsLoading(false);
-    }
-  };
-
-  const handleOAuth = (provider: '42' | 'google' | 'github') => {
+  const handleOAuth42 = () => {
     const redirectUri = window.location.origin + '/auth/callback';
-    const oauthUrls = {
-      '42': `${import.meta.env.VITE_API_URL}/auth/42?redirect_uri=${redirectUri}`,
-      'google': `${import.meta.env.VITE_API_URL}/auth/google?redirect_uri=${redirectUri}`,
-      'github': `${import.meta.env.VITE_API_URL}/auth/github?redirect_uri=${redirectUri}`
-    };
-    
-    window.location.href = oauthUrls[provider];
+    const oauth42Url = `${import.meta.env.VITE_API_URL}/auth/42?redirect_uri=${redirectUri}`;
+    window.location.href = oauth42Url;
   };
 
   // Si déjà connecté, afficher un message différent
@@ -157,7 +136,6 @@ const Login: React.FC = () => {
         <div className="login-container">
           <div className="login-box">
             
-            {!showTwoFA ? (
               <div className="card">
                 <h2 className="login-title">
                   {isRegisterMode ? 'S\'inscrire' : 'Se connecter'}
@@ -171,30 +149,12 @@ const Login: React.FC = () => {
 
                 <div className="login-oauth">
                   <button
-                    onClick={() => handleOAuth('42')}
+                    onClick={handleOAuth42}
                     disabled={isLoading}
                     className="oauth-button oauth-42"
                   >
                     <span className="oauth-icon">🚀</span>
                     Se connecter avec 42
-                  </button>
-
-                  <button
-                    onClick={() => handleOAuth('google')}
-                    disabled={isLoading}
-                    className="oauth-button oauth-google"
-                  >
-                    <span className="oauth-icon">🔍</span>
-                    Se connecter avec Google
-                  </button>
-
-                  <button
-                    onClick={() => handleOAuth('github')}
-                    disabled={isLoading}
-                    className="oauth-button oauth-github"
-                  >
-                    <span className="oauth-icon">🐙</span>
-                    Se connecter avec GitHub
                   </button>
                 </div>
 
@@ -278,59 +238,6 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-            ) : (
-              <div className="card">
-                <h2 className="login-title">🔒 Authentification 2FA</h2>
-                <p className="login-2fa-subtitle">
-                  Entrez le code de votre application
-                </p>
-
-                {error && (
-                  <div className="login-error">
-                    {error}
-                  </div>
-                )}
-
-                <form onSubmit={handle2FA} className="login-form">
-                  <div className="form-group">
-                    <label htmlFor="twoFACode" className="form-label">
-                      Code (6 chiffres)
-                    </label>
-                    <input
-                      id="twoFACode"
-                      type="text"
-                      className="input input-2fa"
-                      value={twoFACode}
-                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="123456"
-                      maxLength={6}
-                      required
-                    />
-                  </div>
-
-                  <div className="login-2fa-actions">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => {
-                        setShowTwoFA(false);
-                        setTwoFACode('');
-                        setError('');
-                      }}
-                    >
-                      ← Retour
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={isLoading || twoFACode.length !== 6}
-                    >
-                      {isLoading ? '⏳ Vérification...' : '✅ Vérifier'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
           </div>
         </div>
       </div>

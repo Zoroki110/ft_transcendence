@@ -78,15 +78,6 @@ export const authAPI = {
   loginWith42: () =>
     apiClient.get('/auth/42'),
 
-  // 2FA
-  verify2FA: (code: string) =>
-    apiClient.post('/auth/twofa/verify', { code }),
-
-  enable2FA: () =>
-    apiClient.post('/auth/twofa/enable'),
-
-  disable2FA: () =>
-    apiClient.post('/auth/twofa/disable'),
 };
 
 // ===== USERS API =====
@@ -215,6 +206,10 @@ export const tournamentAPI = {
 
   getParticipants: (id: number) =>
     apiClient.get(`/tournaments/${id}/participants`),
+
+  // Démarrer un tournoi (génère les brackets)
+  startTournament: (id: number) =>
+    apiClient.post(`/tournaments/${id}/generate-brackets`),
 
   // Brackets et matches
   generateBrackets: (id: number) =>
