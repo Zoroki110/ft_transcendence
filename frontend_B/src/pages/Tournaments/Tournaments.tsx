@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useTournaments } from '../../hooks/useTournaments';
 import { useUser } from '../../contexts/UserContext';
 import { getTournamentPermissions } from '../../utils/tournamentPermissions';
+import { useTournamentActions } from '../../hooks/useTournamentActions';
 import { Tournament } from '../../types';
 import './Tournaments.css';
 
@@ -15,15 +16,20 @@ const Tournaments: React.FC = () => {
     search: ''
   });
 
-  // Utiliser le hook corrigé
+  // Utiliser le hook corrigé et les actions
   const {
     tournaments,
     loading: isLoading,
     error,
     updateQuery,
-    joinTournament,
-    leaveTournament
+    refetch
   } = useTournaments();
+
+  const {
+    state: actionState,
+    joinTournament: hookJoinTournament,
+    leaveTournament: hookLeaveTournament
+  } = useTournamentActions();
 
   // Mettre à jour les filtres API quand les filtres locaux changent
   const handleStatusChange = (status: string) => {
@@ -75,11 +81,10 @@ const Tournaments: React.FC = () => {
     event.preventDefault();
     event.stopPropagation();
     
-    console.log('🔍 DEBUG handleQuickJoin:', {
+    console.log('🔍 TOURNAMENTS: Quick join start', {
       tournamentId,
-      isLoggedIn,
-      user: user ? { id: user.id, username: user.username } : null,
-      token: localStorage.getItem('access_token') ? 'exists' : 'missing'
+      userId: user?.id,
+      isLoggedIn
     });
     
     if (!isLoggedIn) {
@@ -87,16 +92,12 @@ const Tournaments: React.FC = () => {
       return;
     }
 
-    try {
-      const success = await joinTournament(tournamentId);
-      if (success) {
-        alert('Inscription réussie !');
-      } else {
-        alert('Erreur lors de l\'inscription');
-      }
-    } catch (error) {
-      console.error('❌ Erreur dans handleQuickJoin:', error);
-      alert('Erreur lors de l\'inscription');
+    const result = await hookJoinTournament(tournamentId);
+    
+    if (result) {
+      // Recharger la liste des tournois pour synchroniser
+      await refetch();
+      console.log('✅ TOURNAMENTS: Quick join success, list refreshed');
     }
   };
 
@@ -104,16 +105,17 @@ const Tournaments: React.FC = () => {
     event.preventDefault();
     event.stopPropagation();
     
-    try {
-      const success = await leaveTournament(tournamentId);
-      if (success) {
-        alert('Vous avez quitté le tournoi');
-      } else {
-        alert('Erreur lors de la sortie du tournoi');
-      }
-    } catch (error) {
-      console.error('❌ Erreur dans handleQuickLeave:', error);
-      alert('Erreur lors de la sortie du tournoi');
+    console.log('🔍 TOURNAMENTS: Quick leave start', {
+      tournamentId,
+      userId: user?.id
+    });
+
+    const result = await hookLeaveTournament(tournamentId);
+    
+    if (result) {
+      // Recharger la liste des tournois pour synchroniser
+      await refetch();
+      console.log('✅ TOURNAMENTS: Quick leave success, list refreshed');
     }
   };
 
@@ -204,16 +206,16 @@ const Tournaments: React.FC = () => {
               const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
               const permissions = getTournamentPermissions(tournament, user, isLoggedIn);
               
-              // Debug des permissions
-              console.log(`🔍 DEBUG Permissions pour tournoi ${tournament.id}:`, {
-                tournamentId: tournament.id,
-                userId: user?.id,
-                isParticipant: permissions.isParticipant,
-                canJoin: permissions.canJoin,
-                canLeave: permissions.canLeave,
-                participantsIds: tournament.participants?.map(p => p.id) || [],
-                currentParticipants: tournament.currentParticipants
-              });
+              // Debug des permissions uniquement en développement
+              if (process.env.NODE_ENV === 'development') {
+                console.log(`🔍 Permissions tournoi ${tournament.id}:`, {
+                  isParticipant: permissions.isParticipant,
+                  canJoin: permissions.canJoin,
+                  canLeave: permissions.canLeave,
+                  participantsCount: tournament.participants?.length || 0,
+                  currentParticipants: tournament.currentParticipants
+                });
+              }
 
               return (
                 <div key={tournament.id} className="card tournament-card">

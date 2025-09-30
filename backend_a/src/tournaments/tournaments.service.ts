@@ -117,71 +117,187 @@ export class TournamentsService {
   // ===== GESTION DES PARTICIPANTS =====
 
   async joinTournament(tournamentId: number, userId: number): Promise<Tournament> {
-    console.log('🔍 DEBUG joinTournament backend:', { tournamentId, userId });
+    console.log('🔍 JOIN TOURNAMENT START:', { tournamentId, userId });
     
-    const tournament = await this.findOne(tournamentId);
-    console.log('🔍 DEBUG tournament found:', {
-      id: tournament.id,
-      status: tournament.status,
-      isRegistrationOpen: tournament.isRegistrationOpen,
-      currentParticipants: tournament.currentParticipants,
-      maxParticipants: tournament.maxParticipants
-    });
-    
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    console.log('🔍 DEBUG user found:', { userId: user?.id, username: user?.username });
-
-    if (!user) {
-      throw new NotFoundException('Utilisateur introuvable');
-    }
-
-    if (!tournament.isRegistrationOpen) {
-      console.log('❌ DEBUG registration not open:', {
-        status: tournament.status,
-        registrationStart: tournament.registrationStart,
-        registrationEnd: tournament.registrationEnd,
-        currentParticipants: tournament.currentParticipants,
-        maxParticipants: tournament.maxParticipants
+    // Utiliser une transaction pour garantir l'atomicité
+    return await this.tournamentRepository.manager.transaction(async (transactionalEntityManager) => {
+      // Recharger le tournoi avec un verrou pour éviter les conditions de course
+      const tournament = await transactionalEntityManager.findOne(Tournament, {
+        where: { id: tournamentId },
+        relations: ['creator', 'participants', 'matches', 'winner'],
+        lock: { mode: 'pessimistic_write' }
       });
-      throw new BadRequestException('Les inscriptions ne sont pas ouvertes pour ce tournoi');
-    }
 
-    if (tournament.isFull) {
-      throw new BadRequestException('Le tournoi est complet');
-    }
+      if (!tournament) {
+        throw new NotFoundException('Tournoi introuvable');
+      }
 
-    const isAlreadyParticipant = tournament.participants.some(p => p.id === userId);
-    if (isAlreadyParticipant) {
-      throw new ConflictException('Vous êtes déjà inscrit à ce tournoi');
-    }
+      const user = await transactionalEntityManager.findOne(User, { where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('Utilisateur introuvable');
+      }
 
-    tournament.participants.push(user);
-    tournament.currentParticipants = tournament.participants.length;
+      console.log('🔍 TOURNAMENT STATE:', {
+        id: tournament.id,
+        status: tournament.status,
+        currentParticipants: tournament.currentParticipants,
+        participantsArrayLength: tournament.participants.length,
+        maxParticipants: tournament.maxParticipants,
+        participantIds: tournament.participants.map(p => p.id)
+      });
 
-    if (tournament.isFull) {
-      tournament.status = TournamentStatus.FULL;
-    } else if (tournament.status === TournamentStatus.DRAFT) {
-      tournament.status = TournamentStatus.OPEN;
-    }
+      // Vérifications strictes
+      if (tournament.status === TournamentStatus.IN_PROGRESS) {
+        throw new BadRequestException('Impossible de rejoindre un tournoi en cours');
+      }
 
-    return await this.tournamentRepository.save(tournament);
+      if (tournament.status === TournamentStatus.COMPLETED) {
+        throw new BadRequestException('Impossible de rejoindre un tournoi terminé');
+      }
+
+      if (tournament.status === TournamentStatus.CANCELLED) {
+        throw new BadRequestException('Impossible de rejoindre un tournoi annulé');
+      }
+
+      // Vérifier la limite de participants
+      if (tournament.participants.length >= tournament.maxParticipants) {
+        throw new BadRequestException('Le tournoi est complet');
+      }
+
+      // Vérifier si déjà participant
+      const isAlreadyParticipant = tournament.participants.some(p => p.id === userId);
+      if (isAlreadyParticipant) {
+        throw new ConflictException('Vous êtes déjà inscrit à ce tournoi');
+      }
+
+      // Ajouter le participant
+      tournament.participants.push(user);
+      
+      // Mettre à jour le statut automatiquement
+      const newParticipantCount = tournament.participants.length;
+      tournament.currentParticipants = newParticipantCount;
+
+      if (newParticipantCount >= tournament.maxParticipants) {
+        tournament.status = TournamentStatus.FULL;
+      } else if (tournament.status === TournamentStatus.DRAFT) {
+        tournament.status = TournamentStatus.OPEN;
+      }
+
+      // Force la synchronisation avant sauvegarde
+      tournament.currentParticipants = tournament.participants.length;
+      
+      const savedTournament = await transactionalEntityManager.save(Tournament, tournament);
+      
+      // Force une mise à jour SQL directe pour être 100% sûr
+      await transactionalEntityManager.query(
+        'UPDATE tournament SET current_participants = $1 WHERE id = $2',
+        [tournament.participants.length, tournamentId]
+      );
+      
+      // Vérification post-sauvegarde
+      const reloadedTournament = await transactionalEntityManager.findOne(Tournament, {
+        where: { id: tournamentId },
+        relations: ['creator', 'participants', 'matches', 'winner']
+      });
+      
+      console.log('✅ TOURNAMENT JOINED:', {
+        tournamentId: savedTournament.id,
+        savedParticipantCount: savedTournament.currentParticipants,
+        reloadedParticipantCount: reloadedTournament?.currentParticipants,
+        actualParticipantsLength: reloadedTournament?.participants.length,
+        newStatus: savedTournament.status,
+        participantIds: savedTournament.participants.map(p => p.id)
+      });
+
+      return reloadedTournament || savedTournament;
+    });
   }
 
   async leaveTournament(tournamentId: number, userId: number): Promise<Tournament> {
-    const tournament = await this.findOne(tournamentId);
+    console.log('🔍 LEAVE TOURNAMENT START:', { tournamentId, userId });
+    
+    // Utiliser une transaction pour garantir l'atomicité
+    return await this.tournamentRepository.manager.transaction(async (transactionalEntityManager) => {
+      // Recharger le tournoi avec un verrou pour éviter les conditions de course
+      const tournament = await transactionalEntityManager.findOne(Tournament, {
+        where: { id: tournamentId },
+        relations: ['creator', 'participants', 'matches', 'winner'],
+        lock: { mode: 'pessimistic_write' }
+      });
 
-    if (tournament.status === TournamentStatus.IN_PROGRESS) {
-      throw new BadRequestException('Impossible de quitter un tournoi en cours');
-    }
+      if (!tournament) {
+        throw new NotFoundException('Tournoi introuvable');
+      }
 
-    tournament.participants = tournament.participants.filter(p => p.id !== userId);
-    tournament.currentParticipants = tournament.participants.length;
+      console.log('🔍 TOURNAMENT STATE BEFORE LEAVE:', {
+        id: tournament.id,
+        status: tournament.status,
+        currentParticipants: tournament.currentParticipants,
+        participantsArrayLength: tournament.participants.length,
+        participantIds: tournament.participants.map(p => p.id),
+        userTryingToLeave: userId
+      });
 
-    if (tournament.status === TournamentStatus.FULL) {
-      tournament.status = TournamentStatus.OPEN;
-    }
+      // Vérifications strictes
+      if (tournament.status === TournamentStatus.IN_PROGRESS) {
+        throw new BadRequestException('Impossible de quitter un tournoi en cours');
+      }
 
-    return await this.tournamentRepository.save(tournament);
+      if (tournament.status === TournamentStatus.COMPLETED) {
+        throw new BadRequestException('Impossible de quitter un tournoi terminé');
+      }
+
+      // Vérifier si l'utilisateur est bien participant
+      const isParticipant = tournament.participants.some(p => p.id === userId);
+      if (!isParticipant) {
+        throw new BadRequestException('Vous n\'êtes pas inscrit à ce tournoi');
+      }
+
+      // Retirer le participant
+      tournament.participants = tournament.participants.filter(p => p.id !== userId);
+      
+      // Mettre à jour le compteur et le statut automatiquement
+      const newParticipantCount = tournament.participants.length;
+      tournament.currentParticipants = newParticipantCount;
+
+      // Ajuster le statut selon le nombre de participants
+      if (tournament.status === TournamentStatus.FULL && newParticipantCount < tournament.maxParticipants) {
+        tournament.status = TournamentStatus.OPEN;
+      }
+      
+      // Si plus aucun participant (sauf le créateur qui peut être participant), revenir en draft
+      if (newParticipantCount === 0 && tournament.status === TournamentStatus.OPEN) {
+        tournament.status = TournamentStatus.DRAFT;
+      }
+
+      // Force la synchronisation avant sauvegarde
+      tournament.currentParticipants = tournament.participants.length;
+      
+      const savedTournament = await transactionalEntityManager.save(Tournament, tournament);
+      
+      // Force une mise à jour SQL directe pour être 100% sûr
+      await transactionalEntityManager.query(
+        'UPDATE tournament SET current_participants = $1 WHERE id = $2',
+        [tournament.participants.length, tournamentId]
+      );
+      
+      // Vérification post-sauvegarde
+      const reloadedTournament = await transactionalEntityManager.findOne(Tournament, {
+        where: { id: tournamentId },
+        relations: ['creator', 'participants', 'matches', 'winner']
+      });
+      
+      console.log('✅ TOURNAMENT LEFT:', {
+        tournamentId: savedTournament.id,
+        savedParticipantCount: savedTournament.currentParticipants,
+        reloadedParticipantCount: reloadedTournament?.currentParticipants,
+        actualParticipantsLength: reloadedTournament?.participants.length,
+        newStatus: savedTournament.status,
+        participantIds: savedTournament.participants.map(p => p.id)
+      });
+
+      return reloadedTournament || savedTournament;
+    });
   }
 
   // ===== GESTION DES BRACKETS =====
