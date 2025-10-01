@@ -41,6 +41,7 @@ interface GameRoom {
   gameState: GameState;
   lastUpdate: number;
   matchId?: number;
+  rematchRequests: { player1?: boolean; player2?: boolean };
 }
 
 @WebSocketGateway({
@@ -193,6 +194,126 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(roomId).emit('gameStateUpdate', room.gameState);
   }
 
+  @SubscribeMessage('requestRematch')
+  handleRequestRematch(@ConnectedSocket() client: Socket) {
+    const roomId = this.playerToRoom.get(client.id);
+    if (!roomId) return;
+
+    const room = this.gameRooms.get(roomId);
+    if (!room || room.gameState.gameStatus !== 'finished') return;
+
+    const isPlayer1 = room.players.player1 === client.id;
+    const isPlayer2 = room.players.player2 === client.id;
+
+    if (!isPlayer1 && !isPlayer2) return;
+
+    this.logger.log(`🔄 REMATCH REQUEST: roomId=${roomId}, from=${isPlayer1 ? 'player1' : 'player2'}`);
+
+    // Marquer la demande de rematch
+    if (isPlayer1) {
+      room.rematchRequests.player1 = true;
+    } else {
+      room.rematchRequests.player2 = true;
+    }
+
+    // Notifier l'autre joueur de la demande
+    const otherPlayerId = isPlayer1 ? room.players.player2 : room.players.player1;
+    if (otherPlayerId) {
+      this.server.to(otherPlayerId).emit('rematchRequested', {
+        fromPlayer: isPlayer1 ? 'player1' : 'player2',
+        fromName: isPlayer1 ? room.playersNames.player1 : room.playersNames.player2
+      });
+    }
+
+    // Vérifier si les deux joueurs veulent un rematch
+    if (room.rematchRequests.player1 && room.rematchRequests.player2) {
+      this.startRematch(roomId);
+    }
+  }
+
+  @SubscribeMessage('acceptRematch')
+  handleAcceptRematch(@ConnectedSocket() client: Socket) {
+    const roomId = this.playerToRoom.get(client.id);
+    if (!roomId) return;
+
+    const room = this.gameRooms.get(roomId);
+    if (!room || room.gameState.gameStatus !== 'finished') return;
+
+    const isPlayer1 = room.players.player1 === client.id;
+    const isPlayer2 = room.players.player2 === client.id;
+
+    if (!isPlayer1 && !isPlayer2) return;
+
+    this.logger.log(`✅ REMATCH ACCEPTED: roomId=${roomId}, from=${isPlayer1 ? 'player1' : 'player2'}`);
+
+    // Marquer l'acceptation
+    if (isPlayer1) {
+      room.rematchRequests.player1 = true;
+    } else {
+      room.rematchRequests.player2 = true;
+    }
+
+    // Vérifier si les deux joueurs ont accepté
+    if (room.rematchRequests.player1 && room.rematchRequests.player2) {
+      this.startRematch(roomId);
+    }
+  }
+
+  @SubscribeMessage('declineRematch')
+  handleDeclineRematch(@ConnectedSocket() client: Socket) {
+    const roomId = this.playerToRoom.get(client.id);
+    if (!roomId) return;
+
+    const room = this.gameRooms.get(roomId);
+    if (!room) return;
+
+    this.logger.log(`❌ REMATCH DECLINED: roomId=${roomId}`);
+
+    // Réinitialiser les demandes de rematch
+    room.rematchRequests = { player1: false, player2: false };
+
+    // Notifier tous les clients que le rematch a été refusé
+    this.server.to(roomId).emit('rematchDeclined');
+  }
+
+  private startRematch(gameId: string) {
+    const room = this.gameRooms.get(gameId);
+    if (!room) return;
+
+    this.logger.log(`🔄 STARTING REMATCH: gameId=${gameId}`);
+
+    // Réinitialiser l'état du jeu
+    room.gameState = {
+      ball: {
+        x: 400,
+        y: 200,
+        velocityX: 8,
+        velocityY: 6,
+      },
+      paddles: {
+        player1: { y: 150 },
+        player2: { y: 150 },
+      },
+      score: {
+        player1: 0,
+        player2: 0,
+      },
+      players: {
+        player1: { name: room.playersNames.player1 || 'Joueur 1', id: room.players.player1 },
+        player2: { name: room.playersNames.player2 || 'Joueur 2', id: room.players.player2 },
+      },
+      gameStatus: 'playing',
+    };
+
+    // Réinitialiser les demandes de rematch
+    room.rematchRequests = { player1: false, player2: false };
+
+    // Notifier le début du rematch
+    this.server.to(gameId).emit('rematchStarted', room.gameState);
+
+    // Démarrer la boucle de jeu
+    this.startGameLoop(gameId);
+  }
 
   private createGameRoom(gameId: string): GameRoom {
     return {
@@ -200,6 +321,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       players: {},
       playersNames: {},
       spectators: new Set(),
+      rematchRequests: { player1: false, player2: false },
       gameState: {
         ball: {
           x: 400, // Centre du canvas (800/2)
