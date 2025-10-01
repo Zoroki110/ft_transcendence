@@ -276,6 +276,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(roomId).emit('rematchDeclined');
   }
 
+  @SubscribeMessage('sendChatMessage')
+  handleSendChatMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { message: string; username?: string },
+  ) {
+    const roomId = this.playerToRoom.get(client.id);
+    if (!roomId) return;
+
+    const room = this.gameRooms.get(roomId);
+    if (!room) return;
+
+    const { message, username } = data;
+    if (!message || !message.trim()) return;
+
+    this.logger.log(`💬 CHAT MESSAGE: roomId=${roomId}, username=${username}, message=${message.substring(0, 50)}...`);
+
+    // Diffuser le message à tous les clients de la room
+    this.server.to(roomId).emit('chatMessage', {
+      username: username || 'Anonyme',
+      message: message.trim(),
+      timestamp: new Date().toISOString(),
+      senderId: client.id
+    });
+  }
+
   private startRematch(gameId: string) {
     const room = this.gameRooms.get(gameId);
     if (!room) return;

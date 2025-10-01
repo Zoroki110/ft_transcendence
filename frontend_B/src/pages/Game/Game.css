@@ -436,6 +436,34 @@
   }
 }
 
+/* Styles pour le chat */
+.chat-message {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.chat-message.own-message {
+  margin-left: 10px;
+  padding-left: 8px;
+}
+
+.chat-message.other-message {
+  margin-right: 10px;
+  padding-left: 8px;
+}
+
+.chat-username {
+  font-weight: bold;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.chat-text {
+  color: #ffffff;
+}
+
 /* Responsive pour le menu de fin */
 @media (max-width: 768px) {
   .game-end-menu {

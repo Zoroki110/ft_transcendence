@@ -33,6 +33,35 @@ const Game: React.FC = () => {
   const [playerNames, setPlayerNames] = useState<{ player1: string; player2: string }>({ player1: 'Joueur 1', player2: 'Joueur 2' });
   const [rematchRequest, setRematchRequest] = useState<{ fromPlayer: string; fromName: string } | null>(null);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
+  const [currentSocketId, setCurrentSocketId] = useState<string | null>(null);
+
+  // Fonction pour générer une couleur basée sur le nom d'utilisateur
+  const getUserColor = (username: string): string => {
+    const colors = [
+      '#FF6B6B', // Rouge
+      '#4ECDC4', // Turquoise
+      '#45B7D1', // Bleu
+      '#96CEB4', // Vert
+      '#FFEAA7', // Jaune
+      '#DDA0DD', // Violet clair
+      '#98D8C8', // Menthe
+      '#F7DC6F', // Or
+      '#BB8FCE', // Lavande
+      '#85C1E9', // Bleu clair
+      '#F8C471', // Orange
+      '#82E0AA', // Vert clair
+    ];
+
+    // Générer un hash simple du nom d'utilisateur
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Utiliser le hash pour sélectionner une couleur
+    const colorIndex = Math.abs(hash) % colors.length;
+    return colors[colorIndex];
+  };
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -68,12 +97,26 @@ const Game: React.FC = () => {
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
 
-    setMessages(prev => [...prev, {
-      username: 'Moi',
-      message: chatMessage,
-      timestamp: new Date()
-    }]);
+    // Envoyer via WebSocket
+    if ((window as any).sendChatMessage) {
+      (window as any).sendChatMessage(chatMessage);
+    }
     setChatMessage('');
+  };
+
+  const handleChatMessage = (messageData: { username: string; message: string; timestamp: string; senderId: string }) => {
+    console.log('💬 GAME: Message de chat reçu:', messageData);
+    setMessages(prev => [...prev, {
+      username: messageData.username,
+      message: messageData.message,
+      timestamp: new Date(messageData.timestamp),
+      senderId: messageData.senderId,
+      isOwnMessage: messageData.senderId === currentSocketId
+    }]);
+  };
+
+  const handleSocketId = (socketId: string) => {
+    setCurrentSocketId(socketId);
   };
 
   const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any, receivedPlayerNames: any) => {
@@ -220,6 +263,8 @@ const Game: React.FC = () => {
                   onAcceptRematch={handleAcceptRematch}
                   onDeclineRematch={handleDeclineRematch}
                   waitingForRematch={waitingForRematch}
+                  onChatMessage={handleChatMessage}
+                  onSocketId={handleSocketId}
                 />
               ) : (
                 <div className="game-placeholder">
@@ -259,12 +304,28 @@ const Game: React.FC = () => {
                     Aucun message
                   </div>
                 ) : (
-                  messages.map((msg, index) => (
-                    <div key={index} className={`chat-message ${msg.isSystem ? 'system-message' : ''}`}>
-                      <strong className="chat-username">{msg.username}:</strong>{' '}
-                      <span className="chat-text">{msg.message}</span>
-                    </div>
-                  ))
+                  messages.map((msg, index) => {
+                    const userColor = msg.isOwnMessage ? '#9932CC' : getUserColor(msg.username);
+                    const messageStyle = msg.isOwnMessage
+                      ? { borderLeftColor: userColor }
+                      : { borderLeftColor: userColor, backgroundColor: `${userColor}15` };
+
+                    return (
+                      <div
+                        key={index}
+                        className={`chat-message ${msg.isSystem ? 'system-message' : ''} ${msg.isOwnMessage ? 'own-message' : 'other-message'}`}
+                        style={messageStyle}
+                      >
+                        <strong
+                          className="chat-username"
+                          style={{ color: userColor }}
+                        >
+                          {msg.isOwnMessage ? 'Moi' : msg.username}:
+                        </strong>{' '}
+                        <span className="chat-text">{msg.message}</span>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
