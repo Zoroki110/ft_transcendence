@@ -37,6 +37,8 @@ interface PongGameProps {
   onAcceptRematch?: () => void;
   onDeclineRematch?: () => void;
   waitingForRematch?: boolean;
+  onChatMessage?: (messageData: { username: string; message: string; timestamp: string; senderId: string }) => void;
+  onSocketId?: (socketId: string) => void;
 }
 
 const PongGame: React.FC<PongGameProps> = ({
@@ -50,7 +52,9 @@ const PongGame: React.FC<PongGameProps> = ({
   onRematchDeclined,
   onAcceptRematch,
   onDeclineRematch,
-  waitingForRematch
+  waitingForRematch,
+  onChatMessage,
+  onSocketId
 }) => {
   const { user } = useUser();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,7 +89,7 @@ const PongGame: React.FC<PongGameProps> = ({
     if (playerRole === 'spectator') return;
 
     const key = event.key.toLowerCase();
-    if (['w', 's', 'arrowup', 'arrowdown'].includes(key)) {
+    if (['arrowup', 'arrowdown'].includes(key)) {
       event.preventDefault();
       keysPressed.current.add(key);
     }
@@ -112,10 +116,10 @@ const PongGame: React.FC<PongGameProps> = ({
     let direction = '';
 
     if (playerRole === 'player1' || playerRole === 'player2') {
-      if (keys.has('w') || keys.has('arrowup')) {
+      if (keys.has('arrowup')) {
         direction = 'up';
         shouldSend = true;
-      } else if (keys.has('s') || keys.has('arrowdown')) {
+      } else if (keys.has('arrowdown')) {
         direction = 'down';
         shouldSend = true;
       }
@@ -285,10 +289,10 @@ const PongGame: React.FC<PongGameProps> = ({
       ctx.shadowBlur = 5;
       ctx.textAlign = 'left';
       if (playerRole === 'player1') {
-        ctx.fillText('[W/S] or [↑/↓] TO MOVE', 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('[↑/↓] TO MOVE', 10, CANVAS_HEIGHT - 10);
       } else {
         ctx.textAlign = 'right';
-        ctx.fillText('[W/S] or [↑/↓] TO MOVE', CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('[↑/↓] TO MOVE', CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
       }
       ctx.shadowBlur = 0;
     }
@@ -326,6 +330,8 @@ const PongGame: React.FC<PongGameProps> = ({
     socket.on('connect', () => {
       console.log(`🔵 WEBSOCKET: Connecté au serveur WebSocket, socket.id=${socket.id}`);
       setConnectionStatus('connected');
+      // Envoyer l'ID du socket au parent
+      onSocketId?.(socket.id);
       // Utiliser le nom de l'utilisateur connecté ou un nom par défaut
       const playerName = isSpectator ? undefined : (user?.displayName || user?.username || `Joueur ${Math.floor(Math.random() * 1000)}`);
       console.log(`🔵 WEBSOCKET: Émission joinGame avec gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}`);
@@ -416,6 +422,11 @@ const PongGame: React.FC<PongGameProps> = ({
       onRematchDeclined?.();
     });
 
+    socket.on('chatMessage', (messageData: { username: string; message: string; timestamp: string; senderId: string }) => {
+      console.log(`💬 WEBSOCKET: chatMessage reçu, username=${messageData.username}, message=${messageData.message}`);
+      onChatMessage?.(messageData);
+    });
+
     socket.on('connect_error', () => {
       console.log(`🔴 WEBSOCKET: Erreur de connexion WebSocket`);
       setConnectionStatus('error');
@@ -473,11 +484,22 @@ const PongGame: React.FC<PongGameProps> = ({
       }
     };
 
+    (window as any).sendChatMessage = (message: string) => {
+      if (socketRef.current && user) {
+        console.log('💬 WEBSOCKET: Envoi sendChatMessage, message=', message);
+        socketRef.current.emit('sendChatMessage', {
+          message: message,
+          username: user.displayName || user.username || 'Joueur'
+        });
+      }
+    };
+
     return () => {
       // Nettoyer lors du démontage
       delete (window as any).sendRematchRequest;
       delete (window as any).sendAcceptRematch;
       delete (window as any).sendDeclineRematch;
+      delete (window as any).sendChatMessage;
     };
   }, []);
 
@@ -532,7 +554,7 @@ const PongGame: React.FC<PongGameProps> = ({
       {playerRole !== 'spectator' && (
         <div className="game-controls">
           <p>Vous êtes le <strong>{playerRole === 'player1' ? 'Joueur 1 (gauche)' : 'Joueur 2 (droite)'}</strong></p>
-          <p>Utilisez <kbd>W</kbd>/<kbd>S</kbd> ou <kbd>↑</kbd>/<kbd>↓</kbd> pour bouger votre paddle</p>
+          <p>Utilisez <kbd>↑</kbd>/<kbd>↓</kbd> pour bouger votre paddle</p>
         </div>
       )}
     </div>
