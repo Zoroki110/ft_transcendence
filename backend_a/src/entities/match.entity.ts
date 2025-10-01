@@ -1,11 +1,11 @@
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  ManyToOne, 
-  Column, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Column,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn
+  JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Tournament } from './tournament.entity';
@@ -15,15 +15,16 @@ export class Match {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, user => user.matchesAsPlayer1, {
-  nullable: false,
-  onDelete: 'CASCADE'})
+  @ManyToOne(() => User, (user) => user.matchesAsPlayer1, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'player1_id' })
   player1: User;
 
-  @ManyToOne(() => User, user => user.matchesAsPlayer2, {
+  @ManyToOne(() => User, (user) => user.matchesAsPlayer2, {
     nullable: false,
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'player2_id' })
   player2: User;
@@ -37,7 +38,7 @@ export class Match {
   @Column({
     type: 'enum',
     enum: ['pending', 'active', 'finished', 'cancelled'],
-    default: 'pending'
+    default: 'pending',
   })
   status: string;
 
@@ -50,7 +51,9 @@ export class Match {
   @Column({ type: 'timestamp', nullable: true })
   finishedAt: Date;
 
-  @ManyToOne(() => Tournament, (tournament) => tournament.matches, { nullable: true })
+  @ManyToOne(() => Tournament, (tournament) => tournament.matches, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'tournament_id' })
   tournament: Tournament;
 

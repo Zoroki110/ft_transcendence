@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Req, UseGuards, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Req,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -35,23 +43,27 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() body: { username: string; email: string; password: string }) {
+  async register(
+    @Body() body: { username: string; email: string; password: string },
+  ) {
     if (!body?.username || !body?.email || !body?.password) {
-      throw new BadRequestException('username, email and password are required');
+      throw new BadRequestException(
+        'username, email and password are required',
+      );
     }
-    
+
     // Créer l'utilisateur via UsersService
     const user = await this.usersService.create({
       username: body.username,
       email: body.email,
-      password: body.password
+      password: body.password,
     });
-    
+
     // Générer le token JWT
     const access_token = this.authService.generateJwt(user);
-    
-    return { 
-      message: 'User registered successfully', 
+
+    return {
+      message: 'User registered successfully',
       user: {
         id: user.id,
         username: user.username,
@@ -65,9 +77,9 @@ export class AuthController {
         isOnline: user.isOnline,
         lastSeen: user.lastSeen,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
       },
-      access_token 
+      access_token,
     };
   }
 }

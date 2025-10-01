@@ -15,7 +15,7 @@ export class ChatMessage {
   @Column()
   content: string;
 
-  @ManyToOne(() => User, user => user.messages, { eager: true })
+  @ManyToOne(() => User, (user) => user.messages, { eager: true })
   sender: User;
 
   @CreateDateColumn()

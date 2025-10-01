@@ -1,12 +1,57 @@
 // frontend_B/src/pages/Home/Home.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+import { gameAPI } from '../../services/api';
 import Debug from '../../components/Debug';
 import './Home.css';
 
 const Home: React.FC = () => {
   const { isLoggedIn } = useUser();
+  const navigate = useNavigate();
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [waitingRoomsCount, setWaitingRoomsCount] = useState(0);
+
+  const handleCreateQuickGame = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setIsCreatingGame(true);
+      console.log('🟢 FRONTEND: Appel API createQuickMatch à', new Date().toISOString());
+      const response = await gameAPI.createQuickMatch();
+      console.log('🟢 FRONTEND: Réponse API reçue:', response.data);
+      const gameId = response.data.gameId;
+      console.log('🟢 FRONTEND: Navigation vers /game/' + gameId);
+      navigate(`/game/${gameId}`);
+    } catch (error) {
+      console.error('🔴 FRONTEND: Erreur lors de la création de la partie:', error);
+      alert('Impossible de créer une partie. Veuillez réessayer.');
+    } finally {
+      setIsCreatingGame(false);
+    }
+  };
+
+  // Charger le nombre de parties en attente
+  useEffect(() => {
+    const fetchWaitingRooms = async () => {
+      try {
+        const response = await gameAPI.getWaitingRoomsCount();
+        setWaitingRoomsCount(response.data.count);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des parties en attente:', error);
+      }
+    };
+
+    if (isLoggedIn) {
+      fetchWaitingRooms();
+      // Rafraîchir toutes les 10 secondes
+      const interval = setInterval(fetchWaitingRooms, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn]);
   
   return (
     <div className="home-page">
@@ -17,13 +62,23 @@ const Home: React.FC = () => {
             Le meilleur jeu de Pong en ligne
           </p>
           <div className="home-hero-actions">
-            <Link to={isLoggedIn ? "/game" : "/login"} className="btn btn-primary btn-large">
-              🚀 {isLoggedIn ? "Commencer à jouer" : "Se connecter pour jouer"}
-            </Link>
+            <button
+              onClick={handleCreateQuickGame}
+              disabled={isCreatingGame || !isLoggedIn}
+              className="btn btn-primary btn-large"
+            >
+              🚀 {isCreatingGame ? "Recherche..." : isLoggedIn ? "Partie rapide" : "Se connecter pour jouer"}
+            </button>
             <Link to="/tournaments" className="btn btn-secondary btn-large">
               🏆 Voir les tournois
             </Link>
           </div>
+
+          {isLoggedIn && waitingRoomsCount > 0 && (
+            <div className="home-waiting-info">
+              <p>🎯 {waitingRoomsCount} joueur{waitingRoomsCount > 1 ? 's' : ''} en attente d'un adversaire</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -31,6 +86,14 @@ const Home: React.FC = () => {
         <div className="home-features">
           <h2 className="home-section-title">✨ Fonctionnalités</h2>
           <div className="grid grid-3">
+            <div className="card home-feature-card">
+              <div className="home-feature-icon">🎯</div>
+              <h3>Matchmaking</h3>
+              <p className="home-feature-description">
+                Système automatique d'appariement pour trouver rapidement un adversaire
+              </p>
+            </div>
+
             <div className="card home-feature-card">
               <div className="home-feature-icon">🎮</div>
               <h3>Jeu en temps réel</h3>

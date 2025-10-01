@@ -17,7 +17,8 @@ import { FtStrategy } from './oauth/ft.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get('JWT_ACCESS_SECRET') ?? cfg.get('JWT_SECRET') ?? 'change-me',
+        secret:
+          cfg.get('JWT_ACCESS_SECRET') ?? cfg.get('JWT_SECRET') ?? 'change-me',
         signOptions: { expiresIn: cfg.get('JWT_ACCESS_TTL') ?? '15m' },
       }),
     }),

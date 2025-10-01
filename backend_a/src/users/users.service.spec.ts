@@ -57,7 +57,9 @@ describe('UsersService', () => {
 
     service = module.get<UsersService>(UsersService);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    friendshipRepository = module.get<Repository<Friendship>>(getRepositoryToken(Friendship));
+    friendshipRepository = module.get<Repository<Friendship>>(
+      getRepositoryToken(Friendship),
+    );
     matchRepository = module.get<Repository<Match>>(getRepositoryToken(Match));
   });
 
@@ -77,7 +79,14 @@ describe('UsersService', () => {
       const result = await service.findAll();
       expect(result).toEqual(expectedUsers);
       expect(mockUserRepository.find).toHaveBeenCalledWith({
-        select: ['id', 'username', 'email', 'avatar', 'isOnline', 'displayName'],
+        select: [
+          'id',
+          'username',
+          'email',
+          'avatar',
+          'isOnline',
+          'displayName',
+        ],
       });
     });
   });
@@ -89,7 +98,9 @@ describe('UsersService', () => {
 
       const result = await service.findOne(1);
       expect(result).toEqual(expectedUser);
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
     });
 
     it('should return null if user not found', async () => {

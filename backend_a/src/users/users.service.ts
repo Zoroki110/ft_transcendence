@@ -1,10 +1,10 @@
 // backend_a/src/users/users.service.ts
-import { 
-  Injectable, 
-  ConflictException, 
+import {
+  Injectable,
+  ConflictException,
   NotFoundException,
   BadRequestException,
-  ForbiddenException 
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
@@ -42,8 +42,8 @@ export class UsersService {
   // ===============================
 
   async findAll(): Promise<SafeUser[]> {
-    const users = await this.userRepo.find({ 
-      select: ['id', 'username', 'email', 'avatar', 'isOnline', 'displayName'] 
+    const users = await this.userRepo.find({
+      select: ['id', 'username', 'email', 'avatar', 'isOnline', 'displayName'],
     });
     return users as SafeUser[];
   }
@@ -53,14 +53,20 @@ export class UsersService {
     return toSafe(user);
   }
 
-  async findOrCreate(userData: { username: string; email: string }): Promise<SafeUser> {
-    let user = await this.userRepo.findOne({ where: { email: userData.email } });
+  async findOrCreate(userData: {
+    username: string;
+    email: string;
+  }): Promise<SafeUser> {
+    let user = await this.userRepo.findOne({
+      where: { email: userData.email },
+    });
     if (!user) {
       const exists = await this.userRepo.findOne({
         where: [{ username: userData.username }, { email: userData.email }],
         select: ['id'],
       });
-      if (exists) throw new ConflictException('Username or email already exists');
+      if (exists)
+        throw new ConflictException('Username or email already exists');
 
       user = this.userRepo.create({
         username: userData.username,
@@ -120,7 +126,8 @@ export class UsersService {
     });
 
     const updated = await this.userRepo.findOne({ where: { id } });
-    if (!updated) throw new NotFoundException(`User ${id} not found after update`);
+    if (!updated)
+      throw new NotFoundException(`User ${id} not found after update`);
     return toSafe(updated)!;
   }
 
@@ -136,23 +143,27 @@ export class UsersService {
   // NOUVELLES MÉTHODES - FRIENDS
   // ===============================
 
-  async sendFriendRequest(requesterId: number, addresseeId: number): Promise<Friendship> {
+  async sendFriendRequest(
+    requesterId: number,
+    addresseeId: number,
+  ): Promise<Friendship> {
     // Vérifier que les deux users existent
     const [requester, addressee] = await Promise.all([
       this.userRepo.findOne({ where: { id: requesterId } }),
-      this.userRepo.findOne({ where: { id: addresseeId } })
+      this.userRepo.findOne({ where: { id: addresseeId } }),
     ]);
 
     if (!requester) throw new NotFoundException('Requester not found');
     if (!addressee) throw new NotFoundException('Addressee not found');
-    if (requesterId === addresseeId) throw new BadRequestException('Cannot add yourself as friend');
+    if (requesterId === addresseeId)
+      throw new BadRequestException('Cannot add yourself as friend');
 
     // Vérifier qu'il n'y a pas déjà une relation
     const existing = await this.friendshipRepo.findOne({
       where: [
         { requesterId, addresseeId },
-        { requesterId: addresseeId, addresseeId: requesterId }
-      ]
+        { requesterId: addresseeId, addresseeId: requesterId },
+      ],
     });
 
     if (existing) {
@@ -164,16 +175,19 @@ export class UsersService {
       addresseeId,
       requester,
       addressee,
-      status: FriendshipStatus.PENDING
+      status: FriendshipStatus.PENDING,
     });
 
     return await this.friendshipRepo.save(friendship);
   }
 
-  async acceptFriendRequest(friendshipId: number, userId: number): Promise<Friendship> {
+  async acceptFriendRequest(
+    friendshipId: number,
+    userId: number,
+  ): Promise<Friendship> {
     const friendship = await this.friendshipRepo.findOne({
       where: { id: friendshipId },
-      relations: ['requester', 'addressee']
+      relations: ['requester', 'addressee'],
     });
 
     if (!friendship) throw new NotFoundException('Friend request not found');
@@ -188,9 +202,12 @@ export class UsersService {
     return await this.friendshipRepo.save(friendship);
   }
 
-  async rejectFriendRequest(friendshipId: number, userId: number): Promise<void> {
+  async rejectFriendRequest(
+    friendshipId: number,
+    userId: number,
+  ): Promise<void> {
     const friendship = await this.friendshipRepo.findOne({
-      where: { id: friendshipId }
+      where: { id: friendshipId },
     });
 
     if (!friendship) throw new NotFoundException('Friend request not found');
@@ -204,9 +221,17 @@ export class UsersService {
   async removeFriend(userId: number, friendId: number): Promise<void> {
     const friendship = await this.friendshipRepo.findOne({
       where: [
-        { requesterId: userId, addresseeId: friendId, status: FriendshipStatus.ACCEPTED },
-        { requesterId: friendId, addresseeId: userId, status: FriendshipStatus.ACCEPTED }
-      ]
+        {
+          requesterId: userId,
+          addresseeId: friendId,
+          status: FriendshipStatus.ACCEPTED,
+        },
+        {
+          requesterId: friendId,
+          addresseeId: userId,
+          status: FriendshipStatus.ACCEPTED,
+        },
+      ],
     });
 
     if (!friendship) throw new NotFoundException('Friendship not found');
@@ -217,22 +242,24 @@ export class UsersService {
     const friendships = await this.friendshipRepo.find({
       where: [
         { requesterId: userId, status: FriendshipStatus.ACCEPTED },
-        { addresseeId: userId, status: FriendshipStatus.ACCEPTED }
+        { addresseeId: userId, status: FriendshipStatus.ACCEPTED },
       ],
-      relations: ['requester', 'addressee']
+      relations: ['requester', 'addressee'],
     });
 
-    const friends = friendships.map(friendship => {
-      return friendship.requesterId === userId ? friendship.addressee : friendship.requester;
+    const friends = friendships.map((friendship) => {
+      return friendship.requesterId === userId
+        ? friendship.addressee
+        : friendship.requester;
     });
 
-    return friends.map(friend => toSafe(friend)!);
+    return friends.map((friend) => toSafe(friend)!);
   }
 
   async getPendingFriendRequests(userId: number): Promise<Friendship[]> {
     return await this.friendshipRepo.find({
       where: { addresseeId: userId, status: FriendshipStatus.PENDING },
-      relations: ['requester', 'addressee']
+      relations: ['requester', 'addressee'],
     });
   }
 
@@ -246,7 +273,10 @@ export class UsersService {
 
     // Supprimer l'ancien avatar s'il existe
     if (user.avatar) {
-      const oldAvatarPath = path.join('./uploads/avatars', path.basename(user.avatar));
+      const oldAvatarPath = path.join(
+        './uploads/avatars',
+        path.basename(user.avatar),
+      );
       if (fs.existsSync(oldAvatarPath)) {
         fs.unlinkSync(oldAvatarPath);
       }
@@ -263,7 +293,10 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
 
     if (user.avatar) {
-      const avatarPath = path.join('./uploads/avatars', path.basename(user.avatar));
+      const avatarPath = path.join(
+        './uploads/avatars',
+        path.basename(user.avatar),
+      );
       if (fs.existsSync(avatarPath)) {
         fs.unlinkSync(avatarPath);
       }
@@ -280,13 +313,10 @@ export class UsersService {
 
   async getMatchHistory(userId: number): Promise<Match[]> {
     return await this.matchRepo.find({
-      where: [
-        { player1: { id: userId } },
-        { player2: { id: userId } }
-      ],
+      where: [{ player1: { id: userId } }, { player2: { id: userId } }],
       relations: ['player1', 'player2', 'tournament'],
       order: { createdAt: 'DESC' },
-      take: 50 // Limiter à 50 derniers matches
+      take: 50, // Limiter à 50 derniers matches
     });
   }
 
@@ -300,24 +330,23 @@ export class UsersService {
 
     // Calculer les stats en temps réel depuis les matches
     const matches = await this.matchRepo.find({
-      where: [
-        { player1: { id: userId } },
-        { player2: { id: userId } }
-      ],
-      relations: ['player1', 'player2']
+      where: [{ player1: { id: userId } }, { player2: { id: userId } }],
+      relations: ['player1', 'player2'],
     });
 
     let wins = 0;
     let losses = 0;
     let totalScore = 0;
 
-    matches.forEach(match => {
+    matches.forEach((match) => {
       // Déterminer le gagnant basé sur les scores
       if (match.status === 'finished') {
         const isPlayer1 = match.player1.id === userId;
         const userScore = isPlayer1 ? match.player1Score : match.player2Score;
-        const opponentScore = isPlayer1 ? match.player2Score : match.player1Score;
-        
+        const opponentScore = isPlayer1
+          ? match.player2Score
+          : match.player1Score;
+
         if (userScore > opponentScore) {
           wins++;
         } else if (opponentScore > userScore) {
@@ -338,7 +367,7 @@ export class UsersService {
     await this.userRepo.update(userId, {
       gamesWon: wins,
       gamesLost: losses,
-      totalScore
+      totalScore,
     });
 
     return {
@@ -349,7 +378,7 @@ export class UsersService {
       totalGames: wins + losses,
       winRate: wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0,
       totalScore,
-      tournamentsWon: user.tournamentsWon
+      tournamentsWon: user.tournamentsWon,
     };
   }
 
@@ -358,9 +387,9 @@ export class UsersService {
   // ===============================
 
   async setOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
-    const updateData: Partial<User> = { 
+    const updateData: Partial<User> = {
       isOnline,
-      lastSeen: new Date()
+      lastSeen: new Date(),
     };
 
     await this.userRepo.update(userId, updateData);
@@ -368,17 +397,20 @@ export class UsersService {
 
   async getOnlineFriends(userId: number): Promise<SafeUser[]> {
     const friends = await this.getFriends(userId);
-    return friends.filter(friend => friend.isOnline);
+    return friends.filter((friend) => friend.isOnline);
   }
 
   // ===============================
   // MÉTHODES UTILITAIRES
   // ===============================
 
-  async updateDisplayName(userId: number, displayName: string): Promise<SafeUser> {
+  async updateDisplayName(
+    userId: number,
+    displayName: string,
+  ): Promise<SafeUser> {
     // Vérifier que le displayName n'est pas déjà pris
     const existing = await this.userRepo.findOne({
-      where: { displayName, id: Not(userId) as any }
+      where: { displayName, id: Not(userId) as any },
     });
 
     if (existing) {

@@ -1,12 +1,12 @@
 // backend_a/src/entities/user.entity.ts
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  OneToMany, 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
   Unique,
   CreateDateColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
 import { Match } from './match.entity';
 import { ChatMessage } from './chat-message.entity';
@@ -28,13 +28,13 @@ export class User {
   @Column({ nullable: true })
   password: string;
 
-  @Column({ nullable: true, length: 255})
+  @Column({ nullable: true, length: 255 })
   avatar?: string;
 
-  @Column({ nullable: true, length: 50})
+  @Column({ nullable: true, length: 50 })
   provider: string;
 
-  @Column({ nullable: true, length: 100})
+  @Column({ nullable: true, length: 100 })
   providerId: string;
 
   @Column({ default: false })
@@ -77,20 +77,20 @@ export class User {
 
   // ===== RELATIONS =====
 
-  @OneToMany(() => Match, match => match.player1)
+  @OneToMany(() => Match, (match) => match.player1)
   matchesAsPlayer1: Match[];
 
-  @OneToMany(() => Match, match => match.player2)
+  @OneToMany(() => Match, (match) => match.player2)
   matchesAsPlayer2: Match[];
 
-  @OneToMany(() => ChatMessage, message => message.sender)
+  @OneToMany(() => ChatMessage, (message) => message.sender)
   messages: ChatMessage[];
 
   // Relations d'amitié
-  @OneToMany(() => Friendship, friendship => friendship.requester)
+  @OneToMany(() => Friendship, (friendship) => friendship.requester)
   sentFriendRequests: Friendship[];
 
-  @OneToMany(() => Friendship, friendship => friendship.addressee)
+  @OneToMany(() => Friendship, (friendship) => friendship.addressee)
   receivedFriendRequests: Friendship[];
 
   // ===== MÉTHODES UTILITAIRES =====

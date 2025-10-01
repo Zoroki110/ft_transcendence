@@ -250,6 +250,18 @@ export const gameAPI = {
 
   finishMatch: (id: number, data: any) =>
     apiClient.patch(`/games/matches/${id}/finish`, data),
+
+  // Créer une partie rapide
+  createQuickMatch: () =>
+    apiClient.post('/public-games/quick-match'),
+
+  // Pour compatibilité avec l'ancien code
+  getGame: (gameId: string) =>
+    apiClient.get(`/games/matches/${gameId}`),
+
+  // Parties en attente
+  getWaitingRoomsCount: () =>
+    apiClient.get('/games/waiting-rooms/count'),
 };
 
 // ===== HEALTH API =====
