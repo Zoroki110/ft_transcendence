@@ -406,6 +406,36 @@
   }
 }
 
+/* Popup de demande de rematch */
+.rematch-request {
+  background: linear-gradient(135deg, #1a0b2e 0%, #2d1b45 50%, #1a0b2e 100%);
+  border: 3px solid #9932CC;
+}
+
+.rematch-message {
+  font-size: 1.2rem;
+  color: #DA70D6;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 10px #DA70D6;
+}
+
+.rematch-request .game-end-title {
+  color: #FFD700;
+  text-shadow: 0 0 25px #FFD700;
+  animation: pulse-neon-gold 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-neon-gold {
+  from {
+    text-shadow: 0 0 25px #FFD700;
+  }
+  to {
+    text-shadow: 0 0 35px #FFD700, 0 0 45px #FFD700;
+  }
+}
+
 /* Responsive pour le menu de fin */
 @media (max-width: 768px) {
   .game-end-menu {

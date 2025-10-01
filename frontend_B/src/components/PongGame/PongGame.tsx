@@ -30,9 +30,28 @@ interface PongGameProps {
   isSpectator?: boolean;
   onGameEnd?: (winner: 'player1' | 'player2', finalScore: any, playerNames: any) => void;
   onPlayerNamesUpdate?: (playerNames: any) => void;
+  onRematchRequest?: () => void;
+  onRematchRequested?: (data: { fromPlayer: string; fromName: string }) => void;
+  onRematchStarted?: () => void;
+  onRematchDeclined?: () => void;
+  onAcceptRematch?: () => void;
+  onDeclineRematch?: () => void;
+  waitingForRematch?: boolean;
 }
 
-const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGameEnd, onPlayerNamesUpdate }) => {
+const PongGame: React.FC<PongGameProps> = ({
+  gameId,
+  isSpectator = false,
+  onGameEnd,
+  onPlayerNamesUpdate,
+  onRematchRequest,
+  onRematchRequested,
+  onRematchStarted,
+  onRematchDeclined,
+  onAcceptRematch,
+  onDeclineRematch,
+  waitingForRematch
+}) => {
   const { user } = useUser();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -380,6 +399,23 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
       setSpectatorCount(data.spectatorCount);
     });
 
+    socket.on('rematchRequested', (data: { fromPlayer: string; fromName: string }) => {
+      console.log(`🔔 WEBSOCKET: rematchRequested reçu, fromPlayer=${data.fromPlayer}, fromName=${data.fromName}`);
+      onRematchRequested?.(data);
+    });
+
+    socket.on('rematchStarted', (gameState: GameState) => {
+      console.log(`🔄 WEBSOCKET: rematchStarted reçu`);
+      setGameState(gameState);
+      gameStateRef.current = gameState;
+      onRematchStarted?.();
+    });
+
+    socket.on('rematchDeclined', () => {
+      console.log(`❌ WEBSOCKET: rematchDeclined reçu`);
+      onRematchDeclined?.();
+    });
+
     socket.on('connect_error', () => {
       console.log(`🔴 WEBSOCKET: Erreur de connexion WebSocket`);
       setConnectionStatus('error');
@@ -413,6 +449,37 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
       }
     };
   }, [connectionStatus, animate]);
+
+  // Exposer les fonctions de rematch globalement
+  useEffect(() => {
+    (window as any).sendRematchRequest = () => {
+      if (socketRef.current) {
+        console.log('🔄 WEBSOCKET: Envoi requestRematch');
+        socketRef.current.emit('requestRematch');
+      }
+    };
+
+    (window as any).sendAcceptRematch = () => {
+      if (socketRef.current) {
+        console.log('✅ WEBSOCKET: Envoi acceptRematch');
+        socketRef.current.emit('acceptRematch');
+      }
+    };
+
+    (window as any).sendDeclineRematch = () => {
+      if (socketRef.current) {
+        console.log('❌ WEBSOCKET: Envoi declineRematch');
+        socketRef.current.emit('declineRematch');
+      }
+    };
+
+    return () => {
+      // Nettoyer lors du démontage
+      delete (window as any).sendRematchRequest;
+      delete (window as any).sendAcceptRematch;
+      delete (window as any).sendDeclineRematch;
+    };
+  }, []);
 
   if (connectionStatus === 'connecting') {
     return (

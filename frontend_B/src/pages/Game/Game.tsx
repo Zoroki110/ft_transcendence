@@ -31,6 +31,8 @@ const Game: React.FC = () => {
   const [gameEnded, setGameEnded] = useState(false);
   const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any; playerNames?: any } | null>(null);
   const [playerNames, setPlayerNames] = useState<{ player1: string; player2: string }>({ player1: 'Joueur 1', player2: 'Joueur 2' });
+  const [rematchRequest, setRematchRequest] = useState<{ fromPlayer: string; fromName: string } | null>(null);
+  const [waitingForRematch, setWaitingForRematch] = useState(false);
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -102,8 +104,50 @@ const Game: React.FC = () => {
   };
 
   const handleRematch = () => {
-    // Recharger la page pour redémarrer la même partie
-    window.location.reload();
+    console.log('🔄 GAME: Demande de rematch envoyée');
+    setWaitingForRematch(true);
+    // Appel de la fonction depuis le composant PongGame
+    if ((window as any).sendRematchRequest) {
+      (window as any).sendRematchRequest();
+    }
+  };
+
+  const handleAcceptRematch = () => {
+    console.log('✅ GAME: Rematch accepté');
+    setRematchRequest(null);
+    // Appel de la fonction depuis le composant PongGame
+    if ((window as any).sendAcceptRematch) {
+      (window as any).sendAcceptRematch();
+    }
+  };
+
+  const handleDeclineRematch = () => {
+    console.log('❌ GAME: Rematch refusé');
+    setRematchRequest(null);
+    setWaitingForRematch(false);
+    // Appel de la fonction depuis le composant PongGame
+    if ((window as any).sendDeclineRematch) {
+      (window as any).sendDeclineRematch();
+    }
+  };
+
+  const handleRematchRequested = (data: { fromPlayer: string; fromName: string }) => {
+    console.log('🔔 GAME: Demande de rematch reçue:', data);
+    setRematchRequest(data);
+  };
+
+  const handleRematchStarted = () => {
+    console.log('🔄 GAME: Rematch démarré');
+    setGameEnded(false);
+    setGameResult(null);
+    setRematchRequest(null);
+    setWaitingForRematch(false);
+  };
+
+  const handleRematchDeclined = () => {
+    console.log('❌ GAME: Rematch refusé par l\'adversaire');
+    setRematchRequest(null);
+    setWaitingForRematch(false);
   };
 
   const handleQuitToHome = () => {
@@ -169,6 +213,13 @@ const Game: React.FC = () => {
                   gameId={gameId}
                   onGameEnd={handleGameEnd}
                   onPlayerNamesUpdate={handlePlayerNamesUpdate}
+                  onRematchRequest={handleRematch}
+                  onRematchRequested={handleRematchRequested}
+                  onRematchStarted={handleRematchStarted}
+                  onRematchDeclined={handleRematchDeclined}
+                  onAcceptRematch={handleAcceptRematch}
+                  onDeclineRematch={handleDeclineRematch}
+                  waitingForRematch={waitingForRematch}
                 />
               ) : (
                 <div className="game-placeholder">
@@ -263,14 +314,48 @@ const Game: React.FC = () => {
                 <button
                   className="btn btn-secondary btn-large game-end-btn"
                   onClick={handleRematch}
+                  disabled={waitingForRematch}
                 >
-                  🔄 Rejouer
+                  {waitingForRematch ? '⏳ En attente...' : '🔄 Rejouer'}
                 </button>
                 <button
                   className="btn btn-danger btn-large game-end-btn"
                   onClick={handleQuitToHome}
                 >
                   🚪 Quitter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Demande de rematch reçue */}
+        {rematchRequest && (
+          <div className="game-end-overlay">
+            <div className="game-end-menu rematch-request">
+              <div className="game-end-header">
+                <h2 className="game-end-title">
+                  🔔 Demande de rematch
+                </h2>
+                <div className="rematch-message">
+                  <strong>{rematchRequest.fromName}</strong> souhaite faire un rematch.
+                  <br />
+                  Acceptez-vous de rejouer ?
+                </div>
+              </div>
+
+              <div className="game-end-actions">
+                <button
+                  className="btn btn-primary btn-large game-end-btn"
+                  onClick={handleAcceptRematch}
+                >
+                  ✅ Accepter
+                </button>
+                <button
+                  className="btn btn-danger btn-large game-end-btn"
+                  onClick={handleDeclineRematch}
+                >
+                  ❌ Refuser
                 </button>
               </div>
             </div>

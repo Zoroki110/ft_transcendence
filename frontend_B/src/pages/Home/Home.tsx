@@ -74,11 +74,6 @@ const Home: React.FC = () => {
             </Link>
           </div>
 
-          {isLoggedIn && waitingRoomsCount > 0 && (
-            <div className="home-waiting-info">
-              <p>🎯 {waitingRoomsCount} joueur{waitingRoomsCount > 1 ? 's' : ''} en attente d'un adversaire</p>
-            </div>
-          )}
         </div>
       </div>
 
