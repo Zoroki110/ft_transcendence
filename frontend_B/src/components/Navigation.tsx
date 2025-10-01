@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { gameAPI } from '../services/api';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -12,6 +13,30 @@ const Navigation: React.FC = () => {
 
   // 🎯 UTILISER LE VRAI CONTEXTE UTILISATEUR
   const { user, isLoggedIn, logout } = useUser();
+  const [isCreatingGame, setIsCreatingGame] = useState(false);
+
+  // 🎮 Fonction pour créer une partie rapide (identique à Home.tsx)
+  const handleQuickPlay = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setIsCreatingGame(true);
+      console.log('🟢 NAVIGATION: Appel API createQuickMatch à', new Date().toISOString());
+      const response = await gameAPI.createQuickMatch();
+      console.log('🟢 NAVIGATION: Réponse API reçue:', response.data);
+      const gameId = response.data.gameId;
+      console.log('🟢 NAVIGATION: Navigation vers /game/' + gameId);
+      navigate(`/game/${gameId}`);
+    } catch (error) {
+      console.error('🔴 NAVIGATION: Erreur lors de la création de la partie:', error);
+      alert('Impossible de créer une partie. Veuillez réessayer.');
+    } finally {
+      setIsCreatingGame(false);
+    }
+  };
 
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
@@ -46,10 +71,10 @@ const Navigation: React.FC = () => {
   const handleDropdownItemClick = (action: string) => {
     console.log('🖱️ Action dropdown:', action);
     setIsProfileDropdownOpen(false);
-    
+
     switch (action) {
       case 'game':
-        navigate('/game');
+        handleQuickPlay();
         break;
       case 'profile':
         navigate('/profile');
@@ -95,16 +120,42 @@ const Navigation: React.FC = () => {
         </Link>
         
         <div className="nav-links">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            // Cas spécial pour "Jouer" - utiliser handleQuickPlay au lieu d'un lien
+            if (item.path === '/game') {
+              return (
+                <button
+                  key={item.path}
+                  onClick={handleQuickPlay}
+                  disabled={isCreatingGame}
+                  className={`nav-link nav-button ${isCreatingGame ? 'loading' : ''}`}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: isCreatingGame ? 'wait' : 'pointer',
+                    opacity: isCreatingGame ? 0.7 : 1
+                  }}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">
+                    {isCreatingGame ? 'Recherche...' : item.label}
+                  </span>
+                </button>
+              );
+            }
+
+            // Autres liens normaux
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
 
         <div className="nav-user">
@@ -234,6 +285,7 @@ const Navigation: React.FC = () => {
                     <button
                       className="dropdown-item"
                       onClick={() => handleDropdownItemClick('game')}
+                      disabled={isCreatingGame}
                       style={{
                         width: '100%',
                         display: 'flex',
@@ -242,17 +294,18 @@ const Navigation: React.FC = () => {
                         padding: '0.75rem 1rem',
                         background: 'none',
                         border: 'none',
-                        color: '#4a5568',
-                        cursor: 'pointer',
+                        color: isCreatingGame ? '#a0aec0' : '#4a5568',
+                        cursor: isCreatingGame ? 'wait' : 'pointer',
                         fontSize: '0.95rem',
                         textAlign: 'left',
-                        transition: 'background 0.15s ease'
+                        transition: 'background 0.15s ease',
+                        opacity: isCreatingGame ? 0.7 : 1
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseEnter={(e) => !isCreatingGame && (e.currentTarget.style.background = '#f7fafc')}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                     >
                       <span className="dropdown-icon">🎮</span>
-                      <span>Jouer Maintenant</span>
+                      <span>{isCreatingGame ? 'Recherche...' : 'Jouer Maintenant'}</span>
                     </button>
                     
                     <button
