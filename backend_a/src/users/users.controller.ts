@@ -1,9 +1,29 @@
 // backend_a/src/users/users.controller.ts
 import {
-  Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe, UseGuards, Req, Query, UseInterceptors, UploadedFile, BadRequestException, Patch
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  ParseIntPipe,
+  UseGuards,
+  Req,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags, ApiConsumes, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -58,7 +78,11 @@ export class UsersController {
   @ApiBearerAuth()
   @Put(':id')
   @ApiOperation({ summary: 'Update user profile' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto, @Req() req) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUserDto,
+    @Req() req,
+  ) {
     if (req.user.sub != id) {
       throw new ForbiddenException('You can only update your own profile');
     }
@@ -96,7 +120,7 @@ export class UsersController {
   async respondToFriendRequest(
     @Param('requestId', ParseIntPipe) requestId: number,
     @Body() dto: FriendRequestResponseDto,
-    @Req() req
+    @Req() req,
   ) {
     if (dto.accept) {
       return this.usersService.acceptFriendRequest(requestId, req.user.sub);
@@ -142,7 +166,10 @@ export class UsersController {
   @ApiBearerAuth()
   @Delete('friends/:friendId')
   @ApiOperation({ summary: 'Remove friend' })
-  async removeFriend(@Param('friendId', ParseIntPipe) friendId: number, @Req() req) {
+  async removeFriend(
+    @Param('friendId', ParseIntPipe) friendId: number,
+    @Req() req,
+  ) {
     await this.usersService.removeFriend(req.user.sub, friendId);
     return { message: 'Friend removed successfully' };
   }
@@ -192,7 +219,10 @@ export class UsersController {
 
   @Get(':id/stats')
   @ApiOperation({ summary: 'Get user game statistics' })
-  @ApiResponse({ status: 200, description: 'User statistics retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User statistics retrieved successfully',
+  })
   async getUserStats(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.getUserStats(id);
   }
@@ -222,7 +252,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user match history (public)' })
   async getUserMatches(
     @Param('id', ParseIntPipe) id: number,
-    @Query() query: MatchHistoryQueryDto
+    @Query() query: MatchHistoryQueryDto,
   ) {
     return this.usersService.getMatchHistory(id);
   }
@@ -266,9 +296,11 @@ export class UsersController {
   @ApiOperation({ summary: 'Search users by username' })
   async searchUsers(@Query('q') searchQuery: string) {
     if (!searchQuery || searchQuery.length < 2) {
-      throw new BadRequestException('Search query must be at least 2 characters');
+      throw new BadRequestException(
+        'Search query must be at least 2 characters',
+      );
     }
-    
+
     // On implémentera cette méthode dans le service plus tard
     // return this.usersService.searchUsers(searchQuery);
     return { message: 'Search feature coming soon', query: searchQuery };
@@ -280,23 +312,24 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user dashboard data' })
   async getDashboard(@Req() req) {
     const userId = req.user.sub;
-    
+
     // Récupérer toutes les données pour le dashboard
-    const [user, stats, friends, pendingRequests, recentMatches] = await Promise.all([
-      this.usersService.findOne(userId),
-      this.usersService.getUserStats(userId),
-      this.usersService.getFriends(userId),
-      this.usersService.getPendingFriendRequests(userId),
-      this.usersService.getMatchHistory(userId)
-    ]);
+    const [user, stats, friends, pendingRequests, recentMatches] =
+      await Promise.all([
+        this.usersService.findOne(userId),
+        this.usersService.getUserStats(userId),
+        this.usersService.getFriends(userId),
+        this.usersService.getPendingFriendRequests(userId),
+        this.usersService.getMatchHistory(userId),
+      ]);
 
     return {
       user,
       stats,
       friendsCount: friends.length,
-      onlineFriendsCount: friends.filter(f => f.isOnline).length,
+      onlineFriendsCount: friends.filter((f) => f.isOnline).length,
       pendingRequestsCount: pendingRequests.length,
-      recentMatches: recentMatches.slice(0, 5) // 5 derniers matches
+      recentMatches: recentMatches.slice(0, 5), // 5 derniers matches
     };
   }
 }

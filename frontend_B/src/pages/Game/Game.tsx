@@ -1,7 +1,8 @@
 // frontend_B/src/pages/Game/Game.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { gameAPI } from '../../services/api';
+import PongGame from '../../components/PongGame/PongGame';
 import './Game.css';
 
 interface GameData {
@@ -21,11 +22,14 @@ interface GameData {
 
 const Game: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
+  const [gameEnded, setGameEnded] = useState(false);
+  const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any } | null>(null);
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -33,8 +37,21 @@ const Game: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await gameAPI.getGame(gameId);
-        setGameData(response.data);
+        // Pour les parties rapides, pas besoin d'appeler l'API
+        // Les données sont gérées par WebSocket
+        if (gameId.startsWith('game_') || gameId.startsWith('quick_')) {
+          setGameData({
+            id: gameId,
+            players: [],
+            score: { player1: 0, player2: 0 },
+            status: 'waiting',
+            spectatorCount: 0
+          });
+        } else {
+          // Pour les matchs existants (ID numérique)
+          const response = await gameAPI.getGame(gameId);
+          setGameData(response.data);
+        }
       } catch (err: any) {
         setError(err.response?.data?.message || 'Erreur de chargement');
       } finally {
@@ -47,13 +64,32 @@ const Game: React.FC = () => {
 
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
-    
+
     setMessages(prev => [...prev, {
       username: 'Moi',
       message: chatMessage,
       timestamp: new Date()
     }]);
     setChatMessage('');
+  };
+
+  const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any) => {
+    setGameEnded(true);
+    setGameResult({ winner, finalScore });
+
+    // Ajouter un message dans le chat
+    setMessages(prev => [...prev, {
+      username: 'Système',
+      message: `🎉 ${winner === 'player1' ? 'Joueur 1' : 'Joueur 2'} a gagné ! Score final: ${finalScore.player1} - ${finalScore.player2}`,
+      timestamp: new Date(),
+      isSystem: true
+    }]);
+  };
+
+  const handleQuitGame = () => {
+    if (confirm('Êtes-vous sûr de vouloir quitter la partie ?')) {
+      navigate('/');
+    }
   };
 
   if (isLoading) {
@@ -95,7 +131,7 @@ const Game: React.FC = () => {
 
             <div className="game-header-actions">
               <button className="btn btn-secondary">⚙️</button>
-              <button className="btn btn-danger">🚪 Quitter</button>
+              <button className="btn btn-danger" onClick={handleQuitGame}>🚪 Quitter</button>
             </div>
           </div>
         </div>
@@ -106,13 +142,20 @@ const Game: React.FC = () => {
           
           <div className="card game-area">
             <div id="game-canvas-container" className="game-canvas">
-              <div className="game-placeholder">
-                <div className="game-placeholder-icon">🎮</div>
-                <div className="game-placeholder-title">Zone du moteur de jeu (Game_D)</div>
-                <div className="game-placeholder-subtitle">
-                  Canvas WebGL sera injecté ici
+              {gameId ? (
+                <PongGame
+                  gameId={gameId}
+                  onGameEnd={handleGameEnd}
+                />
+              ) : (
+                <div className="game-placeholder">
+                  <div className="game-placeholder-icon">🎮</div>
+                  <div className="game-placeholder-title">Aucun ID de partie fourni</div>
+                  <div className="game-placeholder-subtitle">
+                    Retournez à l'accueil pour créer une partie
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -143,7 +186,7 @@ const Game: React.FC = () => {
                   </div>
                 ) : (
                   messages.map((msg, index) => (
-                    <div key={index} className="chat-message">
+                    <div key={index} className={`chat-message ${msg.isSystem ? 'system-message' : ''}`}>
                       <strong className="chat-username">{msg.username}:</strong>{' '}
                       <span className="chat-text">{msg.message}</span>
                     </div>

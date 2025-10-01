@@ -198,6 +198,17 @@
   font-size: 0.9rem;
 }
 
+.system-message {
+  background: rgba(76, 175, 80, 0.1);
+  border-left: 3px solid #4caf50;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.system-message .chat-username {
+  color: #4caf50;
+}
+
 .chat-input {
   display: flex;
   gap: 0.5rem;

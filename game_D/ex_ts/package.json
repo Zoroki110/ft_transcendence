@@ -1,0 +1,17 @@
+{
+  "name": "ex_ts",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "dev": "vite"
+}
+,
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
+  }
+}

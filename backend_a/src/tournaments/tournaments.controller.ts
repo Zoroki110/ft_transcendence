@@ -49,13 +49,34 @@ export class TournamentsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lister tous les tournois avec filtres et pagination' })
-  @ApiResponse({ status: 200, description: 'Liste des tournois récupérée avec succès' })
-  @ApiQuery({ name: 'status', required: false, description: 'Filtrer par status' })
+  @ApiOperation({
+    summary: 'Lister tous les tournois avec filtres et pagination',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tournois récupérée avec succès',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filtrer par status',
+  })
   @ApiQuery({ name: 'type', required: false, description: 'Filtrer par type' })
-  @ApiQuery({ name: 'isPublic', required: false, description: 'Tournois publics seulement' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Nombre de résultats par page (défaut: 10)' })
-  @ApiQuery({ name: 'page', required: false, description: 'Numéro de page (défaut: 1)' })
+  @ApiQuery({
+    name: 'isPublic',
+    required: false,
+    description: 'Tournois publics seulement',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Nombre de résultats par page (défaut: 10)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Numéro de page (défaut: 1)',
+  })
   findAll(@Query() query: TournamentQueryDto, @Req() req) {
     const userId = req.user?.sub || null;
     return this.tournamentsService.findAll(query, userId);
@@ -86,7 +107,11 @@ export class TournamentsController {
     @Body() updateTournamentDto: UpdateTournamentDto,
     @Req() req,
   ) {
-    return this.tournamentsService.update(id, updateTournamentDto, req.user.sub);
+    return this.tournamentsService.update(
+      id,
+      updateTournamentDto,
+      req.user.sub,
+    );
   }
 
   @Delete(':id')
@@ -111,7 +136,10 @@ export class TournamentsController {
   @ApiOperation({ summary: 'Rejoindre un tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Inscription au tournoi réussie' })
-  @ApiResponse({ status: 400, description: 'Inscription impossible (tournoi complet, fermé, etc.)' })
+  @ApiResponse({
+    status: 400,
+    description: 'Inscription impossible (tournoi complet, fermé, etc.)',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   @ApiResponse({ status: 409, description: 'Déjà inscrit au tournoi' })
@@ -129,7 +157,10 @@ export class TournamentsController {
   @ApiOperation({ summary: 'Quitter un tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Sortie du tournoi réussie' })
-  @ApiResponse({ status: 400, description: 'Impossible de quitter (tournoi commencé)' })
+  @ApiResponse({
+    status: 400,
+    description: 'Impossible de quitter (tournoi commencé)',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   leaveTournament(@Param('id', ParseIntPipe) id: number, @Req() req) {
@@ -137,7 +168,7 @@ export class TournamentsController {
   }
 
   @Get(':id/participants')
-  @ApiOperation({ summary: 'Liste des participants d\'un tournoi' })
+  @ApiOperation({ summary: "Liste des participants d'un tournoi" })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Liste des participants' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
@@ -157,10 +188,19 @@ export class TournamentsController {
   @Post(':id/generate-brackets')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Générer les brackets et démarrer le tournoi (créateur seulement)' })
+  @ApiOperation({
+    summary: 'Générer les brackets et démarrer le tournoi (créateur seulement)',
+  })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
-  @ApiResponse({ status: 200, description: 'Brackets générés, tournoi démarré' })
-  @ApiResponse({ status: 400, description: 'Impossible de générer (pas assez de participants, déjà généré, etc.)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Brackets générés, tournoi démarré',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Impossible de générer (pas assez de participants, déjà généré, etc.)',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   @ApiResponse({ status: 403, description: 'Seul le créateur peut démarrer' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
@@ -169,7 +209,7 @@ export class TournamentsController {
   }
 
   @Get(':id/brackets')
-  @ApiOperation({ summary: 'Visualiser l\'arbre du tournoi' })
+  @ApiOperation({ summary: "Visualiser l'arbre du tournoi" })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Arbre du tournoi' })
   @ApiResponse({ status: 400, description: 'Brackets pas encore générés' })
@@ -180,17 +220,17 @@ export class TournamentsController {
   }
 
   @Get(':id/matches')
-  @ApiOperation({ summary: 'Lister tous les matches d\'un tournoi' })
+  @ApiOperation({ summary: "Lister tous les matches d'un tournoi" })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiResponse({ status: 200, description: 'Liste des matches avec détails' })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   async getMatches(@Param('id', ParseIntPipe) id: number) {
     const matches = await this.tournamentsService.getMatchesWithPlayers(id);
-    
+
     return {
       tournamentId: id,
       totalMatches: matches.length,
-      matches: matches.map(match => ({
+      matches: matches.map((match) => ({
         id: match.id,
         player1: match.player1?.username || 'TBD',
         player2: match.player2?.username || 'TBD',
@@ -210,7 +250,10 @@ export class TournamentsController {
   @Get(':id/stats')
   @ApiOperation({ summary: 'Statistiques du tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
-  @ApiResponse({ status: 200, description: 'Statistiques détaillées du tournoi' })
+  @ApiResponse({
+    status: 200,
+    description: 'Statistiques détaillées du tournoi',
+  })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   getStats(@Param('id', ParseIntPipe) id: number, @Req() req) {
     const userId = req.user?.sub || null;
@@ -220,7 +263,10 @@ export class TournamentsController {
   @Get(':id/leaderboard')
   @ApiOperation({ summary: 'Classement du tournoi' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
-  @ApiResponse({ status: 200, description: 'Leaderboard avec positions et stats' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leaderboard avec positions et stats',
+  })
   @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
   async getLeaderboard(@Param('id', ParseIntPipe) id: number, @Req() req) {
     const userId = req.user?.sub || null;
@@ -232,27 +278,34 @@ export class TournamentsController {
   @Post(':id/advance-winner/:matchId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Faire avancer le gagnant d\'un match' })
+  @ApiOperation({ summary: "Faire avancer le gagnant d'un match" })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
   @ApiParam({ name: 'matchId', description: 'ID du match' })
   @ApiResponse({ status: 200, description: 'Gagnant avancé avec succès' })
-  @ApiResponse({ status: 400, description: 'Match déjà terminé ou données invalides' })
+  @ApiResponse({
+    status: 400,
+    description: 'Match déjà terminé ou données invalides',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
-  @ApiResponse({ status: 403, description: 'Seul le créateur peut faire avancer' })
+  @ApiResponse({
+    status: 403,
+    description: 'Seul le créateur peut faire avancer',
+  })
   @ApiResponse({ status: 404, description: 'Match introuvable' })
   async advanceWinner(
     @Param('id', ParseIntPipe) tournamentId: number,
     @Param('matchId', ParseIntPipe) matchId: number,
-    @Body() body: { winnerId: number; player1Score: number; player2Score: number },
+    @Body()
+    body: { winnerId: number; player1Score: number; player2Score: number },
     @Req() req,
   ) {
     return this.tournamentsService.advanceWinner(
-      tournamentId, 
-      matchId, 
-      body.winnerId, 
-      body.player1Score, 
-      body.player2Score, 
-      req.user.sub
+      tournamentId,
+      matchId,
+      body.winnerId,
+      body.player1Score,
+      body.player2Score,
+      req.user.sub,
     );
   }
 
@@ -266,12 +319,15 @@ export class TournamentsController {
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   async getMyTournaments(@Req() req, @Query() query: TournamentQueryDto) {
     const createdQuery = { ...query };
-    const createdTournaments = await this.tournamentsService.findAll(createdQuery);
+    const createdTournaments =
+      await this.tournamentsService.findAll(createdQuery);
 
     return {
-      created: createdTournaments.tournaments.filter(t => t.creatorId === req.user.sub),
-      participated: createdTournaments.tournaments.filter(t => 
-        t.participants.some(p => p.id === req.user.sub)
+      created: createdTournaments.tournaments.filter(
+        (t) => t.creatorId === req.user.sub,
+      ),
+      participated: createdTournaments.tournaments.filter((t) =>
+        t.participants.some((p) => p.id === req.user.sub),
       ),
     };
   }

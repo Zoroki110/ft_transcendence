@@ -28,6 +28,20 @@
   flex-wrap: wrap;
 }
 
+.home-waiting-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.home-waiting-info p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
 /* Features Section */
 .home-features {
   padding: 3rem 0;

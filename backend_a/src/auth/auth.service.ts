@@ -19,14 +19,18 @@ export class AuthService {
   }
 
   generateJwt(user: any): string {
-    const payload = { sub: user.id, username: user.username, email: user.email };
+    const payload = {
+      sub: user.id,
+      username: user.username,
+      email: user.email,
+    };
     return this.jwtService.sign(payload);
   }
 
   async loginWithEmail(email: string, password: string) {
     const user = await this.validateUserByEmail(email, password);
     const access_token = this.generateJwt(user);
-    return { 
+    return {
       user: {
         id: user.id,
         username: user.username,
@@ -40,9 +44,9 @@ export class AuthService {
         isOnline: user.isOnline,
         lastSeen: user.lastSeen,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
       },
-      access_token 
+      access_token,
     };
   }
 }

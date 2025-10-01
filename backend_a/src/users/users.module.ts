@@ -20,7 +20,8 @@ import { UsersController } from './users.controller';
       storage: diskStorage({
         destination: './uploads/avatars',
         filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
           callback(null, `avatar-${uniqueSuffix}${ext}`);
         },

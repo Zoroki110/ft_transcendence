@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON PONG - ARCADE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(45deg, #0a0a1a, #1a0a2e, #16213e, #0f1419);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            font-family: 'Orbitron', monospace;
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Effet de grille rétro en arrière-plan */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Particules flottantes */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(2px 2px at 20px 30px, rgba(0, 255, 255, 0.3), transparent),
+                              radial-gradient(2px 2px at 40px 70px, rgba(255, 0, 255, 0.2), transparent),
+                              radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 0, 0.3), transparent),
+                              radial-gradient(1px 1px at 130px 80px, rgba(0, 255, 255, 0.2), transparent);
+            background-repeat: repeat;
+            background-size: 200px 100px;
+            animation: sparkle 4s linear infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+            50% { transform: translateY(-10px) rotate(180deg); opacity: 0.5; }
+        }
+
+        #gameContainer {
+            position: relative;
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 0 50px #00ffff,
+                inset 0 0 50px rgba(0, 255, 255, 0.1),
+                0 0 100px rgba(0, 255, 255, 0.3);
+            animation: containerGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes containerGlow {
+            0% { 
+                box-shadow: 0 0 50px #00ffff, inset 0 0 50px rgba(0, 255, 255, 0.1), 0 0 100px rgba(0, 255, 255, 0.3);
+            }
+            100% { 
+                box-shadow: 0 0 80px #00ffff, inset 0 0 80px rgba(0, 255, 255, 0.2), 0 0 150px rgba(0, 255, 255, 0.5);
+            }
+        }
+
+        canvas {
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(0, 100, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(10, 20, 40, 0.95));
+            border-radius: 12px;
+            position: relative;
+        }
+
+        /* Titre du jeu */
+        .game-title {
+            position: absolute;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            color: #00ffff;
+            text-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            animation: titlePulse 3s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { 
+                text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 80px #00ffff;
+                transform: translateX(-50%) scale(1);
+            }
+            50% { 
+                text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 80px #ff00ff, 0 0 120px #ff00ff;
+                transform: translateX(-50%) scale(1.05);
+            }
+        }
+
+        .controls-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #00ffff;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.6;
+            text-shadow: 0 0 10px #00ffff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        /* Panneaux de jeu */
+        #gameOverPanel, #settingsPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: 
+                linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 40, 80, 0.95));
+            border: 3px solid #00ffff;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            color: #00ffff;
+            min-width: 350px;
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 0 60px rgba(0, 255, 255, 0.6),
+                inset 0 0 60px rgba(0, 255, 255, 0.1);
+            animation: panelAppear 0.5s ease-out;
+        }
+
+        @keyframes panelAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8) rotateX(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotateX(0deg);
+            }
+        }
+
+        .winner-title {
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 900;
+            color: #00ffff;
+            text-shadow: 
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 60px #ff00ff;
+            animation: winnerGlow 1.5s ease-in-out infinite alternate;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        @keyframes winnerGlow {
+            0% { 
+                color: #00ffff;
+                text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #ff00ff;
+            }
+            100% { 
+                color: #ff00ff;
+                text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 60px #00ffff;
+            }
+        }
+
+        .final-score {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #ffff00;
+            text-shadow: 0 0 20px #ffff00;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .game-stats {
+            margin-bottom: 25px;
+            font-size: 16px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            line-height: 1.8;
+        }
+
+        h2 {
+            color: #00ffff;
+            margin-top: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #00ffff;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 14px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            border: 2px solid;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        .restart-btn {
+            color: #00ff00;
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .restart-btn:hover {
+            color: #000;
+            background: #00ff00;
+            box-shadow: 0 0 40px #00ff00;
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        .settings-btn {
+            color: #00ffff;
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .settings-btn:hover {
+            color: #000;
+            background: #00ffff;
+            box-shadow: 0 0 40px #00ffff;
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        .difficulty-btn {
+            color: #ff00ff;
+            border-color: #ff00ff;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+
+        .difficulty-btn:hover {
+            color: #000;
+            background: #ff00ff;
+            box-shadow: 0 0 40px #ff00ff;
+            transform: scale(1.1) translateY(-2px);
+        }
+
+        /* Paramètres */
+        .setting-item {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        label {
+            color: #00ffff;
+            font-weight: 700;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        input[type="range"] {
+            width: 150px;
+            height: 6px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #00ffff;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #00ffff;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Effets de scan line rétro */
+        #gameContainer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 255, 0.03) 2px,
+                rgba(0, 255, 255, 0.03) 4px
+            );
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        /* Animation de clignotement pour les éléments importants */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div class="game-title">NEON PONG</div>
+        <canvas id="game" width="800" height="600"></canvas>
+        
+        <div class="controls-info">
+            PLAYER 1: W/S<br>
+            PLAYER 2: ↑/↓<br>
+            PAUSE: SPACE<br>
+            <span class="blink">>>> READY <<<</span>
+        </div>
+        
+        <div id="gameOverPanel" class="hidden">
+            <div class="winner-title" id="winnerText">PLAYER 1 WINS!</div>
+            <div class="final-score" id="finalScore">10 - 8</div>
+            <div class="game-stats" id="gameStats">
+                DURATION: 2:34<br>
+                TOTAL RALLIES: 42<br>
+                DIFFICULTY: NORMAL
+            </div>
+            <div class="buttons">
+                <button class="restart-btn" onclick="restartGame()">RESTART</button>
+                <button class="settings-btn" onclick="showSettings()">SETTINGS</button>
+                <button class="difficulty-btn" onclick="changeDifficulty()">DIFFICULTY</button>
+            </div>
+        </div>
+        
+        <div id="settingsPanel" class="hidden">
+            <h2>GAME CONFIG</h2>
+            <div class="setting-item">
+                <label>BALL SPEED:</label>
+                <input type="range" id="ballSpeed" min="2" max="8" value="4">
+                <span id="ballSpeedValue">4</span>
+            </div>
+            <div class="setting-item">
+                <label>PADDLE SPEED:</label>
+                <input type="range" id="paddleSpeed" min="3" max="10" value="5">
+                <span id="paddleSpeedValue">5</span>
+            </div>
+            <div class="setting-item">
+                <label>MAX SCORE:</label>
+                <input type="range" id="maxScore" min="5" max="21" value="10">
+                <span id="maxScoreValue">10</span>
+            </div>
+            <div class="setting-item">
+                <label>VISUAL FX:</label>
+                <input type="checkbox" id="visualEffects" checked>
+            </div>
+            <div class="buttons" style="margin-top: 25px;">
+                <button class="restart-btn" onclick="applySettings()">APPLY</button>
+                <button class="settings-btn" onclick="hideSettings()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/src/claude.ts"></script>
+</body>
+</html>

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Pong - Roland Garros Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2e8b57, #228b22, #32cd32, #90ee90);
+            background-size: 400% 400%;
+            animation: grassWave 10s ease infinite;
+            font-family: 'Roboto', sans-serif;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        @keyframes grassWave {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Effet d'herbe texturée */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(0, 100, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(0, 150, 0, 0.1) 0%, transparent 50%),
+                linear-gradient(45deg, transparent 40%, rgba(0, 100, 0, 0.1) 50%, transparent 60%);
+            background-size: 30px 30px, 40px 40px, 20px 20px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        #gameContainer {
+            position: relative;
+            border: 4px solid #ffffff;
+            border-radius: 10px;
+            background: 
+                linear-gradient(90deg, 
+                    #c8860d 0%, #c8860d 2%, 
+                    #2e8b57 2%, #2e8b57 98%, 
+                    #c8860d 98%, #c8860d 100%);
+            box-shadow: 
+                0 0 30px rgba(0, 0, 0, 0.5),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        canvas {
+            background: 
+                /* Lignes de côté */
+                linear-gradient(90deg, 
+                    #c8860d 0%, #c8860d 3%, 
+                    transparent 3%, transparent 5%,
+                    #228b22 5%, #228b22 95%,
+                    transparent 95%, transparent 97%,
+                    #c8860d 97%, #c8860d 100%),
+                /* Texture herbe */
+                repeating-linear-gradient(45deg, 
+                    #228b22 0px, #228b22 2px, 
+                    #2e8b57 2px, #2e8b57 4px);
+            border-radius: 6px;
+        }
+
+        /* Titre du tournoi */
+        .tournament-title {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .tournament-name {
+            font-size: 36px;
+            font-weight: 900;
+            color: #c8860d;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .tournament-subtitle {
+            font-size: 18px;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            font-style: italic;
+        }
+
+        .controls-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #c8860d;
+        }
+
+        /* Score style tennis */
+        .tennis-scoreboard {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #c8860d;
+            border-radius: 10px;
+            padding: 10px 20px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .player-score {
+            text-align: center;
+            color: #fff;
+        }
+
+        .player-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #c8860d;
+        }
+
+        .score-display {
+            font-size: 24px;
+            font-weight: 900;
+            font-family: monospace;
+        }
+
+        .vs {
+            color: #c8860d;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Panneaux de jeu style tennis */
+        #gameOverPanel, #settingsPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: 
+                linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(40, 60, 40, 0.95));
+            border: 4px solid #c8860d;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            color: #fff;
+            min-width: 400px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(200, 134, 13, 0.8);
+        }
+
+        .winner-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+            font-weight: 900;
+            color: #c8860d;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .match-result {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .final-score {
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: #90ee90;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .game-stats {
+            margin-bottom: 25px;
+            font-size: 16px;
+            color: #fff;
+            line-height: 1.8;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        h2 {
+            color: #c8860d;
+            margin-top: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .restart-btn {
+            background: #228b22;
+            color: #fff;
+            border-color: #228b22;
+        }
+
+        .restart-btn:hover {
+            background: #32cd32;
+            border-color: #32cd32;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(50, 205, 50, 0.4);
+        }
+
+        .settings-btn {
+            background: #c8860d;
+            color: #fff;
+            border-color: #c8860d;
+        }
+
+        .settings-btn:hover {
+            background: #daa520;
+            border-color: #daa520;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(218, 165, 32, 0.4);
+        }
+
+        .difficulty-btn {
+            background: #8b4513;
+            color: #fff;
+            border-color: #8b4513;
+        }
+
+        .difficulty-btn:hover {
+            background: #a0522d;
+            border-color: #a0522d;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(160, 82, 45, 0.4);
+        }
+
+        /* Paramètres */
+        .setting-item {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(40, 60, 40, 0.3);
+            border-radius: 8px;
+            border: 1px solid #c8860d;
+        }
+
+        label {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 150px;
+            height: 6px;
+            background: linear-gradient(90deg, #228b22, #32cd32);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #c8860d;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #228b22;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Animation de balle de tennis qui rebondit */
+        .tennis-ball-animation {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: 
+                radial-gradient(circle at 30% 30%, #ffff80, #ffff00, #e6e600),
+                linear-gradient(45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
+                linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
+            border-radius: 50%;
+            animation: ballBounce 2s ease-in-out infinite;
+        }
+
+        @keyframes ballBounce {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+
+        /* Style umpire */
+        .umpire-call {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #c8860d;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            border: 2px solid #c8860d;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .umpire-call.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div class="tournament-title">
+            <div class="tournament-name">Roland Garros</div>
+            <div class="tournament-subtitle">Tournoi International de Tennis</div>
+        </div>
+
+        <div class="tennis-scoreboard">
+            <div class="player-score">
+                <div class="player-name">JOUEUR 1</div>
+                <div class="score-display" id="score1">0</div>
+            </div>
+            <div class="vs">VS</div>
+            <div class="player-score">
+                <div class="player-name">JOUEUR 2</div>
+                <div class="score-display" id="score2">0</div>
+            </div>
+        </div>
+        
+        <canvas id="game" width="800" height="600"></canvas>
+        
+        <div class="controls-info">
+            🎾 CONTROLES 🎾<br>
+            Joueur 1: W/S<br>
+            Joueur 2: ↑/↓<br>
+            Pause: ESPACE<br>
+            🏆 PREMIER À 6 GAGNE
+        </div>
+
+        <div class="umpire-call" id="umpireCall">15 - 0</div>
+
+        <div class="tennis-ball-animation" style="top: 20px; right: 100px;"></div>
+        
+        <div id="gameOverPanel" class="hidden">
+            <div class="winner-title" id="winnerText">MATCH GAGNÉ!</div>
+            <div class="match-result">🏆 CHAMPION DU TOURNOI 🏆</div>
+            <div class="final-score" id="finalScore">6 - 4</div>
+            <div class="game-stats" id="gameStats">
+                ⏱️ Durée du match: 2:34<br>
+                🎾 Échanges totaux: 42<br>
+                🎯 Niveau: Professionnel<br>
+                🏟️ Court: Terre battue
+            </div>
+            <div class="buttons">
+                <button class="restart-btn" onclick="restartGame()">🎾 NOUVEAU MATCH</button>
+                <button class="settings-btn" onclick="showSettings()">⚙️ PARAMÈTRES</button>
+                <button class="difficulty-btn" onclick="changeDifficulty()">📈 DIFFICULTÉ</button>
+            </div>
+        </div>
+        
+        <div id="settingsPanel" class="hidden">
+            <h2>⚙️ PARAMÈTRES DU MATCH</h2>
+            <div class="setting-item">
+                <label>Vitesse de la balle:</label>
+                <input type="range" id="ballSpeed" min="2" max="8" value="4">
+                <span id="ballSpeedValue">4</span>
+            </div>
+            <div class="setting-item">
+                <label>Vitesse des raquettes:</label>
+                <input type="range" id="paddleSpeed" min="3" max="10" value="5">
+                <span id="paddleSpeedValue">5</span>
+            </div>
+            <div class="setting-item">
+                <label>Score pour gagner:</label>
+                <input type="range" id="maxScore" min="3" max="11" value="6">
+                <span id="maxScoreValue">6</span>
+            </div>
+            <div class="setting-item">
+                <label>Effets visuels:</label>
+                <input type="checkbox" id="visualEffects" checked>
+            </div>
+            <div class="buttons" style="margin-top: 25px;">
+                <button class="restart-btn" onclick="applySettings()">✅ APPLIQUER</button>
+                <button class="settings-btn" onclick="hideSettings()">❌ ANNULER</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Récupération du canvas
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        // Variables de jeu tennis
+        let scoreLeft = 0;
+        let scoreRight = 0;
+        let MAX_SCORE = 6;
+        let winner = null;
+        let gameStartTime = Date.now();
+        let rallies = 0;
+        let currentRally = 0;
+        let isPaused = false;
+        let difficulty = "Professionnel";
+        let ballBaseSpeed = 4;
+        let paddleSpeed = 5;
+        let visualEffects = true;
+        let particles = [];
+        let lastScoringPlayer = null;
+
+        // Sons d'arbitre (simulation)
+        const umpireCalls = ["15-0", "30-0", "40-0", "Jeu", "Avantage", "Égalité", "Faute!", "Let!"];
+
+        // Création des entités (raquettes de tennis)
+        const paddleWidth = 8, paddleHeight = 80;
+        const leftPaddle = {
+            x: 30,
+            y: canvas.height/2 - 40,
+            width: paddleWidth,
+            height: paddleHeight,
+            dy: 0
+        };
+        
+        const rightPaddle = {
+            x: canvas.width - 38,
+            y: canvas.height/2 - 40,
+            width: paddleWidth,
+            height: paddleHeight,
+            dy: 0
+        };
+
+        // Balle de tennis
+        const ball = {
+            x: canvas.width/2,
+            y: canvas.height/2,
+            radius: 6,
+            dx: ballBaseSpeed,
+            dy: ballBaseSpeed,
+            trail: [],
+            bounces: 0
+        };
+
+        // Contrôles clavier
+        const keys = {};
+        window.addEventListener("keydown", e => {
+            keys[e.key] = true;
+            if (e.key === " ") {
+                e.preventDefault();
+                isPaused = !isPaused;
+            }
+        });
+        window.addEventListener("keyup", e => keys[e.key] = false);
+
+        // Système de particules (poussière de terre battue)
+        function createTennisParticles(x, y, color = "#8b4513") {
+            if (!visualEffects) return;
+            
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 20,
+                    y: y + (Math.random() - 0.5) * 20,
+                    dx: (Math.random() - 0.5) * 8,
+                    dy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 3 + 1,
+                    life: 40,
+                    maxLife: 40,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.dx *= 0.95;
+                p.dy += 0.1; // Gravité
+                p.life--;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                const alpha = p.life / p.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha * 0.7;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // Appel d'arbitre
+        function showUmpireCall(text) {
+            const umpireElement = document.getElementById("umpireCall");
+            umpireElement.textContent = text;
+            umpireElement.classList.add("show");
+            setTimeout(() => {
+                umpireElement.classList.remove("show");
+            }, 2000);
+        }
+
+        function resetBall() {
+            if (winner) return;
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = (Math.random() > 0.5 ? ballBaseSpeed : -ballBaseSpeed);
+            ball.dy = (Math.random() - 0.5) * ballBaseSpeed;
+            ball.trail = [];
+            ball.bounces = 0;
+            currentRally = 0;
+        }
+
+        function update() {
+            if (isPaused || winner) return;
+
+            // Déplacement des raquettes
+            if (keys["w"]) leftPaddle.y -= paddleSpeed;
+            if (keys["s"]) leftPaddle.y += paddleSpeed;
+            if (keys["ArrowUp"]) rightPaddle.y -= paddleSpeed;
+            if (keys["ArrowDown"]) rightPaddle.y += paddleSpeed;
+
+            // IA pour difficulté facile
+            if (difficulty === "Amateur") {
+                const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
+                const diff = ball.y - paddleCenter;
+                if (Math.abs(diff) > 10) {
+                    rightPaddle.y += diff > 0 ? 3 : -3;
+                }
+            }
+
+            // Limites des raquettes
+            leftPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, leftPaddle.y));
+            rightPaddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, rightPaddle.y));
+
+            // Traînée de la balle
+            if (visualEffects) {
+                ball.trail.unshift({x: ball.x, y: ball.y});
+                if (ball.trail.length > 8) ball.trail.pop();
+            }
+
+            // Déplacement de la balle
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Collision avec les lignes de fond (filet implicite)
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+                ball.dy *= -1;
+                createTennisParticles(ball.x, ball.y, "#654321");
+                ball.bounces++;
+            }
+
+            // Collision raquette gauche
+            if (ball.x - ball.radius < leftPaddle.x + leftPaddle.width &&
+                ball.y > leftPaddle.y &&
+                ball.y < leftPaddle.y + leftPaddle.height &&
+                ball.dx < 0) {
+                
+                ball.dx *= -1.1; // Légère accélération
+                ball.x = leftPaddle.x + leftPaddle.width + ball.radius;
+                
+                // Effet selon la position de frappe
+                const hitPos = (ball.y - leftPaddle.y) / leftPaddle.height - 0.5;
+                ball.dy += hitPos * 3;
+                
+                currentRally++;
+                createTennisParticles(ball.x, ball.y, "#ffff00");
+                
+                // Son de raquette (simulation)
+                if (Math.random() < 0.1) showUmpireCall("Beau coup!");
+            }
+
+            // Collision raquette droite
+            if (ball.x + ball.radius > rightPaddle.x &&
+                ball.y > rightPaddle.y &&
+                ball.y < rightPaddle.y + rightPaddle.height &&
+                ball.dx > 0) {
+                
+                ball.dx *= -1.1;
+                ball.x = rightPaddle.x - ball.radius;
+                
+                const hitPos = (ball.y - rightPaddle.y) / rightPaddle.height - 0.5;
+                ball.dy += hitPos * 3;
+                
+                currentRally++;
+                createTennisParticles(ball.x, ball.y, "#ffff00");
+            }
+
+            // Point marqué
+            if (ball.x < 0) {
+                scoreRight++;
+                lastScoringPlayer = "right";
+                rallies += currentRally;
+                createTennisParticles(20, ball.y, "#ff0000");
+                showUmpireCall(scoreRight + " - " + scoreLeft);
+                
+                if (scoreRight >= MAX_SCORE && scoreRight - scoreLeft >= 2) {
+                    winner = "Joueur 2";
+                    showGameOver();
+                    showUmpireCall("Jeu, set et match!");
+                }
+                resetBall();
+            }
+            
+            if (ball.x > canvas.width) {
+                scoreLeft++;
+                lastScoringPlayer = "left";
+                rallies += currentRally;
+                createTennisParticles(canvas.width - 20, ball.y, "#ff0000");
+                showUmpireCall(scoreLeft + " - " + scoreRight);
+                
+                if (scoreLeft >= MAX_SCORE && scoreLeft - scoreRight >= 2) {
+                    winner = "Joueur 1";
+                    showGameOver();
+                    showUmpireCall("Jeu, set et match!");
+                }
+                resetBall();
+            }
+
+            updateParticles();
+            updateScoreboard();
+        }
+
+        function updateScoreboard() {
+            document.getElementById("score1").textContent = scoreLeft;
+            document.getElementById("score2").textContent = scoreRight;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Terrain de tennis
+            drawTennisCourt();
+
+            // Traînée de la balle
+            if (visualEffects && ball.trail.length > 0) {
+                for (let i = 0; i < ball.trail.length; i++) {
+                    const alpha = 1 - (i / ball.trail.length);
+                    ctx.save();
+                    ctx.globalAlpha = alpha * 0.5;
+                    ctx.fillStyle = "#ffff00";
+                    ctx.beginPath();
+                    ctx.arc(ball.trail[i].x, ball.trail[i].y, ball.radius * alpha, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            // Raquettes de tennis avec style
+            drawTennisRacket(leftPaddle, "#8b4513");
+            drawTennisRacket(rightPaddle, "#8b4513");
+
+            // Balle de tennis
+            drawTennisBall();
+
+            // Particules
+            drawParticles();
+
+            // Compteur de rally
+            if (currentRally > 8) {
+                ctx.fillStyle = "#ffff00";
+                ctx.font = "bold 18px Roboto";
+                ctx.textAlign = "center";
+                ctx.fillText(`🔥 Rally: ${currentRally} coups! 🔥`, canvas.width / 2, 30);
+            }
+
+            // Message de pause
+            if (isPaused) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#c8860d";
+                ctx.font = "bold 36px Roboto";
+                ctx.textAlign = "center";
+                ctx.fillText("⏸️ MATCH EN PAUSE", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillStyle = "#fff";
+                ctx.font = "18px Roboto";
+                ctx.fillText("Appuyez sur ESPACE pour reprendre", canvas.width / 2, canvas.height / 2 + 20);
+            }
+        }
+
+        function drawTennisCourt() {
+            // Lignes de service (verticales)
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.25, 50);
+            ctx.lineTo(canvas.width * 0.25, canvas.height - 50);
+            ctx.moveTo(canvas.width * 0.75, 50);
+            ctx.lineTo(canvas.width * 0.75, canvas.height - 50);
+            ctx.stroke();
+
+            // Ligne centrale (filet)
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.setLineDash([]);
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // Filet au centre
+            ctx.fillStyle = "#ffffff";
+            for (let i = 0; i < canvas.height; i += 10) {
+                ctx.fillRect(canvas.width / 2 - 1, i, 2, 5);
+            }
+
+            // Lignes de fond
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(40, 50);
+            ctx.lineTo(canvas.width - 40, 50);
+            ctx.moveTo(40, canvas.height - 50);
+            ctx.lineTo(canvas.width - 40, canvas.height - 50);
+            ctx.stroke();
+        }
+
+        function drawTennisRacket(paddle, color) {
+            // Manche de la raquette
+            ctx.fillStyle = color;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            
+            // Cordage de la raquette
+            ctx.strokeStyle = "#f5f5dc";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < paddle.height; i += 8) {
+                ctx.beginPath();
+                ctx.moveTo(paddle.x, paddle.y + i);
+                ctx.lineTo(paddle.x + paddle.width, paddle.y + i);
+                ctx.stroke();
+            }
+            
+            // Cordage vertical
+            for (let i = 0; i < paddle.width; i += 3) {
+                ctx.beginPath();
+                ctx.moveTo(paddle.x + i, paddle.y);
+                ctx.lineTo(paddle.x + i, paddle.y + paddle.height);
+                ctx.stroke();
+            }
+        }
+
+        function drawTennisBall() {
+            ctx.save();
+            
+            // Ombre de la balle
+            if (visualEffects) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                ctx.beginPath();
+                ctx.arc(ball.x + 3, ball.y + 3, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Corps de la balle (jaune tennis)
+            const gradient = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 0, ball.x, ball.y, ball.radius);
+            gradient.addColorStop(0, "#ffff80");
+            gradient.addColorStop(0.7, "#ffff00");
+            gradient.addColorStop(1, "#e6e600");
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Courbe caractéristique de balle de tennis
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 0.8, Math.PI * 0.2, Math.PI * 0.8);
+            ctx.arc(ball.x, ball.y, ball.radius * 0.8, Math.PI * 1.2, Math.PI * 1.8);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        function showGameOver() {
+            const gameTime = Math.floor((Date.now() - gameStartTime) / 1000);
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = gameTime % 60;
+            
+            document.getElementById("winnerText").textContent = `${winner} Gagne!`;
+            document.getElementById("finalScore").textContent = `${scoreLeft} - ${scoreRight}`;
+            document.getElementById("gameStats").innerHTML = `
+                ⏱️ Durée du match: ${minutes}:${seconds.toString().padStart(2, '0')}<br>
+                🎾 Échanges totaux: ${rallies}<br>
+                🎯 Niveau: ${difficulty}<br>
+                🏟️ Court: Terre battue
+            `;
+            document.getElementById("gameOverPanel").classList.remove("hidden");
+        }
+
+        function restartGame() {
+            // Reset de toutes les variables
+            scoreLeft = 0;
+            scoreRight = 0;
+            winner = null;
+            gameStartTime = Date.now();
+            rallies = 0;
+            currentRally = 0;
+            isPaused = false;
+            particles = [];
+            lastScoringPlayer = null;
+            
+            // Reset positions
+            leftPaddle.y = canvas.height/2 - 40;
+            rightPaddle.y = canvas.height/2 - 40;
+            resetBall();
+            
+            // Cacher le panneau
+            document.getElementById("gameOverPanel").classList.add("hidden");
+            
+            // Message d'arbitre
+            showUmpireCall("Nouveau match!");
+        }
+
+        function showSettings() {
+            document.getElementById("settingsPanel").classList.remove("hidden");
+            document.getElementById("gameOverPanel").classList.add("hidden");
+        }
+
+        function hideSettings() {
+            document.getElementById("settingsPanel").classList.add("hidden");
+            if (winner) {
+                document.getElementById("gameOverPanel").classList.remove("hidden");
+            }
+        }
+
+        function applySettings() {
+            ballBaseSpeed = parseInt(document.getElementById("ballSpeed").value);
+            paddleSpeed = parseInt(document.getElementById("paddleSpeed").value);
+            MAX_SCORE = parseInt(document.getElementById("maxScore").value);
+            visualEffects = document.getElementById("visualEffects").checked;
+            
+            hideSettings();
+            showUmpireCall("Paramètres appliqués!");
+        }
+
+        function changeDifficulty() {
+            const difficulties = ["Amateur", "Professionnel", "Champion"];
+            const currentIndex = difficulties.indexOf(difficulty);
+            difficulty = difficulties[(currentIndex + 1) % difficulties.length];
+            
+            if (difficulty === "Champion") {
+                ballBaseSpeed = Math.min(ballBaseSpeed * 1.4, 8);
+                paddleSpeed = Math.max(paddleSpeed * 0.7, 3);
+            } else if (difficulty === "Professionnel") {
+                ballBaseSpeed = 4;
+                paddleSpeed = 5;
+            } else { // Amateur
+                ballBaseSpeed = Math.max(ballBaseSpeed * 0.7, 2);
+                paddleSpeed = Math.min(paddleSpeed * 1.3, 8);
+            }
+            
+            document.querySelector('.difficulty-btn').textContent = `📈 ${difficulty.toUpperCase()}`;
+            showUmpireCall(`Niveau: ${difficulty}`);
+        }
+
+        // Event listeners pour les paramètres
+        document.getElementById("ballSpeed").addEventListener("input", function() {
+            document.getElementById("ballSpeedValue").textContent = this.value;
+        });
+
+        document.getElementById("paddleSpeed").addEventListener("input", function() {
+            document.getElementById("paddleSpeedValue").textContent = this.value;
+        });
+
+        document.getElementById("maxScore").addEventListener("input", function() {
+            document.getElementById("maxScoreValue").textContent = this.value;
+        });
+
+        // Boucle principale
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Initialisation
+        document.querySelector('.difficulty-btn').textContent = `📈 ${difficulty.toUpperCase()}`;
+        showUmpireCall("Match prêt à commencer!");
+        loop();
+    </script>
+</body>
+</html>

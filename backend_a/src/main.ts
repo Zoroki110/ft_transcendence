@@ -26,16 +26,16 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV != 'production') {
     const config = new DocumentBuilder()
-    .setTitle('Transcendence API')
-    .setDescription('API Backend ft_transcendence')
-    .setVersion('1.0')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      description: 'Enter JWT token',
-    })
-    .build();
+      .setTitle('Transcendence API')
+      .setDescription('API Backend ft_transcendence')
+      .setVersion('1.0')
+      .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter JWT token',
+      })
+      .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api-docs', app, document);
   }
