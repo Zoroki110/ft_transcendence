@@ -3,11 +3,36 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  border-radius: 12px;
-  border: 2px solid #333;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  background:
+    radial-gradient(ellipse at center, #1a0033 0%, #000000 70%),
+    linear-gradient(90deg, transparent 0%, rgba(153, 50, 204, 0.05) 50%, transparent 100%);
+  border-radius: 8px;
+  border: 3px solid #9932CC;
+  box-shadow:
+    0 0 25px rgba(153, 50, 204, 0.6),
+    inset 0 0 25px rgba(153, 50, 204, 0.1);
+  font-family: 'Courier New', monospace;
+  position: relative;
+}
+
+.pong-game::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(153, 50, 204, 0.04) 2px,
+      rgba(153, 50, 204, 0.04) 4px
+    );
+  pointer-events: none;
+  border-radius: 8px;
 }
 
 .pong-info {
@@ -16,10 +41,15 @@
   align-items: center;
   width: 100%;
   max-width: 800px;
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
+  padding: 0.75rem 1rem;
+  background: rgba(153, 50, 204, 0.15);
+  border: 2px solid #9932CC;
+  border-radius: 4px;
+  box-shadow: 0 0 20px rgba(153, 50, 204, 0.4);
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  z-index: 1;
+  position: relative;
 }
 
 .player-info {
@@ -33,79 +63,129 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  font-weight: 500;
+  border-radius: 4px;
+  background: rgba(218, 112, 214, 0.15);
+  border: 1px solid #DA70D6;
+  color: #DA70D6;
+  font-weight: bold;
+  text-shadow: 0 0 10px #DA70D6;
+  font-family: 'Courier New', monospace;
   transition: all 0.3s ease;
 }
 
 .player-indicator.active {
-  background: rgba(76, 175, 80, 0.2);
-  border: 1px solid #4caf50;
-  color: #4caf50;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+  background: rgba(255, 0, 255, 0.25);
+  border: 2px solid #FF00FF;
+  color: #FF00FF;
+  text-shadow: 0 0 20px #FF00FF;
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.5);
+  animation: pulse-neon 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-neon {
+  from {
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.5);
+  }
+  to {
+    box-shadow: 0 0 35px rgba(255, 0, 255, 0.8), 0 0 45px rgba(255, 0, 255, 0.6);
+  }
 }
 
 .game-status {
   padding: 0.5rem 1rem;
-  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
+  background: linear-gradient(45deg, #9932CC 0%, #DA70D6 100%);
+  border: 2px solid #9932CC;
+  border-radius: 4px;
+  color: #000000;
   font-weight: bold;
   text-transform: uppercase;
   font-size: 0.9rem;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 0 20px rgba(153, 50, 204, 0.6);
+  animation: status-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes status-glow {
+  from {
+    box-shadow: 0 0 20px rgba(153, 50, 204, 0.6);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(218, 112, 214, 0.8);
+  }
 }
 
 .spectator-info {
   font-size: 0.9rem;
-  color: #ccc;
+  color: #DA70D6;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px #DA70D6;
+  font-weight: bold;
 }
 
 .pong-canvas {
-  border: 3px solid #444;
-  border-radius: 8px;
-  background: #1a1a1a;
+  border: 4px solid #9932CC;
+  border-radius: 4px;
+  background: #000000;
   box-shadow:
-    0 0 20px rgba(0, 0, 0, 0.5),
-    inset 0 0 20px rgba(255, 255, 255, 0.05);
+    0 0 35px rgba(153, 50, 204, 0.7),
+    inset 0 0 35px rgba(153, 50, 204, 0.1);
   cursor: crosshair;
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .pong-canvas:hover {
-  transform: scale(1.01);
+  transform: scale(1.02);
+  box-shadow:
+    0 0 45px rgba(153, 50, 204, 0.9),
+    inset 0 0 45px rgba(153, 50, 204, 0.15);
 }
 
 .pong-canvas:focus {
-  outline: 2px solid #667eea;
-  outline-offset: 4px;
+  outline: 3px solid #FF00FF;
+  outline-offset: 6px;
+  box-shadow:
+    0 0 55px rgba(255, 0, 255, 0.9),
+    inset 0 0 55px rgba(255, 0, 255, 0.2);
 }
 
 .game-controls {
   text-align: center;
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.05);
+  color: #DA70D6;
+  background: rgba(153, 50, 204, 0.08);
   padding: 1rem 2rem;
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 2px solid #9932CC;
+  box-shadow: 0 0 20px rgba(153, 50, 204, 0.4);
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  z-index: 1;
+  position: relative;
 }
 
 .game-controls p {
   margin: 0.5rem 0;
+  text-shadow: 0 0 12px #DA70D6;
+  font-weight: bold;
 }
 
 .game-controls kbd {
-  background: #333;
-  border: 1px solid #555;
+  background: #000000;
+  border: 2px solid #9932CC;
   border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  font-family: monospace;
+  padding: 0.3rem 0.6rem;
+  font-family: 'Courier New', monospace;
   font-size: 0.9rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #9932CC;
+  font-weight: bold;
+  text-shadow: 0 0 10px #9932CC;
+  box-shadow: 0 0 15px rgba(153, 50, 204, 0.5);
+  margin: 0 0.2rem;
 }
 
 .pong-loading, .pong-error {
@@ -114,21 +194,27 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
+  color: #9932CC;
+  background: rgba(153, 50, 204, 0.08);
+  border: 2px solid #9932CC;
+  border-radius: 8px;
+  box-shadow: 0 0 25px rgba(153, 50, 204, 0.4);
   min-height: 200px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  font-weight: bold;
+  text-shadow: 0 0 15px #9932CC;
 }
 
 .loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
-  border-left: 4px solid #667eea;
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(153, 50, 204, 0.3);
+  border-left: 4px solid #9932CC;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
+  box-shadow: 0 0 25px rgba(153, 50, 204, 0.6);
 }
 
 @keyframes spin {
@@ -139,17 +225,22 @@
 .pong-error button {
   margin-top: 1rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
+  background: linear-gradient(45deg, #9932CC 0%, #DA70D6 100%);
+  color: #000000;
+  border: 2px solid #9932CC;
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
-  transition: transform 0.2s ease;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(153, 50, 204, 0.5);
 }
 
 .pong-error button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(153, 50, 204, 0.8);
+  background: linear-gradient(45deg, #DA70D6 0%, #FF00FF 100%);
 }
 
 /* Responsive design */

@@ -28,17 +28,19 @@ interface GameState {
 interface PongGameProps {
   gameId: string;
   isSpectator?: boolean;
-  onGameEnd?: (winner: 'player1' | 'player2', finalScore: any) => void;
+  onGameEnd?: (winner: 'player1' | 'player2', finalScore: any, playerNames: any) => void;
+  onPlayerNamesUpdate?: (playerNames: any) => void;
 }
 
-const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGameEnd }) => {
+const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGameEnd, onPlayerNamesUpdate }) => {
   const { user } = useUser();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const animationRef = useRef<number>();
+  const gameStateRef = useRef<GameState>(); // Ref pour accéder au gameState actuel dans les callbacks
 
   const [gameState, setGameState] = useState<GameState>({
-    ball: { x: 400, y: 200, velocityX: 5, velocityY: 3 },
+    ball: { x: 400, y: 200, velocityX: 18, velocityY: 12 },
     paddles: { player1: { y: 150 }, player2: { y: 150 } },
     score: { player1: 0, player2: 0 },
     players: { player1: { name: 'En attente...' }, player2: { name: 'En attente...' } },
@@ -77,7 +79,7 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
 
   // Throttling pour éviter de spammer le serveur
   const lastMoveTime = useRef(0);
-  const MOVE_THROTTLE = 50; // Limiter à 20 messages par seconde maximum
+  const MOVE_THROTTLE = 16; // Limiter à 60 messages par seconde maximum pour plus de réactivité
 
   // Envoyer les mouvements au serveur (avec throttling)
   const sendPaddleMovement = useCallback(() => {
@@ -106,7 +108,7 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
     }
   }, [playerRole]);
 
-  // Dessiner le jeu
+  // Dessiner le jeu avec style rétro
   const drawGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -114,110 +116,162 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Effacer le canvas
-    ctx.fillStyle = '#1a1a1a';
+    // Effacer le canvas avec un noir pur rétro
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Dessiner la ligne centrale
-    ctx.setLineDash([5, 15]);
-    ctx.strokeStyle = '#404040';
-    ctx.lineWidth = 2;
+    // Dessiner un effet de scanlines rétro
+    ctx.fillStyle = 'rgba(138, 43, 226, 0.03)';
+    for (let i = 0; i < CANVAS_HEIGHT; i += 4) {
+      ctx.fillRect(0, i, CANVAS_WIDTH, 2);
+    }
+
+    // Dessiner la ligne centrale avec style rétro violet
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = '#8A2BE2';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#8A2BE2';
+    ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.moveTo(CANVAS_WIDTH / 2, 0);
     ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
 
-    // Dessiner les paddles
-    ctx.fillStyle = '#ffffff';
+    // Dessiner les paddles avec effet néon violet
+    ctx.fillStyle = '#9932CC';
+    ctx.shadowColor = '#9932CC';
+    ctx.shadowBlur = 15;
 
-    // Paddle joueur 1 (gauche)
+    // Paddle joueur 1 (gauche) avec effet rétro
     ctx.fillRect(0, gameState.paddles.player1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    // Bordure lumineuse
+    ctx.strokeStyle = '#DA70D6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, gameState.paddles.player1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-    // Paddle joueur 2 (droite)
+    // Paddle joueur 2 (droite) avec effet rétro
     ctx.fillRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.paddles.player2.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    // Bordure lumineuse
+    ctx.strokeRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.paddles.player2.y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-    // Dessiner la balle
-    ctx.fillStyle = '#ff6b6b';
-    ctx.fillRect(gameState.ball.x, gameState.ball.y, BALL_SIZE, BALL_SIZE);
+    // Dessiner la balle ronde avec effet néon violet éclatant
+    ctx.fillStyle = '#FF00FF';
+    ctx.shadowColor = '#FF00FF';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(gameState.ball.x + BALL_SIZE/2, gameState.ball.y + BALL_SIZE/2, BALL_SIZE/2, 0, Math.PI * 2);
+    ctx.fill();
+    // Bordure lumineuse pour la balle ronde
+    ctx.strokeStyle = '#FF00FF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    // Dessiner les scores
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
+    // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // Dessiner les scores avec police rétro violet
+    ctx.fillStyle = '#9932CC';
+    ctx.font = 'bold 64px "Courier New", monospace';
     ctx.textAlign = 'center';
+    ctx.shadowColor = '#9932CC';
+    ctx.shadowBlur = 15;
 
     // Score joueur 1
     ctx.fillText(
       gameState.score.player1.toString(),
       CANVAS_WIDTH / 4,
-      60
+      80
     );
 
     // Score joueur 2
     ctx.fillText(
       gameState.score.player2.toString(),
       (3 * CANVAS_WIDTH) / 4,
-      60
+      80
     );
 
-    // Afficher les noms des joueurs
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px Arial';
+    // Afficher les noms des joueurs avec style rétro violet
+    ctx.fillStyle = '#DA70D6';
+    ctx.font = 'bold 18px "Courier New", monospace';
     ctx.textAlign = 'center';
+    ctx.shadowColor = '#DA70D6';
+    ctx.shadowBlur = 10;
 
     // Nom joueur 1 (gauche)
     ctx.fillText(
-      gameState.players?.player1?.name || 'En attente...',
+      gameState.players?.player1?.name || 'PLAYER_1',
       CANVAS_WIDTH / 4,
-      100
+      120
     );
 
     // Nom joueur 2 (droite)
     ctx.fillText(
-      gameState.players?.player2?.name || 'En attente...',
+      gameState.players?.player2?.name || 'PLAYER_2',
       (3 * CANVAS_WIDTH) / 4,
-      100
+      120
     );
 
-    // Afficher le statut du jeu
+    // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // Afficher le statut du jeu avec style rétro violet
     if (gameState.gameStatus === 'waiting') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = '#9932CC';
+      ctx.font = 'bold 28px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('En attente des joueurs...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowColor = '#9932CC';
+      ctx.shadowBlur = 15;
+      ctx.fillText('>>> WAITING FOR PLAYERS <<<', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowBlur = 0;
     } else if (gameState.gameStatus === 'paused') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      ctx.fillStyle = '#ffeb3b';
-      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = '#DA70D6';
+      ctx.font = 'bold 32px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('PAUSE', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowColor = '#DA70D6';
+      ctx.shadowBlur = 15;
+      ctx.fillText('*** PAUSED ***', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowBlur = 0;
     } else if (gameState.gameStatus === 'finished') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      const winner = gameState.score.player1 > gameState.score.player2 ? 'Joueur 1' : 'Joueur 2';
-      ctx.fillStyle = '#4caf50';
-      ctx.font = 'bold 32px Arial';
+      const winner = gameState.score.player1 > gameState.score.player2 ? 'PLAYER_1' : 'PLAYER_2';
+      ctx.fillStyle = '#FF00FF';
+      ctx.font = 'bold 36px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${winner} a gagné !`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowColor = '#FF00FF';
+      ctx.shadowBlur = 20;
+      ctx.fillText(`${winner} WINS!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+      ctx.fillStyle = '#DA70D6';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.shadowColor = '#DA70D6';
+      ctx.shadowBlur = 10;
+      ctx.fillText('>>> GAME OVER <<<', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+      ctx.shadowBlur = 0;
     }
 
-    // Montrer les contrôles pour les joueurs
+    // Montrer les contrôles pour les joueurs avec style rétro violet
     if (playerRole !== 'spectator' && gameState.gameStatus === 'playing') {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.font = '14px Arial';
+      ctx.fillStyle = '#DA70D6';
+      ctx.font = '14px "Courier New", monospace';
+      ctx.shadowColor = '#DA70D6';
+      ctx.shadowBlur = 5;
       ctx.textAlign = 'left';
       if (playerRole === 'player1') {
-        ctx.fillText('Contrôles: W/S ou ↑/↓', 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('[W/S] or [↑/↓] TO MOVE', 10, CANVAS_HEIGHT - 10);
       } else {
         ctx.textAlign = 'right';
-        ctx.fillText('Contrôles: W/S ou ↑/↓', CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('[W/S] or [↑/↓] TO MOVE', CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
       }
+      ctx.shadowBlur = 0;
     }
   }, [gameState, playerRole]);
 
@@ -254,8 +308,9 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
       console.log(`🔵 WEBSOCKET: Connecté au serveur WebSocket, socket.id=${socket.id}`);
       setConnectionStatus('connected');
       // Utiliser le nom de l'utilisateur connecté ou un nom par défaut
-      const playerName = isSpectator ? undefined : user?.username || `Joueur ${Math.floor(Math.random() * 1000)}`;
+      const playerName = isSpectator ? undefined : (user?.displayName || user?.username || `Joueur ${Math.floor(Math.random() * 1000)}`);
       console.log(`🔵 WEBSOCKET: Émission joinGame avec gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}`);
+      console.log(`🔍 DEBUG: user object:`, user);
       // Rejoindre le jeu
       socket.emit('joinGame', { gameId, isSpectator, playerName });
     });
@@ -264,21 +319,59 @@ const PongGame: React.FC<PongGameProps> = ({ gameId, isSpectator = false, onGame
       console.log(`🔵 WEBSOCKET: gameJoined reçu, role=${data.role}, gameStatus=${data.gameState.gameStatus}`);
       setPlayerRole(data.role as any);
       setGameState(data.gameState);
+      gameStateRef.current = data.gameState; // Mettre à jour la ref
+
+      // Mettre à jour les noms des joueurs si disponibles
+      if (data.gameState.players?.player1?.name || data.gameState.players?.player2?.name) {
+        const playerNames = {
+          player1: data.gameState.players?.player1?.name || 'Joueur 1',
+          player2: data.gameState.players?.player2?.name || 'Joueur 2'
+        };
+        onPlayerNamesUpdate?.(playerNames);
+      }
     });
 
     socket.on('gameStateUpdate', (newGameState: GameState) => {
       console.log(`🔵 WEBSOCKET: gameStateUpdate reçu, gameStatus=${newGameState.gameStatus}`);
       setGameState(newGameState);
+      gameStateRef.current = newGameState; // Mettre à jour la ref
+
+      // Mettre à jour les noms des joueurs si disponibles
+      if (newGameState.players?.player1?.name || newGameState.players?.player2?.name) {
+        const playerNames = {
+          player1: newGameState.players?.player1?.name || 'Joueur 1',
+          player2: newGameState.players?.player2?.name || 'Joueur 2'
+        };
+        onPlayerNamesUpdate?.(playerNames);
+      }
     });
 
     socket.on('gameStarted', (gameState: GameState) => {
       console.log(`🔵 WEBSOCKET: gameStarted reçu, gameStatus=${gameState.gameStatus}`);
       setGameState(gameState);
+      gameStateRef.current = gameState; // Mettre à jour la ref
+
+      // Mettre à jour les noms des joueurs si disponibles
+      if (gameState.players?.player1?.name || gameState.players?.player2?.name) {
+        const playerNames = {
+          player1: gameState.players?.player1?.name || 'Joueur 1',
+          player2: gameState.players?.player2?.name || 'Joueur 2'
+        };
+        onPlayerNamesUpdate?.(playerNames);
+      }
     });
 
     socket.on('gameEnded', (data: { winner: string; finalScore: any }) => {
       console.log(`🔵 WEBSOCKET: gameEnded reçu, winner=${data.winner}`);
-      onGameEnd?.(data.winner as any, data.finalScore);
+      // Utiliser gameStateRef.current pour obtenir les noms actuels des joueurs
+      const currentGameState = gameStateRef.current;
+      console.log(`🔍 DEBUG gameEnded: currentGameState =`, currentGameState);
+      const playerNames = {
+        player1: currentGameState?.players?.player1?.name || 'Joueur 1',
+        player2: currentGameState?.players?.player2?.name || 'Joueur 2'
+      };
+      console.log(`🔍 DEBUG gameEnded: playerNames =`, playerNames);
+      onGameEnd?.(data.winner as any, data.finalScore, playerNames);
     });
 
     socket.on('playersUpdate', (data: { players: any; spectatorCount: number }) => {

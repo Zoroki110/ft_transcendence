@@ -82,6 +82,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { gameId, isSpectator = false, playerName } = data;
     const userName = playerName || `Joueur ${Math.floor(Math.random() * 1000)}`;
 
+    this.logger.log(`🎮 JOIN: gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}, userName=${userName}`);
+
     // Vérifier si le jeu existe ou le créer
     let room = this.gameRooms.get(gameId);
     if (!room) {
@@ -105,6 +107,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         room.playersNames.player1 = userName;
         room.gameState.players.player1 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
+        this.logger.log(`🎮 PLAYER1 JOINED: userName=${userName}, gameState.players.player1.name=${room.gameState.players.player1.name}`);
         client.emit('gameJoined', {
           role: 'player1',
           gameState: room.gameState,
@@ -114,6 +117,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         room.playersNames.player2 = userName;
         room.gameState.players.player2 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
+        this.logger.log(`🎮 PLAYER2 JOINED: userName=${userName}, gameState.players.player2.name=${room.gameState.players.player2.name}`);
         client.emit('gameJoined', {
           role: 'player2',
           gameState: room.gameState,
@@ -136,6 +140,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       players: room.players,
       spectatorCount: room.spectators.size,
     });
+
+    // Aussi envoyer une mise à jour du gameState pour que les noms soient mis à jour
+    this.server.to(gameId).emit('gameStateUpdate', room.gameState);
   }
 
   @SubscribeMessage('movePaddle')
@@ -154,7 +161,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!isPlayer1 && !isPlayer2) return;
 
-    const paddleSpeed = 10;
+    const paddleSpeed = 15; // Augmenté pour suivre la balle plus rapide
     const paddleHeight = 100;
     const canvasHeight = 400;
 
@@ -197,8 +204,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ball: {
           x: 400, // Centre du canvas (800/2)
           y: 200, // Centre du canvas (400/2)
-          velocityX: 3, // Réduire la vitesse pour plus de contrôle
-          velocityY: 2,
+          velocityX: 8, // Vitesse rapide pour un jeu dynamique
+          velocityY: 6,
         },
         paddles: {
           player1: { y: 150 }, // Centre - paddleHeight/2
@@ -313,7 +320,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ball.x = canvasWidth / 2;
     ball.y = canvasHeight / 2;
     ball.velocityX = -ball.velocityX; // Changer de direction
-    ball.velocityY = Math.random() > 0.5 ? 3 : -3;
+    ball.velocityY = Math.random() > 0.5 ? 6 : -6; // Vitesse rapide pour un jeu dynamique
   }
 
   private async endGame(gameId: string) {
@@ -322,12 +329,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     room.gameState.gameStatus = 'finished';
 
+    const winner = room.gameState.score.player1 > room.gameState.score.player2 ? 'player1' : 'player2';
+
+    this.logger.log(`🏆 GAME END: winner=${winner}, player1=${room.gameState.players.player1?.name}, player2=${room.gameState.players.player2?.name}`);
+
     // Notifier la fin du jeu
     this.server.to(gameId).emit('gameEnded', {
-      winner:
-        room.gameState.score.player1 > room.gameState.score.player2
-          ? 'player1'
-          : 'player2',
+      winner,
       finalScore: room.gameState.score,
     });
 

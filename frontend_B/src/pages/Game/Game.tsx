@@ -29,7 +29,8 @@ const Game: React.FC = () => {
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [gameEnded, setGameEnded] = useState(false);
-  const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any } | null>(null);
+  const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any; playerNames?: any } | null>(null);
+  const [playerNames, setPlayerNames] = useState<{ player1: string; player2: string }>({ player1: 'Joueur 1', player2: 'Joueur 2' });
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -73,23 +74,44 @@ const Game: React.FC = () => {
     setChatMessage('');
   };
 
-  const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any) => {
+  const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any, receivedPlayerNames: any) => {
     setGameEnded(true);
-    setGameResult({ winner, finalScore });
-
-    // Ajouter un message dans le chat
-    setMessages(prev => [...prev, {
-      username: 'Système',
-      message: `🎉 ${winner === 'player1' ? 'Joueur 1' : 'Joueur 2'} a gagné ! Score final: ${finalScore.player1} - ${finalScore.player2}`,
-      timestamp: new Date(),
-      isSystem: true
-    }]);
+    setGameResult({ winner, finalScore, playerNames: receivedPlayerNames });
+    setPlayerNames(receivedPlayerNames);
+    // Plus de message système dans le chat - on utilise le menu de fin à la place
   };
 
   const handleQuitGame = () => {
     if (confirm('Êtes-vous sûr de vouloir quitter la partie ?')) {
       navigate('/');
     }
+  };
+
+  // Fonctions pour le menu de fin de partie
+  const handleNewGame = async () => {
+    try {
+      console.log('🎮 GAME: Création d\'une nouvelle partie');
+      const response = await gameAPI.createQuickMatch();
+      const newGameId = response.data.gameId;
+      console.log('🎮 GAME: Nouvelle partie créée:', newGameId);
+      navigate(`/game/${newGameId}`);
+    } catch (error) {
+      console.error('🔴 GAME: Erreur lors de la création d\'une nouvelle partie:', error);
+      alert('Impossible de créer une nouvelle partie. Veuillez réessayer.');
+    }
+  };
+
+  const handleRematch = () => {
+    // Recharger la page pour redémarrer la même partie
+    window.location.reload();
+  };
+
+  const handleQuitToHome = () => {
+    navigate('/');
+  };
+
+  const handlePlayerNamesUpdate = (updatedPlayerNames: any) => {
+    setPlayerNames(updatedPlayerNames);
   };
 
   if (isLoading) {
@@ -119,12 +141,12 @@ const Game: React.FC = () => {
             
             <div className="game-score">
               <div className="player-score">
-                <div className="player-name">{gameData.players[0]?.username || 'Joueur 1'}</div>
+                <div className="player-name">{playerNames.player1}</div>
                 <div className="score-value">{gameData.score.player1}</div>
               </div>
               <div className="score-vs">VS</div>
               <div className="player-score">
-                <div className="player-name">{gameData.players[1]?.username || 'Joueur 2'}</div>
+                <div className="player-name">{playerNames.player2}</div>
                 <div className="score-value">{gameData.score.player2}</div>
               </div>
             </div>
@@ -146,6 +168,7 @@ const Game: React.FC = () => {
                 <PongGame
                   gameId={gameId}
                   onGameEnd={handleGameEnd}
+                  onPlayerNamesUpdate={handlePlayerNamesUpdate}
                 />
               ) : (
                 <div className="game-placeholder">
@@ -213,6 +236,47 @@ const Game: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Menu de fin de partie */}
+        {gameEnded && gameResult && (
+          <div className="game-end-overlay">
+            <div className="game-end-menu">
+              <div className="game-end-header">
+                <h2 className="game-end-title">
+                  {gameResult.winner === 'player1'
+                    ? (gameResult.playerNames?.player1 || 'Joueur 1')
+                    : (gameResult.playerNames?.player2 || 'Joueur 2')
+                  } a gagné!
+                </h2>
+                <div className="game-end-score">
+                  Score final: {gameResult.finalScore.player1} - {gameResult.finalScore.player2}
+                </div>
+              </div>
+
+              <div className="game-end-actions">
+                <button
+                  className="btn btn-primary btn-large game-end-btn"
+                  onClick={handleNewGame}
+                >
+                  🎮 Nouvelle partie
+                </button>
+                <button
+                  className="btn btn-secondary btn-large game-end-btn"
+                  onClick={handleRematch}
+                >
+                  🔄 Rejouer
+                </button>
+                <button
+                  className="btn btn-danger btn-large game-end-btn"
+                  onClick={handleQuitToHome}
+                >
+                  🚪 Quitter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
