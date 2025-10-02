@@ -8,12 +8,15 @@ import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
 // import OnlineStatusManager from './components/OnlineStatusManager'; // ← DÉSACTIVÉ temporairement
 import ProtectedRoute from './components/ProtectedRoute';
+import TabSyncManager from './components/TabSyncManager';
 
 // Pages
 import Home from './pages/Home/Home';
 import Tournaments from './pages/Tournaments/Tournaments';
 import CreateTournament from './pages/CreatTournament/CreateTournament';
 import TournamentDetail from './pages/TournamentDetail/TournamentDetail';
+import TournamentBracketsPage from './pages/TournamentBrackets/TournamentBrackets';
+import BracketsDemo from './components/TournamentBrackets/BracketsDemo';
 import ManageTournament from './pages/ManageTournament/ManageTournament';
 import Profile from './pages/Profile/Profile';
 import Leaderboard from './pages/Leaderboard/Leaderboard';
@@ -34,6 +37,7 @@ function App() {
           <Router>
             <div className="app">
               {/* <OnlineStatusManager /> */}
+              <TabSyncManager />
               <Navigation />
               <main className="main-content">
                 <Routes>
@@ -44,8 +48,10 @@ function App() {
                 {/* Tournois */}
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/tournaments/:id" element={<TournamentDetail />} />
+                <Route path="/tournaments/:id/brackets" element={<TournamentBracketsPage />} />
                 <Route path="/tournaments/:id/manage" element={<ProtectedRoute><ManageTournament /></ProtectedRoute>} />
                 <Route path="/create-tournament" element={<ProtectedRoute><CreateTournament /></ProtectedRoute>} />
+                <Route path="/brackets-demo" element={<BracketsDemo />} />
                 
                 {/* Jeu */}
                 <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />

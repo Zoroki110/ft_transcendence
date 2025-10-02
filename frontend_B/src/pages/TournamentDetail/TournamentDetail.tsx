@@ -6,6 +6,7 @@ import { useUser } from '../../contexts/UserContext';
 import { Tournament } from '../../types';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
 import { useTournamentActions } from '../../hooks/useTournamentActions';
+import TournamentBrackets from '../../components/TournamentBrackets/TournamentBrackets';
 import './TournamentDetail.css';
 
 const TournamentDetail: React.FC = () => {
@@ -386,15 +387,32 @@ const TournamentDetail: React.FC = () => {
         </div>
 
         {(tournament.status === 'in_progress' || tournament.status === 'completed') && (
-          <div className="card tournament-brackets">
-            <h2 className="detail-section-title">🎯 Brackets</h2>
-            <div className="brackets-placeholder">
-              <div className="placeholder-icon">🚧</div>
-              <p>Les brackets seront affichés ici</p>
-              <p className="placeholder-info">
-                Fonctionnalité à venir depuis le backend
-              </p>
+          <div className="card tournament-brackets-preview">
+            <div className="brackets-preview-header">
+              <h2 className="detail-section-title">🎯 Brackets</h2>
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/tournaments/${tournament.id}/brackets`)}
+              >
+                📊 Vue complète des brackets
+              </button>
             </div>
+            <TournamentBrackets
+              tournamentId={tournament.id}
+              isCreator={permissions.isCreator}
+              onMatchUpdate={() => {
+                // Recharger les données du tournoi après une mise à jour de match
+                const fetchTournament = async () => {
+                  try {
+                    const response = await tournamentAPI.getTournament(tournament.id);
+                    setTournament(response.data);
+                  } catch (err) {
+                    console.error('Error reloading tournament:', err);
+                  }
+                };
+                fetchTournament();
+              }}
+            />
           </div>
         )}
 
