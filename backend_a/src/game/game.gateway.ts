@@ -46,6 +46,7 @@ interface GameRoom {
   rematchRequests: { player1?: boolean; player2?: boolean };
   statsUpdated?: boolean;
   gameLoopId?: NodeJS.Timeout;
+  rematchCount?: number;
 }
 
 @WebSocketGateway({
@@ -216,6 +217,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!isPlayer1 && !isPlayer2) return;
 
+    // Éviter les demandes multiples du même joueur
+    const currentPlayerRequest = isPlayer1 ? room.rematchRequests.player1 : room.rematchRequests.player2;
+    if (currentPlayerRequest) {
+      this.logger.log(`⚠️ REMATCH REQUEST: Player ${isPlayer1 ? 'player1' : 'player2'} already requested rematch for room ${roomId}`);
+      return;
+    }
+
     this.logger.log(`🔄 REMATCH REQUEST: roomId=${roomId}, from=${isPlayer1 ? 'player1' : 'player2'}`);
 
     // Marquer la demande de rematch
@@ -252,6 +260,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const isPlayer2 = room.players.player2 === client.id;
 
     if (!isPlayer1 && !isPlayer2) return;
+
+    // Éviter les acceptations multiples du même joueur
+    const currentPlayerRequest = isPlayer1 ? room.rematchRequests.player1 : room.rematchRequests.player2;
+    if (currentPlayerRequest) {
+      this.logger.log(`⚠️ REMATCH ACCEPT: Player ${isPlayer1 ? 'player1' : 'player2'} already accepted rematch for room ${roomId}`);
+      return;
+    }
 
     this.logger.log(`✅ REMATCH ACCEPTED: roomId=${roomId}, from=${isPlayer1 ? 'player1' : 'player2'}`);
 
@@ -314,9 +329,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = this.gameRooms.get(gameId);
     if (!room) return;
 
-    this.logger.log(`🔄 STARTING REMATCH: gameId=${gameId}`);
+    // Incrémenter le compteur de rematchs
+    room.rematchCount = (room.rematchCount || 0) + 1;
 
-    // Réinitialiser l'état du jeu
+    this.logger.log(`🔄 STARTING REMATCH #${room.rematchCount}: gameId=${gameId}`);
+
+    // S'assurer que l'ancienne boucle de jeu est arrêtée
+    if (room.gameLoopId) {
+      this.logger.log(`🔴 REMATCH: Stopping previous game loop for ${gameId}`);
+      clearInterval(room.gameLoopId);
+      room.gameLoopId = undefined;
+    }
+
+    // Réinitialiser complètement l'état du jeu
     room.gameState = {
       ball: {
         x: 400,
@@ -336,17 +361,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         player1: { name: room.playersNames.player1 || 'Joueur 1', id: room.players.player1 },
         player2: { name: room.playersNames.player2 || 'Joueur 2', id: room.players.player2 },
       },
-      gameStatus: 'playing',
+      gameStatus: 'waiting', // Commencer en 'waiting' puis passer à 'playing'
     };
 
     // Réinitialiser les demandes de rematch
     room.rematchRequests = { player1: false, player2: false };
 
+    // Réinitialiser le flag des stats pour permettre de nouvelles stats
+    room.statsUpdated = false;
+
+    // Réinitialiser le timestamp
+    room.lastUpdate = Date.now();
+
+    this.logger.log(`🔄 REMATCH: Game state reset for ${gameId}, players: ${room.playersNames.player1} vs ${room.playersNames.player2}`);
+
     // Notifier le début du rematch
     this.server.to(gameId).emit('rematchStarted', room.gameState);
 
-    // Démarrer la boucle de jeu
-    this.startGameLoop(gameId);
+    // Petit délai pour laisser le frontend se synchroniser, puis démarrer le jeu
+    setTimeout(() => {
+      const currentRoom = this.gameRooms.get(gameId);
+      if (currentRoom && currentRoom.gameState.gameStatus === 'waiting') {
+        currentRoom.gameState.gameStatus = 'playing';
+        this.logger.log(`🎮 REMATCH: Starting game loop for ${gameId}`);
+
+        // Notifier que le jeu démarre vraiment
+        this.server.to(gameId).emit('gameStarted', currentRoom.gameState);
+
+        this.startGameLoop(gameId);
+      }
+    }, 100);
   }
 
   private createGameRoom(gameId: string): GameRoom {
@@ -357,6 +401,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       playersUserIds: {},
       spectators: new Set(),
       rematchRequests: { player1: false, player2: false },
+      rematchCount: 0,
       gameState: {
         ball: {
           x: 400, // Centre du canvas (800/2)
@@ -395,11 +440,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private startGameLoop(gameId: string) {
     const room = this.gameRooms.get(gameId);
-    if (!room || room.gameState.gameStatus !== 'playing') return;
+    if (!room) {
+      this.logger.warn(`🔴 GAME LOOP: Cannot start, room ${gameId} not found`);
+      return;
+    }
+
+    if (room.gameState.gameStatus !== 'playing') {
+      this.logger.warn(`🔴 GAME LOOP: Cannot start, game status is ${room.gameState.gameStatus} for ${gameId}`);
+      return;
+    }
 
     // Stocker l'ID de l'intervalle pour pouvoir l'arrêter proprement
     if (room.gameLoopId) {
+      this.logger.log(`🔄 GAME LOOP: Clearing existing loop for ${gameId}`);
       clearInterval(room.gameLoopId);
+      room.gameLoopId = undefined;
     }
 
     const gameLoop = () => {
@@ -450,7 +505,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Utiliser setInterval au lieu de setTimeout récursif pour plus de stabilité
     room.gameLoopId = setInterval(gameLoop, 1000 / 30); // 30 FPS
-    this.logger.log(`🎮 GAME LOOP: Started for game ${gameId}`);
+    this.logger.log(`🎮 GAME LOOP: Started for game ${gameId} with interval ID ${room.gameLoopId}`);
   }
 
   private updateGamePhysics(room: GameRoom) {
@@ -528,6 +583,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       room.gameLoopId = undefined;
       this.logger.log(`🔴 GAME LOOP: Stopped for game ${gameId}`);
     }
+
+    // Réinitialiser les demandes de rematch pour permettre de nouveaux rematchs
+    room.rematchRequests = { player1: false, player2: false };
+    this.logger.log(`🔄 REMATCH: Requests reset for game ${gameId}`);
 
     const winner = room.gameState.score.player1 > room.gameState.score.player2 ? 'player1' : 'player2';
 
