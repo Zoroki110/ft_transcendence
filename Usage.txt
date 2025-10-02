@@ -1,0 +1,50 @@
+🚀 Mode d'emploi - Transcendence
+
+  Prérequis
+
+  - Docker et Docker Compose installés
+  - Git
+
+  1. Clone et setup initial
+
+  git clone <votre-repo>
+  cd transcendance/devops_E
+
+  2. Configuration de la base de données
+
+  Modifier backend_a/.env avec les bonnes variables :
+  DB_HOST=database
+  DB_PORT=5432
+  DB_USER=transcendence
+  DB_PASS=123
+  DB_NAME=transcendence_dev
+
+  3. Copier les scripts Docker
+
+  cd devops_E
+  cp docker/backend/healthcheck.sh ../backend_a/
+  cp docker/backend/wait-for-it.sh ../backend_a/
+  cp docker/backend/entrypoint.sh ../backend_a/
+
+  4. Démarrer tous les services
+
+  make up-full
+
+  5. Vérifier que tout fonctionne
+
+  docker ps  # Tous les conteneurs doivent être "healthy" ou "running"
+
+  6. Accéder aux services
+
+  - Frontend : http://localhost:5173
+  - Backend API : http://localhost:3000
+  - Swagger docs : http://localhost:3000/api-docs
+  - Grafana : http://localhost:3004 (admin/1234)
+  - Base de données : localhost:5432
+
+  7. Commandes utiles
+
+  make down          # Arrêter tous les services
+  make logs          # Voir les logs
+  make status        # Statut des services
+  docker restart transcendence-backend  # Redémarrer le backend
