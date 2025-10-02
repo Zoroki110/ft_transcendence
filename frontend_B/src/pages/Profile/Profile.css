@@ -46,6 +46,17 @@
   font-size: 1.5rem;
 }
 
+.profile-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.profile-section-header .profile-section-title {
+  margin-bottom: 0;
+}
+
 /* Info List */
 .profile-info-list {
   display: grid;

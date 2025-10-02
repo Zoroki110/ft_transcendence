@@ -217,6 +217,14 @@ export class UsersController {
   // NOUVEAUX ENDPOINTS - STATS
   // ===============================
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('me/stats')
+  @ApiOperation({ summary: 'Get my game statistics' })
+  async getMyStats(@Req() req) {
+    return this.usersService.getUserStats(req.user.sub);
+  }
+
   @Get(':id/stats')
   @ApiOperation({ summary: 'Get user game statistics' })
   @ApiResponse({
@@ -225,14 +233,6 @@ export class UsersController {
   })
   async getUserStats(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.getUserStats(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Get('me/stats')
-  @ApiOperation({ summary: 'Get my game statistics' })
-  async getMyStats(@Req() req) {
-    return this.usersService.getUserStats(req.user.sub);
   }
 
   // ===============================

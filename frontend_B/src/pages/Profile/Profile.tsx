@@ -29,22 +29,37 @@ const Profile: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // On veut vraiment l'exécuter qu'une seule fois
 
+  // Fonction pour charger les stats
+  const loadStatsData = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const response = await userAPI.getMyStats();
+      setLocalStats(response.data);
+      console.log('📊 Stats rechargées:', response.data);
+    } catch (err: any) {
+      console.log('Stats not available yet:', err.response?.data?.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Charger les stats quand user est disponible
   useEffect(() => {
     if (user) {
-      const loadStats = async () => {
-        try {
-          setIsLoading(true);
-          const response = await userAPI.getMyStats();
-          setLocalStats(response.data);
-        } catch (err: any) {
-          console.log('Stats not available yet:', err.response?.data?.message);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadStats();
+      loadStatsData();
     }
+  }, [user]);
+
+  // Rafraîchir automatiquement quand on revient sur la page
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 Page focus - rechargement des stats');
+      loadStatsData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [user]);
 
   const formatDate = (dateString: string): string => {
@@ -144,32 +159,46 @@ const Profile: React.FC = () => {
           </div>
 
           <div className="card">
-            <h2 className="profile-section-title">📊 Statistiques</h2>
-            
-            {user ? (
+            <div className="profile-section-header">
+              <h2 className="profile-section-title">📊 Statistiques</h2>
+              <button
+                onClick={loadStatsData}
+                className="btn btn-small btn-secondary"
+                disabled={isLoading}
+              >
+                {isLoading ? '⏳' : '🔄'} Actualiser
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="profile-stats-placeholder">
+                <div className="placeholder-icon">⏳</div>
+                <p>Chargement des statistiques...</p>
+              </div>
+            ) : localStats ? (
               <div className="profile-stats-grid">
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{user.gamesWon || 0}</div>
+                  <div className="profile-stat-value">{localStats.gamesWon || 0}</div>
                   <div className="profile-stat-label">🏆 Victoires</div>
                 </div>
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{user.gamesLost || 0}</div>
+                  <div className="profile-stat-value">{localStats.gamesLost || 0}</div>
                   <div className="profile-stat-label">❌ Défaites</div>
                 </div>
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{user.totalGames || 0}</div>
+                  <div className="profile-stat-value">{localStats.totalGames || 0}</div>
                   <div className="profile-stat-label">🎮 Total Parties</div>
                 </div>
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{(user.winRate || 0).toFixed(1)}%</div>
+                  <div className="profile-stat-value">{(localStats.winRate || 0).toFixed(1)}%</div>
                   <div className="profile-stat-label">📈 Taux de Victoire</div>
                 </div>
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{user.tournamentsWon || 0}</div>
+                  <div className="profile-stat-value">{localStats.tournamentsWon || 0}</div>
                   <div className="profile-stat-label">🏆 Tournois Gagnés</div>
                 </div>
                 <div className="profile-stat-item">
-                  <div className="profile-stat-value">{user.totalScore || 0}</div>
+                  <div className="profile-stat-value">{localStats.totalScore || 0}</div>
                   <div className="profile-stat-label">⭐ Score Total</div>
                 </div>
               </div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { gameAPI } from '../../services/api';
+import { useUser } from '../../contexts/UserContext';
 import PongGame from '../../components/PongGame/PongGame';
 import './Game.css';
 
@@ -23,6 +24,7 @@ interface GameData {
 const Game: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
+  const { loadStats } = useUser();
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +125,12 @@ const Game: React.FC = () => {
     setGameEnded(true);
     setGameResult({ winner, finalScore, playerNames: receivedPlayerNames });
     setPlayerNames(receivedPlayerNames);
-    // Plus de message système dans le chat - on utilise le menu de fin à la place
+
+    // Rafraîchir les statistiques du joueur après la partie
+    console.log('🔄 GAME: Rafraîchissement des stats après fin de partie');
+    loadStats().catch(err => {
+      console.warn('⚠️ GAME: Erreur lors du rafraîchissement des stats:', err);
+    });
   };
 
   const handleQuitGame = () => {

@@ -337,7 +337,7 @@ const PongGame: React.FC<PongGameProps> = ({
       console.log(`🔵 WEBSOCKET: Émission joinGame avec gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}`);
       console.log(`🔍 DEBUG: user object:`, user);
       // Rejoindre le jeu
-      socket.emit('joinGame', { gameId, isSpectator, playerName });
+      socket.emit('joinGame', { gameId, isSpectator, playerName, userId: user?.id });
     });
 
     socket.on('gameJoined', (data: { role: string; gameState: GameState }) => {
