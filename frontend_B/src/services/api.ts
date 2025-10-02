@@ -135,7 +135,7 @@ export const userAPI = {
 
   // Statistiques
   getMyStats: () =>
-    apiClient.get('/users/me/stats'),
+    apiClient.get(`/users/me/stats?t=${Date.now()}`),
 
   getUserStats: (id: number) =>
     apiClient.get(`/users/${id}/stats`),

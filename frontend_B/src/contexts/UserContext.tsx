@@ -109,11 +109,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // Charger les statistiques
   const loadStats = useCallback(async (): Promise<void> => {
     try {
+      console.log('🔄 CONTEXT: Début loadStats()');
       const response = await userAPI.getMyStats();
+      console.log('📊 CONTEXT: Réponse API raw:', response.data);
       setStats(response.data);
-      console.log('Stats chargées:', response.data);
+      console.log('✅ CONTEXT: Stats mises à jour dans le contexte:', response.data);
     } catch (err: any) {
-      console.error('Erreur chargement stats:', err.response?.data?.message);
+      console.error('❌ CONTEXT: Erreur chargement stats:', err.response?.data?.message);
     }
   }, []);
 
