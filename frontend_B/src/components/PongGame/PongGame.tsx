@@ -386,6 +386,12 @@ const PongGame: React.FC<PongGameProps> = ({
       }
     });
 
+    socket.on('gameResumed', (gameState: GameState) => {
+      console.log(`🔄 WEBSOCKET: gameResumed reçu, gameStatus=${gameState.gameStatus}`);
+      setGameState(gameState);
+      gameStateRef.current = gameState;
+    });
+
     socket.on('gameEnded', (data: { winner: string; finalScore: any }) => {
       console.log(`🔵 WEBSOCKET: gameEnded reçu, winner=${data.winner}`);
       // Utiliser gameStateRef.current pour obtenir les noms actuels des joueurs
