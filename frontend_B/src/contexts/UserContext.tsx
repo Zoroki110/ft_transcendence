@@ -1,9 +1,10 @@
 // frontend_B/src/contexts/UserContext.tsx - CORRIGÉ POUR ÉVITER LES BOUCLES
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { userAPI, authAPI } from '../services/api';
 import { User, UpdateUserDto, UserStats, DashboardData } from '../types';
 import { normalizeUserData, isValidUserData } from '../utils/userUtils';
+import { storageService } from '../utils/storage';
 
 interface UserContextType {
   user: User | null;
@@ -49,10 +50,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    const token = localStorage.getItem('access_token');
-    const isLogged = token !== null;
-    console.log('🔍 DEBUG UserContext init:', { hasToken: !!token, isLogged });
-    return isLogged;
+    const hasToken = storageService.hasToken();
+    console.log('🔍 DEBUG UserContext init:', { hasToken, sessionStorage: true });
+    storageService.debugToken();
+    return hasToken;
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +61,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // Déconnexion - DÉFINIE EN PREMIER
   const logout = useCallback(async (): Promise<void> => {
     try {
-      localStorage.removeItem('access_token');
+      storageService.removeToken();
       setUser(null);
       setStats(null);
       setIsLoggedIn(false);
       setError(null);
-      console.log('Déconnexion réussie');
+      console.log('🔓 Déconnexion réussie (sessionStorage cleared)');
     } catch (err) {
       console.error('Erreur lors de la déconnexion:', err);
     }
@@ -154,9 +155,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       const completeUser = normalizeUserData(userData);
 
-      localStorage.setItem('access_token', access_token);
+      storageService.setToken(access_token);
       setUser(completeUser);
       setIsLoggedIn(true);
+      console.log('🔑 Token stocké dans sessionStorage pour:', userData.username);
 
       // Charger les stats après connexion
       try {
@@ -202,9 +204,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       const completeUser = normalizeUserData(userData);
 
-      localStorage.setItem('access_token', access_token);
+      storageService.setToken(access_token);
       setUser(completeUser);
       setIsLoggedIn(true);
+      console.log('🔑 Token stocké dans sessionStorage pour:', userData.username);
 
       console.log('Inscription réussie:', userData);
       return true;
@@ -301,6 +304,24 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       return false;
     }
   }, []);
+
+  // Auto-chargement du profil au démarrage si un token est présent
+  useEffect(() => {
+    const initializeUser = async () => {
+      if (storageService.hasToken() && !user && !loading) {
+        console.log('🔄 AUTO-LOAD: Token détecté au démarrage, chargement du profil...');
+        try {
+          await loadProfile();
+        } catch (error) {
+          console.error('❌ AUTO-LOAD: Échec du chargement automatique:', error);
+          // Si le token est invalide, on déconnecte
+          await logout();
+        }
+      }
+    };
+
+    initializeUser();
+  }, [user, loading, loadProfile, logout]); // Avec les bonnes dépendances
 
   const contextValue: UserContextType = {
     user,

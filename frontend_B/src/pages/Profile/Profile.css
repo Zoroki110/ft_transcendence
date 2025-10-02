@@ -51,10 +51,39 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .profile-section-header .profile-section-title {
   margin-bottom: 0;
+  flex: 1;
+}
+
+.profile-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auto-refresh-indicator {
+  font-size: 0.8rem;
+  color: var(--success);
+  background: var(--success-light);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  white-space: nowrap;
+}
+
+.online-indicator {
+  margin-left: 0.5rem;
+  font-size: 0.7em;
+}
+
+.profile-type {
+  color: var(--info);
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
 }
 
 /* Info List */
@@ -80,6 +109,11 @@
   font-size: 2rem;
 }
 
+.text-small {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
 /* Actions */
 .profile-actions {
   margin-top: 2rem;
@@ -89,6 +123,49 @@
 
 .btn-full {
   width: 100%;
+}
+
+.profile-public-actions {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.profile-public-actions .btn {
+  flex: 1;
+}
+
+/* Stats Container */
+.profile-stats-container {
+  position: relative;
+}
+
+.profile-stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--info-light);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--info);
+}
+
+.stats-user-info {
+  font-weight: 600;
+  color: var(--info-dark);
+  font-size: 0.9rem;
+}
+
+.stats-updating {
+  color: var(--warning);
+  font-size: 0.8rem;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Stats Grid */
@@ -106,11 +183,37 @@
   text-align: center;
   border: 1px solid var(--gray-200);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
 }
 
 .profile-stat-item:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+/* Couleurs spécifiques par type de stat */
+.stat-wins {
+  border-left: 4px solid var(--success);
+}
+
+.stat-losses {
+  border-left: 4px solid var(--danger);
+}
+
+.stat-total {
+  border-left: 4px solid var(--info);
+}
+
+.stat-winrate {
+  border-left: 4px solid var(--warning);
+}
+
+.stat-tournaments {
+  border-left: 4px solid var(--purple);
+}
+
+.stat-score {
+  border-left: 4px solid var(--orange);
 }
 
 .profile-stat-value {
@@ -125,6 +228,40 @@
   font-size: 0.9rem;
   color: var(--gray-600);
   font-weight: 500;
+}
+
+/* Stats Analysis */
+.profile-stats-analysis {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-200);
+}
+
+.stats-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stats-insights p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.stat-highlight {
+  color: var(--success);
+  font-weight: 600;
+  text-align: center;
+  margin-top: 0.5rem !important;
+}
+
+.stats-nodata {
+  text-align: center;
+  color: var(--gray-500);
+  font-style: italic;
+  margin: 0;
 }
 
 /* Stats Placeholder */
@@ -162,6 +299,25 @@
     text-align: center;
   }
   
+  .profile-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .profile-section-actions {
+    justify-content: center;
+  }
+  
+  .auto-refresh-indicator {
+    text-align: center;
+  }
+  
+  .profile-stats-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
   .profile-stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
@@ -186,10 +342,32 @@
   .profile-actions-grid .btn {
     width: 100%;
   }
+  
+  .profile-public-actions {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 480px) {
   .profile-stats-grid {
     grid-template-columns: 1fr;
   }
+  
+  .stats-insights {
+    text-align: center;
+  }
+  
+  .profile-section-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Variables de couleur pour les nouveaux éléments */
+:root {
+  --success-light: #d4edda;
+  --info-light: #d1ecf1;
+  --info-dark: #0c5460;
+  --purple: #6f42c1;
+  --orange: #fd7e14;
 }

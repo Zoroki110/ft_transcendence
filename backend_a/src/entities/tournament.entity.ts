@@ -145,7 +145,11 @@ export class Tournament {
   get canStart(): boolean {
     // Toujours utiliser la longueur réelle de la liste de participants
     const actualParticipantCount = this.participants?.length || 0;
+    const validStatus = this.status === TournamentStatus.DRAFT || 
+                       this.status === TournamentStatus.OPEN || 
+                       this.status === TournamentStatus.FULL;
     return (
+      validStatus &&
       actualParticipantCount >= 2 &&
       (!this.bracketGenerated || this.matches?.length === 0) // Allow if no actual matches exist
     );

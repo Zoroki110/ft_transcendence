@@ -153,13 +153,18 @@ export class TournamentsService {
       );
     }
 
-    if (tournament.status === TournamentStatus.IN_PROGRESS) {
-      throw new BadRequestException(
-        'Impossible de supprimer un tournoi en cours',
-      );
+    // Le créateur peut supprimer son tournoi même s'il est en cours
+    // Cela permet de nettoyer les tournois en état incohérent
+    console.log(`🗑️ TOURNAMENTS: Suppression du tournoi ${id} (status: ${tournament.status}) par le créateur ${userId}`);
+
+    // Supprimer d'abord tous les matches associés pour éviter les contraintes FK
+    if (tournament.matches && tournament.matches.length > 0) {
+      await this.matchRepository.remove(tournament.matches);
+      console.log(`🗑️ TOURNAMENTS: ${tournament.matches.length} matches supprimés`);
     }
 
     await this.tournamentRepository.remove(tournament);
+    console.log(`✅ TOURNAMENTS: Tournoi ${id} supprimé avec succès`);
   }
 
   // ===== GESTION DES PARTICIPANTS =====
@@ -411,7 +416,10 @@ export class TournamentsService {
     console.log('Tournament ID:', tournament.id);
     console.log('Tournament status:', tournament.status);
     console.log('Current participants:', tournament.currentParticipants);
+    console.log('Participants array length:', tournament.participants?.length);
+    console.log('Participants:', tournament.participants?.map(p => ({ id: p.id, username: p.username })));
     console.log('Bracket generated:', tournament.bracketGenerated);
+    console.log('Existing matches:', tournament.matches?.length || 0);
     console.log('Can start result:', tournament.canStart);
 
     if (tournament.creatorId !== userId) {
@@ -443,7 +451,7 @@ export class TournamentsService {
 
     let matches: Match[] = [];
     if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
-      matches = this.generateSingleEliminationMatches(
+      matches = await this.generateSingleEliminationMatches(
         tournament.participants,
         tournament.id,
       );
@@ -455,32 +463,9 @@ export class TournamentsService {
 
     console.log('Generated matches:', matches.length);
 
-    // Sauvegarder les matches avec validation
-    try {
-      if (matches.length > 0) {
-        const savedMatches = await this.matchRepository.save(matches);
-        console.log('Successfully saved matches:', savedMatches.length);
-        console.log(
-          'Saved match IDs:',
-          savedMatches.map((m) => m.id),
-        );
-
-        // FORCE UPDATE tournament_id with raw SQL (individual updates)
-        for (const match of savedMatches) {
-          await this.matchRepository.query(
-            'UPDATE match SET tournament_id = $1 WHERE id = $2',
-            [tournamentId, match.id],
-          );
-        }
-        console.log(
-          'Force updated tournament_id for matches:',
-          savedMatches.map((m) => m.id),
-        );
-      } else {
-        console.error('No matches generated!');
-      }
-    } catch (error) {
-      console.error('Error saving matches:', error);
+    // Matches are already saved via direct SQL insertion in generateSingleEliminationMatches
+    if (matches.length === 0) {
+      console.error('No matches generated!');
       throw new BadRequestException('Failed to create matches');
     }
 
@@ -488,6 +473,64 @@ export class TournamentsService {
     tournament.status = TournamentStatus.IN_PROGRESS;
 
     return await this.tournamentRepository.save(tournament);
+  }
+
+  async forceRegenerateBrackets(
+    tournamentId: number,
+    userId: number,
+  ): Promise<Tournament> {
+    console.log('🔧 FORCE REGENERATE: Starting force regeneration for tournament', tournamentId);
+    
+    const tournament = await this.findOne(tournamentId, userId);
+
+    if (tournament.creatorId !== userId) {
+      throw new ForbiddenException(
+        'Seul le créateur peut forcer la regénération des brackets',
+      );
+    }
+
+    console.log('🔧 FORCE REGENERATE: Current state', {
+      status: tournament.status,
+      participants: tournament.participants?.length,
+      matches: tournament.matches?.length
+    });
+
+    // Supprimer tous les matches existants
+    if (tournament.matches && tournament.matches.length > 0) {
+      await this.matchRepository.remove(tournament.matches);
+      console.log('🗑️ FORCE REGENERATE: Existing matches removed');
+    }
+
+    // Réinitialiser le flag bracket
+    tournament.bracketGenerated = false;
+
+    // Forcer la génération même si le statut est IN_PROGRESS
+    if (tournament.participants && tournament.participants.length >= 2) {
+      console.log('🚀 FORCE REGENERATE: Generating new matches');
+      
+      let matches: Match[] = [];
+      if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
+        matches = await this.generateSingleEliminationMatches(
+          tournament.participants,
+          tournament.id,
+        );
+      }
+
+      if (matches.length > 0) {
+        console.log('✅ FORCE REGENERATE: Generated', matches.length, 'matches');
+        // Matches are already saved via direct SQL insertion in generateSingleEliminationMatches
+      }
+
+      tournament.bracketGenerated = true;
+      tournament.status = TournamentStatus.IN_PROGRESS;
+    } else {
+      throw new BadRequestException('Pas assez de participants pour générer les brackets');
+    }
+
+    const result = await this.tournamentRepository.save(tournament);
+    console.log('🎉 FORCE REGENERATE: Tournament updated successfully');
+    
+    return result;
   }
 
   async getBrackets(tournamentId: number, userId?: number) {
@@ -510,6 +553,8 @@ export class TournamentsService {
           id: match.id,
           player1: match.player1?.username || 'TBD',
           player2: match.player2?.username || 'TBD',
+          player1Id: match.player1?.id,
+          player2Id: match.player2?.id,
           player1Score: match.player1Score || 0,
           player2Score: match.player2Score || 0,
           status: match.status,
@@ -531,10 +576,47 @@ export class TournamentsService {
   }
 
   async getMatchesWithPlayers(tournamentId: number): Promise<Match[]> {
-    return await this.matchRepository.find({
-      where: { tournament: { id: tournamentId } }, // Changed this line
-      relations: ['player1', 'player2', 'tournament'],
-    });
+    console.log('🔍 GETTING MATCHES: Searching for tournament_id:', tournamentId);
+    
+    // Use raw SQL to ensure we get matches with the correct tournament_id
+    const matches = await this.matchRepository.query(`
+      SELECT 
+        m.*,
+        p1.id as player1_id, p1.username as player1_username,
+        p2.id as player2_id, p2.username as player2_username,
+        t.id as tournament_id, t.name as tournament_name
+      FROM match m
+      LEFT JOIN "user" p1 ON m.player1_id = p1.id
+      LEFT JOIN "user" p2 ON m.player2_id = p2.id
+      LEFT JOIN tournament t ON m.tournament_id = t.id
+      WHERE m.tournament_id = $1
+      ORDER BY m.round ASC, m.bracket_position ASC
+    `, [tournamentId]);
+
+    console.log('🔍 GETTING MATCHES: Found', matches.length, 'matches');
+    console.log('🔍 GETTING MATCHES: Raw matches:', matches.map((m: any) => ({
+      id: m.id,
+      tournament_id: m.tournament_id,
+      round: m.round,
+      bracket_position: m.bracket_position,
+      player1: m.player1_username,
+      player2: m.player2_username
+    })));
+
+    // Convert raw results to Match entities
+    return matches.map((match: any) => ({
+      id: match.id,
+      player1: { id: match.player1_id, username: match.player1_username },
+      player2: { id: match.player2_id, username: match.player2_username },
+      player1Score: match.player1score || 0,
+      player2Score: match.player2score || 0,
+      status: match.status,
+      round: match.round,
+      bracketPosition: match.bracket_position,
+      createdAt: match.createdat,
+      finishedAt: match.finishedat,
+      tournament: { id: match.tournament_id, name: match.tournament_name }
+    })) as any;
   }
 
   // ===== PROGRESSION DES MATCHES =====
@@ -835,14 +917,9 @@ export class TournamentsService {
   }
 
   private validateDates(dto: CreateTournamentDto): void {
-    const now = new Date();
-
-    if (dto.registrationStart && new Date(dto.registrationStart) < now) {
-      throw new BadRequestException(
-        'La date de début des inscriptions ne peut pas être dans le passé',
-      );
-    }
-
+    // Validation assouplie pour permettre plus de flexibilité
+    
+    // Vérifier uniquement la cohérence entre les dates (pas par rapport au présent)
     if (
       dto.registrationEnd &&
       dto.registrationStart &&
@@ -862,22 +939,25 @@ export class TournamentsService {
         'La date de début du tournoi doit être après la fin des inscriptions',
       );
     }
+
+    // Note: On permet maintenant des dates dans le passé pour faciliter les tests
+    console.log('📅 TOURNAMENTS: Validation des dates réussie', {
+      registrationStart: dto.registrationStart,
+      registrationEnd: dto.registrationEnd,
+      startDate: dto.startDate
+    });
   }
 
   private validateUpdate(
     tournament: Tournament,
     dto: UpdateTournamentDto,
   ): void {
-    if (
-      dto.status &&
-      tournament.status === TournamentStatus.IN_PROGRESS &&
-      dto.status !== TournamentStatus.IN_PROGRESS &&
-      dto.status !== TournamentStatus.COMPLETED
-    ) {
-      throw new BadRequestException(
-        'Un tournoi en cours ne peut être que complété',
-      );
-    }
+    // Le créateur peut maintenant changer le statut pour réparer les tournois cassés
+    console.log('🔧 TOURNAMENTS: Update validation', {
+      currentStatus: tournament.status,
+      newStatus: dto.status,
+      tournamentId: tournament.id
+    });
 
     if (
       dto.maxParticipants &&
@@ -889,10 +969,10 @@ export class TournamentsService {
     }
   }
 
-  private generateSingleEliminationMatches(
+  private async generateSingleEliminationMatches(
     participants: User[],
     tournamentId: number,
-  ): Match[] {
+  ): Promise<Match[]> {
     console.log('=== MATCH GENERATION DEBUG ===');
     console.log('Participants received:', participants.length);
     console.log(
@@ -900,32 +980,60 @@ export class TournamentsService {
       participants.map((p) => ({ id: p.id, username: p.username })),
     );
 
+    // Load the full tournament entity for proper relation
+    const tournament = await this.tournamentRepository.findOne({
+      where: { id: tournamentId }
+    });
+
+    if (!tournament) {
+      throw new Error(`Tournament with ID ${tournamentId} not found`);
+    }
+
     const matches: Match[] = [];
 
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
-        // Use the repository to create the match properly
+        // Create match with direct SQL approach to ensure tournament_id is set
+        const result = await this.matchRepository.query(`
+          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING id
+        `, [
+          participants[i].id,
+          participants[i + 1].id,
+          1,
+          Math.floor(i / 2),
+          'pending',
+          0,
+          0,
+          tournamentId
+        ]);
+
+        console.log(`Created match ${matches.length + 1}:`, {
+          id: result[0].id,
+          player1: participants[i].username,
+          player2: participants[i + 1].username,
+          tournament_id: tournamentId
+        });
+
+        // Create a Match object for return (not for saving, just for tracking)
         const match = this.matchRepository.create({
-          player1: { id: participants[i].id } as User,
-          player2: { id: participants[i + 1].id } as User,
+          id: result[0].id,
+          player1: participants[i],
+          player2: participants[i + 1],
           round: 1,
           bracketPosition: Math.floor(i / 2),
           status: 'pending',
           player1Score: 0,
           player2Score: 0,
+          tournament: tournament
         });
-
-        match.tournament = { id: tournamentId } as Tournament;
 
         matches.push(match);
-        console.log(`Created match ${matches.length}:`, {
-          player1: participants[i].username,
-          player2: participants[i + 1].username,
-        });
       }
     }
 
-    console.log('Total matches to save:', matches.length);
+    console.log('Total matches created:', matches.length);
     return matches;
   }
 }
