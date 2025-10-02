@@ -328,58 +328,56 @@ export class UsersService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    // Calculer les stats en temps réel depuis les matches
-    const matches = await this.matchRepo.find({
-      where: [{ player1: { id: userId } }, { player2: { id: userId } }],
-      relations: ['player1', 'player2'],
-    });
+    console.log(`📊 GET STATS: userId=${userId}, gamesWon=${user.gamesWon}, gamesLost=${user.gamesLost}`);
 
-    let wins = 0;
-    let losses = 0;
-    let totalScore = 0;
+    // Utiliser les statistiques directement depuis l'entité User
+    const wins = user.gamesWon || 0;
+    const losses = user.gamesLost || 0;
+    const totalScore = user.totalScore || 0;
+    const totalGames = wins + losses;
+    const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
 
-    matches.forEach((match) => {
-      // Déterminer le gagnant basé sur les scores
-      if (match.status === 'finished') {
-        const isPlayer1 = match.player1.id === userId;
-        const userScore = isPlayer1 ? match.player1Score : match.player2Score;
-        const opponentScore = isPlayer1
-          ? match.player2Score
-          : match.player1Score;
-
-        if (userScore > opponentScore) {
-          wins++;
-        } else if (opponentScore > userScore) {
-          losses++;
-        }
-        // Si égalité, on ne compte ni win ni loss
-      }
-
-      // Additionner le score du joueur
-      if (match.player1.id === userId) {
-        totalScore += match.player1Score || 0;
-      } else {
-        totalScore += match.player2Score || 0;
-      }
-    });
-
-    // Mettre à jour les stats en base
-    await this.userRepo.update(userId, {
-      gamesWon: wins,
-      gamesLost: losses,
-      totalScore,
-    });
-
-    return {
+    const stats = {
       id: user.id,
       username: user.username,
       gamesWon: wins,
       gamesLost: losses,
-      totalGames: wins + losses,
-      winRate: wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0,
+      totalGames,
+      winRate,
       totalScore,
-      tournamentsWon: user.tournamentsWon,
+      tournamentsWon: user.tournamentsWon || 0,
     };
+
+    console.log(`📈 RETURNING STATS:`, stats);
+
+    return stats;
+  }
+
+  // Méthode pour incrémenter les victoires/défaites directement
+  async updateGameStats(winnerId: number, loserId: number): Promise<void> {
+    console.log(`📊 USERS SERVICE: Mise à jour stats - winnerId=${winnerId}, loserId=${loserId}`);
+
+    try {
+      await Promise.all([
+        // Incrémenter les victoires du gagnant
+        this.userRepo.increment({ id: winnerId }, 'gamesWon', 1),
+        // Incrémenter les défaites du perdant
+        this.userRepo.increment({ id: loserId }, 'gamesLost', 1),
+      ]);
+
+      console.log(`✅ USERS SERVICE: Stats mises à jour avec succès`);
+
+      // Vérifier les nouvelles valeurs
+      const winner = await this.userRepo.findOne({ where: { id: winnerId } });
+      const loser = await this.userRepo.findOne({ where: { id: loserId } });
+
+      console.log(`📈 WINNER ${winnerId}: gamesWon=${winner?.gamesWon}, gamesLost=${winner?.gamesLost}`);
+      console.log(`📉 LOSER ${loserId}: gamesWon=${loser?.gamesWon}, gamesLost=${loser?.gamesLost}`);
+
+    } catch (error) {
+      console.error(`❌ USERS SERVICE: Erreur mise à jour stats:`, error);
+      throw error;
+    }
   }
 
   // ===============================

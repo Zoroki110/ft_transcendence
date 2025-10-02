@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { GameService } from './game.service';
+import { UsersService } from '../users/users.service';
 
 interface GameState {
   ball: {
@@ -37,11 +38,13 @@ interface GameRoom {
   id: string;
   players: { player1?: string; player2?: string };
   playersNames: { player1?: string; player2?: string };
+  playersUserIds: { player1?: number; player2?: number };
   spectators: Set<string>;
   gameState: GameState;
   lastUpdate: number;
   matchId?: number;
   rematchRequests: { player1?: boolean; player2?: boolean };
+  statsUpdated?: boolean;
 }
 
 @WebSocketGateway({
@@ -59,7 +62,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private gameRooms = new Map<string, GameRoom>();
   private playerToRoom = new Map<string, string>();
 
-  constructor(private gameService: GameService) {}
+  constructor(
+    private gameService: GameService,
+    private usersService: UsersService,
+  ) {}
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -78,12 +84,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleJoinGame(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { gameId: string; isSpectator?: boolean; playerName?: string },
+    data: { gameId: string; isSpectator?: boolean; playerName?: string; userId?: number },
   ) {
-    const { gameId, isSpectator = false, playerName } = data;
+    const { gameId, isSpectator = false, playerName, userId } = data;
     const userName = playerName || `Joueur ${Math.floor(Math.random() * 1000)}`;
 
-    this.logger.log(`🎮 JOIN: gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}, userName=${userName}`);
+    this.logger.log(`🎮 JOIN: gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}, userName=${userName}, userId=${userId}`);
 
     // Vérifier si le jeu existe ou le créer
     let room = this.gameRooms.get(gameId);
@@ -106,9 +112,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!room.players.player1) {
         room.players.player1 = client.id;
         room.playersNames.player1 = userName;
+        room.playersUserIds.player1 = userId;
         room.gameState.players.player1 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
-        this.logger.log(`🎮 PLAYER1 JOINED: userName=${userName}, gameState.players.player1.name=${room.gameState.players.player1.name}`);
+        this.logger.log(`🎮 PLAYER1 JOINED: userName=${userName}, userId=${userId}, gameState.players.player1.name=${room.gameState.players.player1.name}`);
         client.emit('gameJoined', {
           role: 'player1',
           gameState: room.gameState,
@@ -116,6 +123,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       } else if (!room.players.player2) {
         room.players.player2 = client.id;
         room.playersNames.player2 = userName;
+        room.playersUserIds.player2 = userId;
         room.gameState.players.player2 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
         this.logger.log(`🎮 PLAYER2 JOINED: userName=${userName}, gameState.players.player2.name=${room.gameState.players.player2.name}`);
@@ -345,6 +353,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       id: gameId,
       players: {},
       playersNames: {},
+      playersUserIds: {},
       spectators: new Set(),
       rematchRequests: { player1: false, player2: false },
       gameState: {
@@ -474,11 +483,44 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = this.gameRooms.get(gameId);
     if (!room) return;
 
+    // Éviter les appels multiples d'endGame
+    if (room.gameState.gameStatus === 'finished') {
+      this.logger.log(`⚠️ ENDGAME ALREADY CALLED: gameId=${gameId}`);
+      return;
+    }
+
     room.gameState.gameStatus = 'finished';
 
     const winner = room.gameState.score.player1 > room.gameState.score.player2 ? 'player1' : 'player2';
 
     this.logger.log(`🏆 GAME END: winner=${winner}, player1=${room.gameState.players.player1?.name}, player2=${room.gameState.players.player2?.name}`);
+
+    // Mettre à jour les statistiques des joueurs
+    const player1UserId = room.playersUserIds.player1;
+    const player2UserId = room.playersUserIds.player2;
+
+    this.logger.log(`🔍 DEBUG STATS: winner=${winner}, player1UserId=${player1UserId}, player2UserId=${player2UserId}`);
+    this.logger.log(`🔍 DEBUG SCORES: player1Score=${room.gameState.score.player1}, player2Score=${room.gameState.score.player2}`);
+
+    if (player1UserId && player2UserId && !room.statsUpdated) {
+      try {
+        const winnerId = winner === 'player1' ? player1UserId : player2UserId;
+        const loserId = winner === 'player1' ? player2UserId : player1UserId;
+
+        this.logger.log(`🎯 ATTRIBUTION: winner=${winner} → winnerId=${winnerId}, loserId=${loserId}`);
+        this.logger.log(`🎯 DETAILS: player1='${room.gameState.players.player1?.name}' (id=${player1UserId}), player2='${room.gameState.players.player2?.name}' (id=${player2UserId})`);
+
+        await this.usersService.updateGameStats(winnerId, loserId);
+        room.statsUpdated = true; // Marquer les stats comme mises à jour
+        this.logger.log(`📊 STATS UPDATED: winner=${winnerId}, loser=${loserId}`);
+      } catch (error) {
+        this.logger.error('Error updating user stats:', error);
+      }
+    } else if (room.statsUpdated) {
+      this.logger.log(`⚠️ STATS ALREADY UPDATED: gameId=${gameId}`);
+    } else {
+      this.logger.warn(`Cannot update stats: missing user IDs - player1UserId=${player1UserId}, player2UserId=${player2UserId}`);
+    }
 
     // Notifier la fin du jeu
     this.server.to(gameId).emit('gameEnded', {
