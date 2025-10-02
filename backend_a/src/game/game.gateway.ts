@@ -45,6 +45,7 @@ interface GameRoom {
   matchId?: number;
   rematchRequests: { player1?: boolean; player2?: boolean };
   statsUpdated?: boolean;
+  gameLoopId?: NodeJS.Timeout;
 }
 
 @WebSocketGateway({
@@ -396,30 +397,60 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = this.gameRooms.get(gameId);
     if (!room || room.gameState.gameStatus !== 'playing') return;
 
+    // Stocker l'ID de l'intervalle pour pouvoir l'arrêter proprement
+    if (room.gameLoopId) {
+      clearInterval(room.gameLoopId);
+    }
+
     const gameLoop = () => {
-      if (!this.gameRooms.has(gameId)) return;
-
-      const currentRoom = this.gameRooms.get(gameId);
-      if (!currentRoom || currentRoom.gameState.gameStatus !== 'playing')
-        return;
-
-      this.updateGamePhysics(currentRoom);
-      this.server.to(gameId).emit('gameStateUpdate', currentRoom.gameState);
-
-      // Vérifier si le jeu est terminé
-      if (
-        currentRoom.gameState.score.player1 >= 5 ||
-        currentRoom.gameState.score.player2 >= 5
-      ) {
-        this.endGame(gameId);
+      if (!this.gameRooms.has(gameId)) {
+        this.logger.warn(`🔴 GAME LOOP: Room ${gameId} no longer exists, stopping loop`);
         return;
       }
 
-      // Continuer la boucle
-      setTimeout(gameLoop, 1000 / 30); // 30 FPS pour réduire la charge réseau
+      const currentRoom = this.gameRooms.get(gameId);
+      if (!currentRoom) {
+        this.logger.warn(`🔴 GAME LOOP: Room ${gameId} is null, stopping loop`);
+        return;
+      }
+
+      // Si le jeu est en pause mais que les deux joueurs sont présents, reprendre automatiquement
+      if (currentRoom.gameState.gameStatus === 'paused' &&
+          currentRoom.players.player1 && currentRoom.players.player2) {
+        this.logger.log(`🔄 GAME LOOP: Resuming paused game ${gameId}`);
+        currentRoom.gameState.gameStatus = 'playing';
+        this.server.to(gameId).emit('gameResumed', currentRoom.gameState);
+      }
+
+      // Continuer la boucle même si le jeu est en pause (pour permettre la reprise automatique)
+      if (currentRoom.gameState.gameStatus === 'finished') {
+        this.logger.log(`🏁 GAME LOOP: Game ${gameId} finished, stopping loop`);
+        if (currentRoom.gameLoopId) {
+          clearInterval(currentRoom.gameLoopId);
+          currentRoom.gameLoopId = undefined;
+        }
+        return;
+      }
+
+      // Mettre à jour la physique seulement si le jeu est en cours
+      if (currentRoom.gameState.gameStatus === 'playing') {
+        this.updateGamePhysics(currentRoom);
+        this.server.to(gameId).emit('gameStateUpdate', currentRoom.gameState);
+
+        // Vérifier si le jeu est terminé
+        if (
+          currentRoom.gameState.score.player1 >= 5 ||
+          currentRoom.gameState.score.player2 >= 5
+        ) {
+          this.endGame(gameId);
+          return;
+        }
+      }
     };
 
-    gameLoop();
+    // Utiliser setInterval au lieu de setTimeout récursif pour plus de stabilité
+    room.gameLoopId = setInterval(gameLoop, 1000 / 30); // 30 FPS
+    this.logger.log(`🎮 GAME LOOP: Started for game ${gameId}`);
   }
 
   private updateGamePhysics(room: GameRoom) {
@@ -491,6 +522,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     room.gameState.gameStatus = 'finished';
 
+    // Arrêter la boucle de jeu proprement
+    if (room.gameLoopId) {
+      clearInterval(room.gameLoopId);
+      room.gameLoopId = undefined;
+      this.logger.log(`🔴 GAME LOOP: Stopped for game ${gameId}`);
+    }
+
     const winner = room.gameState.score.player1 > room.gameState.score.player2 ? 'player1' : 'player2';
 
     this.logger.log(`🏆 GAME END: winner=${winner}, player1=${room.gameState.players.player1?.name}, player2=${room.gameState.players.player2?.name}`);
@@ -542,6 +580,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Nettoyer la room après 30 secondes
     setTimeout(() => {
+      const roomToDelete = this.gameRooms.get(gameId);
+      if (roomToDelete?.gameLoopId) {
+        clearInterval(roomToDelete.gameLoopId);
+      }
       this.gameRooms.delete(gameId);
       // Nettoyer les mappings des joueurs
       for (const [playerId, roomId] of this.playerToRoom.entries()) {
@@ -549,6 +591,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.playerToRoom.delete(playerId);
         }
       }
+      this.logger.log(`🧹 CLEANUP: Game room ${gameId} cleaned up`);
     }, 30000);
   }
 
