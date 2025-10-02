@@ -347,9 +347,41 @@
   margin-top: 2rem;
 }
 
+/* Brackets preview styles */
+.tournament-brackets-preview {
+  overflow: hidden;
+}
+
+.brackets-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.brackets-preview-header .detail-section-title {
+  margin: 0;
+}
+
+.brackets-preview-header .btn {
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .tournament-detail-header {
     flex-direction: column;
     gap: 1rem;
+  }
+  
+  .brackets-preview-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .brackets-preview-header .btn {
+    width: 100%;
   }
 }

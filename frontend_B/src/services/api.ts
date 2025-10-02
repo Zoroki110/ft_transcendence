@@ -2,6 +2,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import { API_CONFIG, debugLog } from '../config';
+import { storageService } from '../utils/storage';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -21,14 +22,15 @@ const apiClient: AxiosInstance = axios.create({
 // Intercepteur pour ajouter le token JWT
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = storageService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     debugLog('Requête API:', {
       method: config.method?.toUpperCase(),
       url: config.url,
-      hasToken: !!token
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'null'
     });
     return config;
   },
@@ -57,7 +59,7 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401) {
       console.warn('🔓 Token expiré, redirection vers login');
-      localStorage.removeItem('access_token');
+      storageService.removeToken();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -138,7 +140,10 @@ export const userAPI = {
     apiClient.get(`/users/me/stats?t=${Date.now()}`),
 
   getUserStats: (id: number) =>
-    apiClient.get(`/users/${id}/stats`),
+    apiClient.get(`/users/${id}/stats?t=${Date.now()}`),
+
+  refreshUserStats: (id: number) =>
+    apiClient.post(`/users/${id}/stats/refresh`),
 
   // Historique des matches
   getMyMatches: (params?: any) =>
@@ -214,6 +219,9 @@ export const tournamentAPI = {
   // Brackets et matches
   generateBrackets: (id: number) =>
     apiClient.post(`/tournaments/${id}/generate-brackets`),
+
+  forceRegenerateBrackets: (id: number) =>
+    apiClient.post(`/tournaments/${id}/force-regenerate-brackets`),
 
   getBrackets: (id: number) =>
     apiClient.get(`/tournaments/${id}/brackets`),

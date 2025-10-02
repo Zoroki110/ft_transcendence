@@ -208,6 +208,21 @@ export class TournamentsController {
     return this.tournamentsService.generateBrackets(id, req.user.sub);
   }
 
+  @Post(':id/force-regenerate-brackets')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Forcer la regénération des brackets (créateur seulement)',
+  })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({
+    status: 200,
+    description: 'Brackets forcés, tournoi réparé',
+  })
+  async forceRegenerateBrackets(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.tournamentsService.forceRegenerateBrackets(id, req.user.sub);
+  }
+
   @Get(':id/brackets')
   @ApiOperation({ summary: "Visualiser l'arbre du tournoi" })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
