@@ -23,8 +23,8 @@ services:
   # 🔧 BACKEND SERVICE (Partie A) - CHEMINS CORRIGÉS
   backend_a:
     build:
-      context: ../backend_a                                    # ← 1 niveau (cohérent avec volumes)
-      dockerfile: ../devops_E/docker/backend/Dockerfile    # ← Utilise .dev pour développement
+      context: ../../backend_a                                    # ← backend_a depuis docker/
+      dockerfile: ../devops_E/docker/backend/Dockerfile.dev    # ← Dockerfile depuis backend_a
     container_name: transcendence-backend
     ports:
       - "3000:3000"
@@ -48,7 +48,7 @@ services:
     networks:
       - transcendence-network
     volumes:
-      - ../backend_a:/app
+      - ../../backend_a:/app
       - /app/node_modules
 
   # 🎨 FRONTEND SERVICE VITE (Module 2) - CHEMINS CORRIGÉS
@@ -59,8 +59,8 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      # Utilise le chemin absolu complet
-      - ./frontend_b:/app
+      # Utilise le chemin relatif correct
+      - ../../frontend_B:/app
     networks:
       - transcendence-network
     command: 

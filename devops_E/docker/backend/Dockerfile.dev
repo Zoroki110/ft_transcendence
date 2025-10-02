@@ -10,10 +10,10 @@ RUN apk add --no-cache curl
 COPY package*.json ./
 RUN npm install
 
-# Copy health check and wait scripts
-COPY devops_E/docker/backend/healthcheck.sh ./
-COPY devops_E/docker/backend/wait-for-it.sh ./
-COPY devops_E/docker/backend/entrypoint.sh ./
+# Copy health check and wait scripts depuis backend_a
+COPY healthcheck.sh ./
+COPY wait-for-it.sh ./
+COPY entrypoint.sh ./
 
 RUN chmod +x healthcheck.sh wait-for-it.sh entrypoint.sh
 
