@@ -325,10 +325,15 @@ export class UsersService {
   // ===============================
 
   async getUserStats(userId: number) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+    // Forcer un refresh depuis la DB pour éviter les problèmes de cache
+    const user = await this.userRepo.findOne({ 
+      where: { id: userId },
+      // Forcer le rechargement depuis la base de données
+      cache: false
+    });
     if (!user) throw new NotFoundException('User not found');
 
-    console.log(`📊 GET STATS: userId=${userId}, gamesWon=${user.gamesWon}, gamesLost=${user.gamesLost}`);
+    console.log(`📊 GET STATS: userId=${userId}, gamesWon=${user.gamesWon}, gamesLost=${user.gamesLost} [FRESH FROM DB]`);
 
     // Utiliser les statistiques directement depuis l'entité User
     const wins = user.gamesWon || 0;
@@ -346,11 +351,21 @@ export class UsersService {
       winRate,
       totalScore,
       tournamentsWon: user.tournamentsWon || 0,
+      // Ajouter un timestamp pour éviter le cache côté client
+      lastUpdated: new Date().toISOString(),
+      // Ajouter un hash pour détecter les changements
+      statsHash: this.generateStatsHash(wins, losses, totalScore, user.tournamentsWon || 0)
     };
 
     console.log(`📈 RETURNING STATS:`, stats);
 
     return stats;
+  }
+
+  // Méthode utilitaire pour générer un hash des stats
+  private generateStatsHash(wins: number, losses: number, totalScore: number, tournamentsWon: number): string {
+    const data = `${wins}-${losses}-${totalScore}-${tournamentsWon}`;
+    return Buffer.from(data).toString('base64');
   }
 
   // Méthode pour incrémenter les victoires/défaites directement
@@ -359,8 +374,8 @@ export class UsersService {
 
     try {
       // Vérifier les valeurs AVANT mise à jour
-      const winnerBefore = await this.userRepo.findOne({ where: { id: winnerId } });
-      const loserBefore = await this.userRepo.findOne({ where: { id: loserId } });
+      const winnerBefore = await this.userRepo.findOne({ where: { id: winnerId }, cache: false });
+      const loserBefore = await this.userRepo.findOne({ where: { id: loserId }, cache: false });
 
       console.log(`📊 BEFORE UPDATE - WINNER ${winnerId} (${winnerBefore?.username}): gamesWon=${winnerBefore?.gamesWon}, gamesLost=${winnerBefore?.gamesLost}`);
       console.log(`📊 BEFORE UPDATE - LOSER ${loserId} (${loserBefore?.username}): gamesWon=${loserBefore?.gamesWon}, gamesLost=${loserBefore?.gamesLost}`);
@@ -374,9 +389,11 @@ export class UsersService {
 
       console.log(`✅ USERS SERVICE: Stats mises à jour avec succès`);
 
-      // Vérifier les nouvelles valeurs APRÈS mise à jour
-      const winnerAfter = await this.userRepo.findOne({ where: { id: winnerId } });
-      const loserAfter = await this.userRepo.findOne({ where: { id: loserId } });
+      // Vérifier les nouvelles valeurs APRÈS mise à jour (avec un délai pour s'assurer que la DB est à jour)
+      await new Promise(resolve => setTimeout(resolve, 100)); // Petit délai de 100ms
+      
+      const winnerAfter = await this.userRepo.findOne({ where: { id: winnerId }, cache: false });
+      const loserAfter = await this.userRepo.findOne({ where: { id: loserId }, cache: false });
 
       console.log(`📈 AFTER UPDATE - WINNER ${winnerId} (${winnerAfter?.username}): gamesWon=${winnerAfter?.gamesWon}, gamesLost=${winnerAfter?.gamesLost}`);
       console.log(`📉 AFTER UPDATE - LOSER ${loserId} (${loserAfter?.username}): gamesWon=${loserAfter?.gamesWon}, gamesLost=${loserAfter?.gamesLost}`);
@@ -385,6 +402,23 @@ export class UsersService {
       console.error(`❌ USERS SERVICE: Erreur mise à jour stats:`, error);
       throw error;
     }
+  }
+
+  // Méthode pour rafraîchir les stats en forçant un reload de la DB
+  async refreshUserStats(userId: number) {
+    console.log(`🔄 REFRESH STATS: Forçage du rafraîchissement pour userId=${userId}`);
+    
+    // Forcer un reload en récupérant à nouveau les données
+    const freshUser = await this.userRepo.findOne({ 
+      where: { id: userId }, 
+      cache: false 
+    });
+    
+    if (!freshUser) throw new NotFoundException('User not found');
+    
+    console.log(`🔄 FRESH DATA: userId=${userId}, gamesWon=${freshUser.gamesWon}, gamesLost=${freshUser.gamesLost}`);
+    
+    return this.getUserStats(userId);
   }
 
   // ===============================

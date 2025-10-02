@@ -63,10 +63,11 @@ export function getTournamentPermissions(
 
   const isCreator = !!(user && tournament.creator?.id === user.id);
   const isParticipant = !!(user && tournament.participants?.some(p => p.id === user.id));
-  const isFull = tournament.currentParticipants >= tournament.maxParticipants;
+  const isAtMaxCapacity = tournament.currentParticipants >= tournament.maxParticipants;
 
   // États du tournoi
   const isOpen = tournament.status === 'draft' || tournament.status === 'open';
+  const isFull = tournament.status === 'full';
   const isInProgress = tournament.status === 'in_progress';
   const isCompleted = tournament.status === 'completed';
   const isCancelled = tournament.status === 'cancelled';
@@ -74,6 +75,7 @@ export function getTournamentPermissions(
   console.log('🔍 PERMISSIONS: Calculated states', {
     isCreator,
     isParticipant,
+    isAtMaxCapacity,
     isFull,
     isOpen,
     participantIds: tournament.participants?.map(p => p.id)
@@ -93,9 +95,9 @@ export function getTournamentPermissions(
     isLoggedIn,
     isParticipant: !isParticipant,
     isOpen,
-    creatorOrNotFull: (isCreator || !isFull),
+    notAtMaxCapacity: !isAtMaxCapacity,
     finalCanJoin: canJoin
-  }); // Créateur peut joindre même si presque complet
+  });
                  
   const canLeave = isLoggedIn &&
                   isParticipant &&
@@ -103,9 +105,9 @@ export function getTournamentPermissions(
 
   // Permissions de créateur
   const canEdit = isCreator && (tournament.status === 'draft' || tournament.status === 'open');
-  const canDelete = isCreator && tournament.status !== 'in_progress' && tournament.status !== 'completed';
+  const canDelete = isCreator && tournament.status !== 'completed'; // Le créateur peut supprimer même en cours
   const canStart = isCreator && 
-                  isOpen && 
+                  (isOpen || isFull) && 
                   tournament.currentParticipants >= 2 && 
                   !tournament.matches?.length;
   const canManageParticipants = isCreator && isOpen;
@@ -122,7 +124,7 @@ export function getTournamentPermissions(
     joinMessage = 'Connectez-vous pour rejoindre ce tournoi';
   } else if (isParticipant) {
     joinMessage = 'Vous participez déjà à ce tournoi';
-  } else if (isFull) {
+  } else if (isAtMaxCapacity) {
     joinMessage = 'Ce tournoi est complet';
   } else if (!isOpen) {
     if (isInProgress) {
@@ -166,7 +168,7 @@ export function getTournamentPermissions(
     canManageParticipants,
     canViewPrivateInfo,
     isParticipant,
-    isFull,
+    isFull: isAtMaxCapacity,
     canRegister,
     joinMessage,
     statusMessage

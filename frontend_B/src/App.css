@@ -26,17 +26,27 @@ body {
 /* Variables CSS */
 :root {
   --primary: #667eea;
+  --primary-light: #e0e7ff;
   --secondary: #764ba2;
   --success: #10b981;
+  --success-light: #d1fae5;
   --danger: #ef4444;
+  --danger-light: #fee2e2;
   --warning: #f59e0b;
+  --warning-light: #fef3c7;
   --gray-100: #f7fafc;
   --gray-200: #edf2f7;
   --gray-300: #e2e8f0;
   --gray-500: #a0aec0;
+  --gray-600: #718096;
   --gray-700: #4a5568;
   --gray-900: #1a202c;
   --white: #ffffff;
+  --background: #f8fafc;
+  --card-background: #ffffff;
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --border: #e2e8f0;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }

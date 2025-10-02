@@ -235,6 +235,16 @@ export class UsersController {
     return this.usersService.getUserStats(id);
   }
 
+  @Post(':id/stats/refresh')
+  @ApiOperation({ summary: 'Force refresh user game statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'User statistics refreshed successfully',
+  })
+  async refreshUserStats(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.refreshUserStats(id);
+  }
+
   // ===============================
   // NOUVEAUX ENDPOINTS - MATCH HISTORY
   // ===============================
