@@ -34,11 +34,13 @@ const Profile: React.FC = () => {
     if (!user) return;
     try {
       setIsLoading(true);
+      console.log(`🔄 PROFILE: loadStatsData() pour user ${user.id} (${user.username})`);
       const response = await userAPI.getMyStats();
+      console.log('📊 PROFILE: API response:', response.data);
       setLocalStats(response.data);
-      console.log('📊 Stats rechargées:', response.data);
+      console.log('✅ PROFILE: localStats mis à jour:', response.data);
     } catch (err: any) {
-      console.log('Stats not available yet:', err.response?.data?.message);
+      console.log('❌ PROFILE: Erreur stats:', err.response?.data?.message);
     } finally {
       setIsLoading(false);
     }

@@ -27,11 +27,21 @@ export interface TournamentPermissions {
 }
 
 export function getTournamentPermissions(
-  tournament: Tournament | null, 
+  tournament: Tournament | null,
   user: User | null,
   isLoggedIn: boolean
 ): TournamentPermissions {
-  
+
+  console.log('🔍 PERMISSIONS: Calculating permissions for', {
+    tournamentId: tournament?.id,
+    tournamentStatus: tournament?.status,
+    currentParticipants: tournament?.currentParticipants,
+    maxParticipants: tournament?.maxParticipants,
+    userId: user?.id,
+    username: user?.username,
+    isLoggedIn
+  });
+
   if (!tournament) {
     return {
       canView: false,
@@ -54,29 +64,46 @@ export function getTournamentPermissions(
   const isCreator = !!(user && tournament.creator?.id === user.id);
   const isParticipant = !!(user && tournament.participants?.some(p => p.id === user.id));
   const isFull = tournament.currentParticipants >= tournament.maxParticipants;
-  
+
   // États du tournoi
   const isOpen = tournament.status === 'draft' || tournament.status === 'open';
   const isInProgress = tournament.status === 'in_progress';
   const isCompleted = tournament.status === 'completed';
   const isCancelled = tournament.status === 'cancelled';
 
+  console.log('🔍 PERMISSIONS: Calculated states', {
+    isCreator,
+    isParticipant,
+    isFull,
+    isOpen,
+    participantIds: tournament.participants?.map(p => p.id)
+  });
+
   // Permissions de base
   const canView = true; // Tout le monde peut voir les tournois publics
-  
-  // Le créateur peut toujours rejoindre son propre tournoi (sauf si complet)
-  const canJoin = isLoggedIn && 
-                 !isParticipant && 
-                 isOpen && 
-                 (isCreator || !isFull); // Créateur peut joindre même si presque complet
+
+  // Logique de jointure : on peut rejoindre si le tournoi accepte encore des participants
+  // Le backend fera la vérification finale, ici on autorise si on n'est pas au maximum strict
+  const canJoin = isLoggedIn &&
+                 !isParticipant &&
+                 isOpen &&
+                 (tournament.participants?.length || 0) < tournament.maxParticipants;
+
+  console.log('🔍 PERMISSIONS: canJoin calculation', {
+    isLoggedIn,
+    isParticipant: !isParticipant,
+    isOpen,
+    creatorOrNotFull: (isCreator || !isFull),
+    finalCanJoin: canJoin
+  }); // Créateur peut joindre même si presque complet
                  
-  const canLeave = isLoggedIn && 
-                  isParticipant && 
-                  isOpen; // Créateur et participants peuvent quitter si ouvert
+  const canLeave = isLoggedIn &&
+                  isParticipant &&
+                  (isOpen || tournament.status === 'full'); // Peut quitter si ouvert ou complet (mais pas en cours)
 
   // Permissions de créateur
   const canEdit = isCreator && (tournament.status === 'draft' || tournament.status === 'open');
-  const canDelete = isCreator && tournament.status !== 'in_progress';
+  const canDelete = isCreator && tournament.status !== 'in_progress' && tournament.status !== 'completed';
   const canStart = isCreator && 
                   isOpen && 
                   tournament.currentParticipants >= 2 && 

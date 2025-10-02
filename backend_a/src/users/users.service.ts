@@ -358,6 +358,13 @@ export class UsersService {
     console.log(`📊 USERS SERVICE: Mise à jour stats - winnerId=${winnerId}, loserId=${loserId}`);
 
     try {
+      // Vérifier les valeurs AVANT mise à jour
+      const winnerBefore = await this.userRepo.findOne({ where: { id: winnerId } });
+      const loserBefore = await this.userRepo.findOne({ where: { id: loserId } });
+
+      console.log(`📊 BEFORE UPDATE - WINNER ${winnerId} (${winnerBefore?.username}): gamesWon=${winnerBefore?.gamesWon}, gamesLost=${winnerBefore?.gamesLost}`);
+      console.log(`📊 BEFORE UPDATE - LOSER ${loserId} (${loserBefore?.username}): gamesWon=${loserBefore?.gamesWon}, gamesLost=${loserBefore?.gamesLost}`);
+
       await Promise.all([
         // Incrémenter les victoires du gagnant
         this.userRepo.increment({ id: winnerId }, 'gamesWon', 1),
@@ -367,12 +374,12 @@ export class UsersService {
 
       console.log(`✅ USERS SERVICE: Stats mises à jour avec succès`);
 
-      // Vérifier les nouvelles valeurs
-      const winner = await this.userRepo.findOne({ where: { id: winnerId } });
-      const loser = await this.userRepo.findOne({ where: { id: loserId } });
+      // Vérifier les nouvelles valeurs APRÈS mise à jour
+      const winnerAfter = await this.userRepo.findOne({ where: { id: winnerId } });
+      const loserAfter = await this.userRepo.findOne({ where: { id: loserId } });
 
-      console.log(`📈 WINNER ${winnerId}: gamesWon=${winner?.gamesWon}, gamesLost=${winner?.gamesLost}`);
-      console.log(`📉 LOSER ${loserId}: gamesWon=${loser?.gamesWon}, gamesLost=${loser?.gamesLost}`);
+      console.log(`📈 AFTER UPDATE - WINNER ${winnerId} (${winnerAfter?.username}): gamesWon=${winnerAfter?.gamesWon}, gamesLost=${winnerAfter?.gamesLost}`);
+      console.log(`📉 AFTER UPDATE - LOSER ${loserId} (${loserAfter?.username}): gamesWon=${loserAfter?.gamesWon}, gamesLost=${loserAfter?.gamesLost}`);
 
     } catch (error) {
       console.error(`❌ USERS SERVICE: Erreur mise à jour stats:`, error);
