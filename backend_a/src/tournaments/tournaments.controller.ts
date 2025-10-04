@@ -364,6 +364,30 @@ export class TournamentsController {
     );
   }
 
+  // ===== DÉMARRAGE DES MATCHES =====
+
+  @Post(':id/matches/:matchId/start')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Démarrer un match de tournoi' })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiParam({ name: 'matchId', description: 'ID du match' })
+  @ApiResponse({ status: 200, description: 'Match démarré avec succès' })
+  @ApiResponse({ status: 400, description: 'Match déjà commencé ou terminé' })
+  @ApiResponse({ status: 403, description: 'Vous n\'êtes pas participant à ce match' })
+  @ApiResponse({ status: 404, description: 'Match introuvable' })
+  async startTournamentMatch(
+    @Param('id', ParseIntPipe) tournamentId: number,
+    @Param('matchId', ParseIntPipe) matchId: number,
+    @Req() req,
+  ) {
+    return this.tournamentsService.startTournamentMatch(
+      tournamentId,
+      matchId,
+      req.user.sub,
+    );
+  }
+
   // ===== ENDPOINTS UTILITAIRES =====
 
   @Get('user/my-tournaments')

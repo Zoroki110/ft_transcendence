@@ -735,6 +735,62 @@ export class TournamentsService {
 
   // ===== PROGRESSION DES MATCHES =====
 
+  // ===== DÉMARRAGE DES MATCHES =====
+
+  async startTournamentMatch(
+    tournamentId: number,
+    matchId: number,
+    userId: number,
+  ): Promise<any> {
+    console.log('🚀 START TOURNAMENT MATCH:', { tournamentId, matchId, userId });
+
+    // Vérifier que le match existe et appartient au tournoi
+    const match = await this.matchRepository.findOne({
+      where: { id: matchId, tournament: { id: tournamentId } },
+      relations: ['player1', 'player2', 'tournament'],
+    });
+
+    if (!match) {
+      throw new NotFoundException('Match introuvable');
+    }
+
+    // Vérifier que l'utilisateur est l'un des participants
+    if (match.player1.id !== userId && match.player2.id !== userId) {
+      throw new ForbiddenException('Vous n\'êtes pas participant à ce match');
+    }
+
+    // Vérifier que le match n'est pas déjà commencé
+    if (match.status !== 'pending') {
+      throw new BadRequestException(`Match déjà ${match.status}`);
+    }
+
+    // Mettre le match en statut "active"
+    await this.matchRepository.update(matchId, {
+      status: 'active',
+    });
+
+    console.log(`✅ Match ${matchId} démarré entre ${match.player1.username} et ${match.player2.username}`);
+
+    // Retourner les informations pour que le frontend puisse rediriger vers le jeu
+    // On utilise un préfixe "tournament_" pour que la page Game sache que c'est un match de tournoi
+    return {
+      matchId: matchId,
+      gameUrl: `/game/tournament_${matchId}`,
+      player1: {
+        id: match.player1.id,
+        username: match.player1.username,
+      },
+      player2: {
+        id: match.player2.id,
+        username: match.player2.username,
+      },
+      tournament: {
+        id: match.tournament.id,
+        name: match.tournament.name,
+      },
+    };
+  }
+
   async advanceWinner(
     tournamentId: number,
     matchId: number,
