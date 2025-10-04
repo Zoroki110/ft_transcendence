@@ -208,6 +208,46 @@ export class TournamentsController {
     return this.tournamentsService.generateBrackets(id, req.user.sub);
   }
 
+  @Post(':id/start')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Démarrer un tournoi avec brackets générés (créateur seulement)',
+  })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tournoi démarré avec succès',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Impossible de démarrer (pas complet, brackets non générés, etc.)',
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Seul le créateur peut démarrer' })
+  @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
+  startTournament(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.tournamentsService.startTournament(id, req.user.sub);
+  }
+
+  @Post(':id/reset-brackets')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Réinitialiser les brackets et remettre le tournoi à FULL (créateur seulement)',
+  })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tournoi réinitialisé avec succès',
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Seul le créateur peut réinitialiser' })
+  @ApiResponse({ status: 404, description: 'Tournoi introuvable' })
+  resetTournamentBrackets(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.tournamentsService.resetTournamentBrackets(id, req.user.sub);
+  }
+
   @Post(':id/force-regenerate-brackets')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
