@@ -81,6 +81,51 @@ const Game: React.FC = () => {
             status: 'waiting',
             spectatorCount: 0
           });
+        } else if (gameId.startsWith('tournament_')) {
+          // Pour les matchs de tournoi
+          const matchId = gameId.replace('tournament_', '');
+          console.log('🎮 Loading tournament match:', { gameId, matchId });
+          
+          const response = await gameAPI.getMatch(parseInt(matchId));
+          const match = response.data;
+          
+          console.log('🎮 Tournament match data:', match);
+          
+          // Vérifier que match a les bonnes propriétés
+          if (!match || !match.player1 || !match.player2) {
+            throw new Error('Données de match incomplètes');
+          }
+          
+          // Adapter le format du match au format attendu par la page Game
+          setGameData({
+            id: gameId,
+            players: [
+              {
+                id: match.player1.id.toString(),
+                username: match.player1.username,
+                avatar: match.player1.avatar || '👤'
+              },
+              {
+                id: match.player2.id.toString(),
+                username: match.player2.username,
+                avatar: match.player2.avatar || '👤'
+              }
+            ],
+            score: { 
+              player1: match.player1Score || 0, 
+              player2: match.player2Score || 0 
+            },
+            status: match.status === 'active' ? 'playing' : (match.status === 'finished' ? 'finished' : 'waiting'),
+            spectatorCount: 0
+          });
+          
+          // Mettre à jour les noms des joueurs
+          setPlayerNames({
+            player1: match.player1.username,
+            player2: match.player2.username
+          });
+          
+          console.log('✅ Tournament match loaded successfully');
         } else {
           // Pour les matchs existants (ID numérique)
           const response = await gameAPI.getGame(gameId);
@@ -217,11 +262,14 @@ const Game: React.FC = () => {
     );
   }
 
-  if (error || !gameData) {
+  if (error || !gameData || !gameData.score || !playerNames) {
     return (
       <div className="game-error">
         <div className="error-icon">⚠️</div>
         <p className="error-message">{error || 'Partie introuvable'}</p>
+        <p style={{ fontSize: '0.8rem', color: '#666' }}>
+          Debug: gameData={!!gameData}, score={!!gameData?.score}, playerNames={!!playerNames}
+        </p>
       </div>
     );
   }

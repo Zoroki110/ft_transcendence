@@ -245,6 +245,10 @@ export const tournamentAPI = {
   // Mes tournois
   getMyTournaments: (params?: any) =>
     apiClient.get('/tournaments/user/my-tournaments', { params }),
+
+  // Démarrer un match de tournoi
+  startTournamentMatch: (tournamentId: number, matchId: number) =>
+    apiClient.post(`/tournaments/${tournamentId}/matches/${matchId}/start`),
 };
 
 // ===== GAMES API =====
