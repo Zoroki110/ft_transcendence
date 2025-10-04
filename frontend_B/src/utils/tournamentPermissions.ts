@@ -15,6 +15,7 @@ export interface TournamentPermissions {
   canStart: boolean;
   canManageParticipants: boolean;
   canViewPrivateInfo: boolean;
+  hasBracketsIssue: boolean;
   
   // États
   isParticipant: boolean;
@@ -53,6 +54,7 @@ export function getTournamentPermissions(
       canStart: false,
       canManageParticipants: false,
       canViewPrivateInfo: false,
+      hasBracketsIssue: false,
       isParticipant: false,
       isFull: false,
       canRegister: false,
@@ -107,11 +109,15 @@ export function getTournamentPermissions(
   const canEdit = isCreator && (tournament.status === 'draft' || tournament.status === 'open');
   const canDelete = isCreator && tournament.status !== 'completed'; // Le créateur peut supprimer même en cours
   const canStart = isCreator && 
-                  (isOpen || isFull) && 
-                  tournament.currentParticipants >= 2 && 
-                  !tournament.matches?.length;
+                  isFull && 
+                  tournament.currentParticipants >= 2;
   const canManageParticipants = isCreator && isOpen;
   const canViewPrivateInfo = isCreator;
+  
+  // Détecter les brackets corrompus : tournoi avec brackets "générés" mais aucun match
+  const hasBracketsIssue = (tournament.status === 'in_progress' || tournament.status === 'full') && 
+                          tournament.bracketGenerated && 
+                          (!tournament.matches || tournament.matches.length === 0);
 
   // États combinés
   const canRegister = canJoin;
@@ -147,7 +153,11 @@ export function getTournamentPermissions(
     } else if (tournament.status === 'open') {
       statusMessage = `Votre tournoi est ouvert - ${tournament.currentParticipants}/${tournament.maxParticipants} participants`;
     } else if (tournament.status === 'full') {
-      statusMessage = 'Votre tournoi est complet - vous pouvez le démarrer';
+      if (tournament.bracketGenerated) {
+        statusMessage = 'Votre tournoi est complet et les brackets sont prêts - vous pouvez le démarrer';
+      } else {
+        statusMessage = 'Votre tournoi est complet - génération des brackets en cours...';
+      }
     } else if (tournament.status === 'in_progress') {
       statusMessage = 'Votre tournoi est en cours';
     } else if (tournament.status === 'completed') {
@@ -167,6 +177,7 @@ export function getTournamentPermissions(
     canStart,
     canManageParticipants,
     canViewPrivateInfo,
+    hasBracketsIssue,
     isParticipant,
     isFull: isAtMaxCapacity,
     canRegister,
