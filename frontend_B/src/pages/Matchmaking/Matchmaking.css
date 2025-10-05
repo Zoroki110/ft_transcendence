@@ -1,0 +1,188 @@
+/* frontend_B/src/pages/Matchmaking/Matchmaking.css */
+
+.matchmaking-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.matchmaking-container {
+  background: white;
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+}
+
+.matchmaking-header {
+  margin-bottom: 3rem;
+}
+
+.matchmaking-title {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.matchmaking-subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  margin: 0;
+}
+
+.matchmaking-content {
+  margin-bottom: 3rem;
+}
+
+.searching-animation {
+  margin-bottom: 3rem;
+}
+
+.searching-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  animation: bounce 1.4s ease-in-out infinite both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.searching-text {
+  font-size: 1.3rem;
+  color: #667eea;
+  font-weight: 600;
+  margin: 0;
+}
+
+.matchmaking-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  gap: 1rem;
+}
+
+.stat-icon {
+  font-size: 2rem;
+  min-width: 3rem;
+}
+
+.stat-content {
+  text-align: left;
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.matchmaking-tips {
+  background: #e3f2fd;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.matchmaking-tips h3 {
+  margin: 0 0 1rem 0;
+  color: #1976d2;
+  font-size: 1.2rem;
+}
+
+.matchmaking-tips ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #666;
+}
+
+.matchmaking-tips li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.matchmaking-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.matchmaking-loading,
+.matchmaking-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-icon,
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-message {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .matchmaking-container {
+    padding: 2rem;
+    margin: 1rem;
+  }
+  
+  .matchmaking-title {
+    font-size: 2rem;
+  }
+  
+  .stat-item {
+    padding: 1rem;
+  }
+}
