@@ -11,6 +11,6 @@ import { UsersModule } from '../users/users.module';
   imports: [TypeOrmModule.forFeature([Match]), UsersModule],
   providers: [GameService, GameGateway],
   controllers: [GameController, PublicGameController],
-  exports: [GameService],
+  exports: [GameService, GameGateway],
 })
 export class GameModule {}

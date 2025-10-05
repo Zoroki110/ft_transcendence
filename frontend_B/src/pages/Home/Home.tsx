@@ -24,8 +24,8 @@ const Home: React.FC = () => {
       const response = await gameAPI.createQuickMatch();
       console.log('🟢 FRONTEND: Réponse API reçue:', response.data);
       const gameId = response.data.gameId;
-      console.log('🟢 FRONTEND: Navigation vers /game/' + gameId);
-      navigate(`/game/${gameId}`);
+      console.log('🟢 FRONTEND: Navigation vers /matchmaking/' + gameId);
+      navigate(`/matchmaking/${gameId}`);
     } catch (error) {
       console.error('🔴 FRONTEND: Erreur lors de la création de la partie:', error);
       alert('Impossible de créer une partie. Veuillez réessayer.');

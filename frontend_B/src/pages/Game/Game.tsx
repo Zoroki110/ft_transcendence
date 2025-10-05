@@ -66,34 +66,28 @@ const Game: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchGameData = async () => {
-      if (!gameId) return;
-
-      try {
-        setIsLoading(true);
-        // Pour les parties rapides, pas besoin d'appeler l'API
-        // Les données sont gérées par WebSocket
-        if (gameId.startsWith('game_') || gameId.startsWith('quick_')) {
-          setGameData({
-            id: gameId,
-            players: [],
-            score: { player1: 0, player2: 0 },
-            status: 'waiting',
-            spectatorCount: 0
-          });
-        } else {
-          // Pour les matchs existants (ID numérique)
-          const response = await gameAPI.getGame(gameId);
-          setGameData(response.data);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Erreur de chargement');
-      } finally {
+    const initializeGame = () => {
+      if (!gameId) {
+        setError('ID de partie manquant');
         setIsLoading(false);
+        return;
       }
+
+      // Initialiser la partie avec des données par défaut
+      // Le WebSocket se chargera de mettre à jour les vraies données
+      setGameData({
+        id: gameId,
+        players: [],
+        score: { player1: 0, player2: 0 },
+        status: 'waiting',
+        spectatorCount: 0
+      });
+
+      console.log(`🎮 Game initialized for: ${gameId}`);
+      setIsLoading(false);
     };
 
-    fetchGameData();
+    initializeGame();
   }, [gameId]);
 
   const handleSendMessage = () => {
@@ -217,11 +211,14 @@ const Game: React.FC = () => {
     );
   }
 
-  if (error || !gameData) {
+  if (error || !gameData || !gameData.score || !playerNames) {
     return (
       <div className="game-error">
         <div className="error-icon">⚠️</div>
         <p className="error-message">{error || 'Partie introuvable'}</p>
+        <p style={{ fontSize: '0.8rem', color: '#666' }}>
+          Debug: gameData={!!gameData}, score={!!gameData?.score}, playerNames={!!playerNames}
+        </p>
       </div>
     );
   }

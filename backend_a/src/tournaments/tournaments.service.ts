@@ -18,6 +18,7 @@ import { Match } from '../entities/match.entity';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
+import { GameGateway } from '../game/game.gateway';
 
 @Injectable()
 export class TournamentsService {
@@ -28,6 +29,7 @@ export class TournamentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   // ===== CRUD BASIQUE =====
@@ -51,9 +53,30 @@ export class TournamentsService {
       creatorId,
       status: TournamentStatus.DRAFT,
       currentParticipants: 0,
+      participants: [creator], // Auto-enroll creator using TypeORM relations
     });
 
-    return await this.tournamentRepository.save(tournament);
+    const savedTournament = await this.tournamentRepository.save(tournament);
+
+    // Mettre à jour le compteur et le statut avec le créateur inscrit
+    await this.tournamentRepository.update(savedTournament.id, {
+      currentParticipants: 1,
+      status: TournamentStatus.OPEN,
+    });
+
+    console.log('✅ CREATOR AUTO-ENROLLED via TypeORM relations');
+
+    // Recharger avec les participants
+    const result = await this.tournamentRepository.findOne({
+      where: { id: savedTournament.id },
+      relations: ['creator', 'participants'],
+    });
+    
+    if (!result) {
+      throw new NotFoundException('Tournoi introuvable après création');
+    }
+    
+    return result;
   }
 
   async findAll(
@@ -173,17 +196,17 @@ export class TournamentsService {
     tournamentId: number,
     userId: number,
   ): Promise<Tournament> {
-    console.log('🔍 JOIN TOURNAMENT START:', { tournamentId, userId });
+    console.log('🔍 NEW JOIN LOGIC START:', { tournamentId, userId });
 
-    // Utiliser une transaction pour garantir l'atomicité
+    // Simple transaction sans complexité
     return await this.tournamentRepository.manager.transaction(
       async (transactionalEntityManager) => {
-        // Charger le tournoi avec toutes les relations (pas de verrou pessimiste pour éviter l'erreur FOR UPDATE)
+        // Charger le tournoi avec les participants
         const tournament = await transactionalEntityManager.findOne(
           Tournament,
           {
             where: { id: tournamentId },
-            relations: ['creator', 'participants', 'matches', 'winner'],
+            relations: ['creator', 'participants'],
           },
         );
 
@@ -191,6 +214,23 @@ export class TournamentsService {
           throw new NotFoundException('Tournoi introuvable');
         }
 
+        // Vérifications de base
+        if (tournament.status !== TournamentStatus.DRAFT && tournament.status !== TournamentStatus.OPEN) {
+          throw new BadRequestException('Impossible de rejoindre ce tournoi');
+        }
+
+        // Vérifier si pas déjà inscrit
+        const isAlreadyParticipant = tournament.participants.some(p => p.id === userId);
+        if (isAlreadyParticipant) {
+          throw new ConflictException('Vous êtes déjà inscrit à ce tournoi');
+        }
+
+        // Vérifier la capacité
+        if (tournament.participants.length >= tournament.maxParticipants) {
+          throw new BadRequestException('Le tournoi est complet');
+        }
+
+        // Charger l'utilisateur
         const user = await transactionalEntityManager.findOne(User, {
           where: { id: userId },
         });
@@ -198,93 +238,51 @@ export class TournamentsService {
           throw new NotFoundException('Utilisateur introuvable');
         }
 
-        console.log('🔍 TOURNAMENT STATE:', {
-          id: tournament.id,
-          status: tournament.status,
-          currentParticipants: tournament.currentParticipants,
-          participantsArrayLength: tournament.participants.length,
-          maxParticipants: tournament.maxParticipants,
-          participantIds: tournament.participants.map((p) => p.id),
-        });
-
-        // Vérifications strictes
-        if (tournament.status === TournamentStatus.IN_PROGRESS) {
-          throw new BadRequestException(
-            'Impossible de rejoindre un tournoi en cours',
-          );
-        }
-
-        if (tournament.status === TournamentStatus.COMPLETED) {
-          throw new BadRequestException(
-            'Impossible de rejoindre un tournoi terminé',
-          );
-        }
-
-        if (tournament.status === TournamentStatus.CANCELLED) {
-          throw new BadRequestException(
-            'Impossible de rejoindre un tournoi annulé',
-          );
-        }
-
-        // Vérifier la limite de participants
-        if (tournament.participants.length >= tournament.maxParticipants) {
-          throw new BadRequestException('Le tournoi est complet');
-        }
-
-        // Vérifier si déjà participant
-        const isAlreadyParticipant = tournament.participants.some(
-          (p) => p.id === userId,
-        );
-        if (isAlreadyParticipant) {
-          throw new ConflictException('Vous êtes déjà inscrit à ce tournoi');
-        }
-
-        // Ajouter le participant
-        tournament.participants.push(user);
-
-        // Mettre à jour le statut automatiquement
-        const newParticipantCount = tournament.participants.length;
-        tournament.currentParticipants = newParticipantCount;
-
-        if (newParticipantCount >= tournament.maxParticipants) {
-          tournament.status = TournamentStatus.FULL;
-        } else if (tournament.status === TournamentStatus.DRAFT) {
-          tournament.status = TournamentStatus.OPEN;
-        }
-
-        // Force la synchronisation avant sauvegarde
-        tournament.currentParticipants = tournament.participants.length;
-
-        const savedTournament = await transactionalEntityManager.save(
-          Tournament,
-          tournament,
-        );
-
-        // Force une mise à jour SQL directe pour être 100% sûr
+        // Ajouter à la table de liaison directement via SQL pour éviter les problèmes
         await transactionalEntityManager.query(
-          'UPDATE tournament SET current_participants = $1 WHERE id = $2',
-          [tournament.participants.length, tournamentId],
+          `INSERT INTO tournament_participants (tournaments_id, user_id) VALUES ($1, $2)`,
+          [tournamentId, userId]
         );
 
-        // Vérification post-sauvegarde
-        const reloadedTournament = await transactionalEntityManager.findOne(
-          Tournament,
-          {
-            where: { id: tournamentId },
-            relations: ['creator', 'participants', 'matches', 'winner'],
-          },
+        // Compter les participants réels
+        const participantCount = await transactionalEntityManager.query(
+          `SELECT COUNT(*) as count FROM tournament_participants WHERE tournaments_id = $1`,
+          [tournamentId]
+        );
+        const actualCount = parseInt(participantCount[0].count);
+
+        // Mettre à jour le statut simple
+        let newStatus: TournamentStatus = tournament.status;
+        if (actualCount >= tournament.maxParticipants) {
+          newStatus = TournamentStatus.FULL;
+        } else if (tournament.status === TournamentStatus.DRAFT) {
+          newStatus = TournamentStatus.OPEN;
+        }
+
+        // Mise à jour directe via SQL
+        await transactionalEntityManager.query(
+          `UPDATE tournament SET current_participants = $1, status = $2 WHERE id = $3`,
+          [actualCount, newStatus, tournamentId]
         );
 
-        console.log('✅ TOURNAMENT JOINED:', {
-          tournamentId: savedTournament.id,
-          savedParticipantCount: savedTournament.currentParticipants,
-          reloadedParticipantCount: reloadedTournament?.currentParticipants,
-          actualParticipantsLength: reloadedTournament?.participants.length,
-          newStatus: savedTournament.status,
-          participantIds: savedTournament.participants.map((p) => p.id),
+        console.log('✅ NEW JOIN LOGIC SUCCESS:', {
+          tournamentId,
+          userId,
+          newParticipantCount: actualCount,
+          newStatus
         });
 
-        return reloadedTournament || savedTournament;
+        // Recharger pour retourner
+        const result = await transactionalEntityManager.findOne(Tournament, {
+          where: { id: tournamentId },
+          relations: ['creator', 'participants', 'matches', 'winner'],
+        });
+        
+        if (!result) {
+          throw new NotFoundException('Tournoi introuvable après mise à jour');
+        }
+        
+        return result;
       },
     );
   }
@@ -409,70 +407,135 @@ export class TournamentsService {
     tournamentId: number,
     userId: number,
   ): Promise<Tournament> {
+    console.log('🔥 NEW SIMPLE BRACKETS GENERATION:', { tournamentId, userId });
+
     const tournament = await this.findOne(tournamentId, userId);
 
-    // ADD THIS DEBUG BLOCK
-    console.log('=== GENERATE BRACKETS DEBUG ===');
-    console.log('Tournament ID:', tournament.id);
-    console.log('Tournament status:', tournament.status);
-    console.log('Current participants:', tournament.currentParticipants);
-    console.log('Participants array length:', tournament.participants?.length);
-    console.log('Participants:', tournament.participants?.map(p => ({ id: p.id, username: p.username })));
-    console.log('Bracket generated:', tournament.bracketGenerated);
-    console.log('Existing matches:', tournament.matches?.length || 0);
-    console.log('Can start result:', tournament.canStart);
-
+    // Vérifications simples
     if (tournament.creatorId !== userId) {
-      throw new ForbiddenException(
-        'Seul le créateur peut générer les brackets',
-      );
+      throw new ForbiddenException('Seul le créateur peut générer les brackets');
     }
 
-    if (!tournament.canStart) {
-      console.log(
-        'CANSTART FAILED - Status:',
-        tournament.status,
-        'Participants:',
-        tournament.currentParticipants,
-        'BracketGenerated:',
-        tournament.bracketGenerated,
-      );
-      throw new BadRequestException('Le tournoi ne peut pas encore commencer');
+    if (tournament.status !== TournamentStatus.FULL) {
+      throw new BadRequestException('Le tournoi doit être complet pour générer les brackets');
     }
 
-    if (tournament.bracketGenerated && tournament.matches.length > 0) {
-      throw new BadRequestException('Les brackets ont déjà été générés');
+    if (tournament.participants.length < 2) {
+      throw new BadRequestException('Il faut au moins 2 participants');
     }
 
-    console.log(
-      'Participants before generating matches:',
-      tournament.participants.length,
+    // Supprimer tous les anciens matches
+    await this.matchRepository.query(
+      'DELETE FROM match WHERE tournament_id = $1',
+      [tournamentId]
     );
 
-    let matches: Match[] = [];
-    if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
-      matches = await this.generateSingleEliminationMatches(
-        tournament.participants,
-        tournament.id,
-      );
-    } else {
-      throw new BadRequestException(
-        'Type de tournoi non supporté pour le moment',
-      );
+    // Générer les matches du premier round directement en SQL
+    const participants = tournament.participants;
+    const matchesCreated: any[] = [];
+
+    for (let i = 0; i < participants.length; i += 2) {
+      if (i + 1 < participants.length) {
+        const result = await this.matchRepository.query(`
+          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id, createdat)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+          RETURNING id
+        `, [
+          participants[i].id,
+          participants[i + 1].id,
+          1,
+          Math.floor(i / 2),
+          'pending',
+          0,
+          0,
+          tournamentId
+        ]);
+        matchesCreated.push(result[0]);
+      }
     }
 
-    console.log('Generated matches:', matches.length);
+    // Mettre à jour le tournoi
+    await this.tournamentRepository.query(
+      'UPDATE tournament SET bracket_generated = true, status = $1 WHERE id = $2',
+      [TournamentStatus.IN_PROGRESS, tournamentId]
+    );
 
-    // Matches are already saved via direct SQL insertion in generateSingleEliminationMatches
-    if (matches.length === 0) {
-      console.error('No matches generated!');
-      throw new BadRequestException('Failed to create matches');
+    console.log('✅ NEW BRACKETS SUCCESS:', {
+      tournamentId,
+      matchesCreated: matchesCreated.length,
+      participants: participants.length
+    });
+
+    // Recharger le tournoi
+    return await this.findOne(tournamentId, userId);
+  }
+
+  async startTournament(
+    tournamentId: number,
+    userId: number,
+  ): Promise<Tournament> {
+    console.log('🚀 SUPER SIMPLE START:', { tournamentId, userId });
+
+    const tournament = await this.findOne(tournamentId, userId);
+
+    // Vérifications de base
+    if (tournament.creatorId !== userId) {
+      throw new ForbiddenException('Seul le créateur peut démarrer le tournoi');
     }
 
-    tournament.bracketGenerated = true;
-    tournament.status = TournamentStatus.IN_PROGRESS;
+    if (tournament.status !== TournamentStatus.FULL) {
+      throw new BadRequestException('Le tournoi doit être complet');
+    }
 
-    return await this.tournamentRepository.save(tournament);
+    if (tournament.participants.length < 2) {
+      throw new BadRequestException('Il faut au moins 2 participants');
+    }
+
+    console.log('👥 PARTICIPANTS:', tournament.participants.map(p => ({ id: p.id, username: p.username })));
+
+    // ÉTAPE 1: Supprimer les anciens matches
+    await this.matchRepository.query(
+      'DELETE FROM match WHERE tournament_id = $1',
+      [tournamentId]
+    );
+    console.log('🗑️ Anciens matches supprimés');
+
+    // ÉTAPE 2: Mélanger les participants aléatoirement
+    const shuffled = [...tournament.participants].sort(() => Math.random() - 0.5);
+    console.log('🎲 ORDRE ALÉATOIRE:', shuffled.map(p => p.username));
+
+    // ÉTAPE 3: Créer les matches du premier round avec TypeORM
+    for (let i = 0; i < shuffled.length; i += 2) {
+      if (i + 1 < shuffled.length) {
+        const player1 = shuffled[i];
+        const player2 = shuffled[i + 1];
+        
+        const match = this.matchRepository.create({
+          player1: player1,
+          player2: player2,
+          round: 1,
+          bracketPosition: Math.floor(i / 2),
+          status: 'pending',
+          player1Score: 0,
+          player2Score: 0,
+          tournament: tournament
+        });
+
+        await this.matchRepository.save(match);
+        console.log(`🆚 MATCH CRÉÉ: ${player1.username} vs ${player2.username}`);
+      }
+    }
+
+    // ÉTAPE 4: Démarrer le tournoi avec TypeORM
+    await this.tournamentRepository.update(tournamentId, {
+      status: TournamentStatus.IN_PROGRESS,
+      bracketGenerated: true,
+      startDate: new Date()
+    });
+
+    console.log('✅ TOURNOI DÉMARRÉ avec brackets générés automatiquement');
+
+    return await this.findOne(tournamentId, userId);
   }
 
   async forceRegenerateBrackets(
@@ -495,11 +558,12 @@ export class TournamentsService {
       matches: tournament.matches?.length
     });
 
-    // Supprimer tous les matches existants
-    if (tournament.matches && tournament.matches.length > 0) {
-      await this.matchRepository.remove(tournament.matches);
-      console.log('🗑️ FORCE REGENERATE: Existing matches removed');
-    }
+    // Supprimer tous les matches existants avec une requête SQL directe
+    await this.matchRepository.query(
+      'DELETE FROM match WHERE tournament_id = $1',
+      [tournamentId]
+    );
+    console.log('🗑️ FORCE REGENERATE: Existing matches removed via SQL');
 
     // Réinitialiser le flag bracket
     tournament.bracketGenerated = false;
@@ -508,21 +572,33 @@ export class TournamentsService {
     if (tournament.participants && tournament.participants.length >= 2) {
       console.log('🚀 FORCE REGENERATE: Generating new matches');
       
-      let matches: Match[] = [];
       if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
-        matches = await this.generateSingleEliminationMatches(
-          tournament.participants,
-          tournament.id,
-        );
-      }
-
-      if (matches.length > 0) {
-        console.log('✅ FORCE REGENERATE: Generated', matches.length, 'matches');
-        // Matches are already saved via direct SQL insertion in generateSingleEliminationMatches
+        // Générer les matches avec SQL direct
+        const matches: any[] = [];
+        for (let i = 0; i < tournament.participants.length; i += 2) {
+          if (i + 1 < tournament.participants.length) {
+            const result = await this.matchRepository.query(`
+              INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              RETURNING id
+            `, [
+              tournament.participants[i].id,
+              tournament.participants[i + 1].id,
+              1,
+              Math.floor(i / 2),
+              'pending',
+              0,
+              0,
+              tournamentId
+            ]);
+            matches.push(result[0]);
+          }
+        }
+        console.log('✅ FORCE REGENERATE: Generated', matches.length, 'matches via SQL');
       }
 
       tournament.bracketGenerated = true;
-      tournament.status = TournamentStatus.IN_PROGRESS;
+      tournament.status = TournamentStatus.FULL; // Remettre à FULL pour permettre le start propre
     } else {
       throw new BadRequestException('Pas assez de participants pour générer les brackets');
     }
@@ -531,6 +607,46 @@ export class TournamentsService {
     console.log('🎉 FORCE REGENERATE: Tournament updated successfully');
     
     return result;
+  }
+
+  async resetTournamentBrackets(
+    tournamentId: number,
+    userId: number,
+  ): Promise<Tournament> {
+    console.log('🔄 RESET BRACKETS: Starting reset for tournament', tournamentId);
+    
+    const tournament = await this.findOne(tournamentId, userId);
+
+    if (tournament.creatorId !== userId) {
+      throw new ForbiddenException(
+        'Seul le créateur peut réinitialiser le tournoi',
+      );
+    }
+
+    console.log('🔄 RESET BRACKETS: Current state', {
+      status: tournament.status,
+      participants: tournament.participants?.length,
+      bracketGenerated: tournament.bracketGenerated
+    });
+
+    // Supprimer tous les matches via SQL direct
+    await this.matchRepository.query(
+      'DELETE FROM match WHERE tournament_id = $1',
+      [tournamentId]
+    );
+    console.log('🗑️ RESET BRACKETS: Deleted matches via SQL');
+
+    // Réinitialiser complètement l'état du tournoi
+    tournament.bracketGenerated = false;
+    tournament.status = TournamentStatus.FULL;
+    tournament.startDate = undefined as any;
+    tournament.endDate = undefined as any;
+    tournament.winnerId = undefined as any;
+
+    const savedTournament = await this.tournamentRepository.save(tournament);
+    console.log('✅ RESET BRACKETS: Tournament reset to FULL status');
+
+    return savedTournament;
   }
 
   async getBrackets(tournamentId: number, userId?: number) {
@@ -620,6 +736,66 @@ export class TournamentsService {
   }
 
   // ===== PROGRESSION DES MATCHES =====
+
+  // ===== DÉMARRAGE DES MATCHES =====
+
+  async startTournamentMatch(
+    tournamentId: number,
+    matchId: number,
+    userId: number,
+  ): Promise<any> {
+    console.log('🚀 START TOURNAMENT MATCH:', { tournamentId, matchId, userId });
+
+    // Vérifier que le match existe et appartient au tournoi
+    const match = await this.matchRepository.findOne({
+      where: { id: matchId, tournament: { id: tournamentId } },
+      relations: ['player1', 'player2', 'tournament'],
+    });
+
+    if (!match) {
+      throw new NotFoundException('Match introuvable');
+    }
+
+    // Vérifier que l'utilisateur est l'un des participants
+    if (match.player1.id !== userId && match.player2.id !== userId) {
+      throw new ForbiddenException('Vous n\'êtes pas participant à ce match');
+    }
+
+    // Vérifier que le match n'est pas déjà commencé
+    if (match.status !== 'pending') {
+      throw new BadRequestException(`Match déjà ${match.status}`);
+    }
+
+    // Mettre le match en statut "active"
+    await this.matchRepository.update(matchId, {
+      status: 'active',
+    });
+
+    // Créer une game room pour ce match de tournoi
+    const gameId = `tournament_${matchId}`;
+    this.gameGateway.createTournamentRoom(gameId, matchId, match.player1, match.player2);
+
+    console.log(`✅ Match ${matchId} démarré entre ${match.player1.username} et ${match.player2.username}`);
+    console.log(`🎮 Game room créée: ${gameId}`);
+
+    // Retourner les informations pour que le frontend puisse rediriger vers le jeu
+    return {
+      matchId: matchId,
+      gameUrl: `/game/${gameId}`,
+      player1: {
+        id: match.player1.id,
+        username: match.player1.username,
+      },
+      player2: {
+        id: match.player2.id,
+        username: match.player2.username,
+      },
+      tournament: {
+        id: match.tournament.id,
+        name: match.tournament.name,
+      },
+    };
+  }
 
   async advanceWinner(
     tournamentId: number,
@@ -905,6 +1081,83 @@ export class TournamentsService {
   }
 
   // ===== MÉTHODES UTILITAIRES =====
+
+  private async autoGenerateBrackets(tournament: Tournament, transactionalEntityManager: any): Promise<void> {
+    console.log('🎯 AUTO-BRACKETS: Starting auto generation for tournament', tournament.id);
+    
+    if (tournament.participants.length < 2) {
+      throw new Error('Pas assez de participants pour générer les brackets');
+    }
+
+    if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
+      const matches = await this.generateSingleEliminationMatchesInTransaction(
+        tournament.participants,
+        tournament.id,
+        transactionalEntityManager
+      );
+      
+      if (matches.length === 0) {
+        throw new Error('Aucun match généré');
+      }
+      
+      console.log('🎯 AUTO-BRACKETS: Generated', matches.length, 'matches for tournament', tournament.id);
+    } else {
+      throw new Error('Type de tournoi non supporté pour la génération automatique');
+    }
+  }
+
+  private async generateSingleEliminationMatchesInTransaction(
+    participants: User[],
+    tournamentId: number,
+    transactionalEntityManager: any
+  ): Promise<Match[]> {
+    console.log('🎯 AUTO-BRACKETS: Generating matches within transaction');
+    
+    const matches: Match[] = [];
+
+    for (let i = 0; i < participants.length; i += 2) {
+      if (i + 1 < participants.length) {
+        // Utiliser le transactionalEntityManager pour la requête SQL
+        const result = await transactionalEntityManager.query(`
+          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING id
+        `, [
+          participants[i].id,
+          participants[i + 1].id,
+          1,
+          Math.floor(i / 2),
+          'pending',
+          0,
+          0,
+          tournamentId
+        ]);
+
+        console.log(`🎯 AUTO-BRACKETS: Created match ${matches.length + 1}:`, {
+          id: result[0].id,
+          player1: participants[i].username,
+          player2: participants[i + 1].username,
+          tournament_id: tournamentId
+        });
+
+        // Créer un objet Match pour le retour
+        const match = this.matchRepository.create({});
+        match.id = result[0].id;
+        match.player1 = participants[i];
+        match.player2 = participants[i + 1];
+        match.round = 1;
+        match.bracketPosition = Math.floor(i / 2);
+        match.status = 'pending';
+        match.player1Score = 0;
+        match.player2Score = 0;
+
+        matches.push(match);
+      }
+    }
+
+    console.log('🎯 AUTO-BRACKETS: Total matches created:', matches.length);
+    return matches;
+  }
 
   private async getCurrentRound(tournamentId: number): Promise<number> {
     const result = await this.matchRepository
