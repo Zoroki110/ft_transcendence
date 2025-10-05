@@ -18,6 +18,7 @@ import { Match } from '../entities/match.entity';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
+import { GameGateway } from '../game/game.gateway';
 
 @Injectable()
 export class TournamentsService {
@@ -28,6 +29,7 @@ export class TournamentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   // ===== CRUD BASIQUE =====
@@ -769,13 +771,17 @@ export class TournamentsService {
       status: 'active',
     });
 
+    // Créer une game room pour ce match de tournoi
+    const gameId = `tournament_${matchId}`;
+    this.gameGateway.createTournamentRoom(gameId, matchId, match.player1, match.player2);
+
     console.log(`✅ Match ${matchId} démarré entre ${match.player1.username} et ${match.player2.username}`);
+    console.log(`🎮 Game room créée: ${gameId}`);
 
     // Retourner les informations pour que le frontend puisse rediriger vers le jeu
-    // On utilise un préfixe "tournament_" pour que la page Game sache que c'est un match de tournoi
     return {
       matchId: matchId,
-      gameUrl: `/game/tournament_${matchId}`,
+      gameUrl: `/game/${gameId}`,
       player1: {
         id: match.player1.id,
         username: match.player1.username,

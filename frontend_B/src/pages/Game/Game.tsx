@@ -66,79 +66,28 @@ const Game: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchGameData = async () => {
-      if (!gameId) return;
-
-      try {
-        setIsLoading(true);
-        // Pour les parties rapides, pas besoin d'appeler l'API
-        // Les données sont gérées par WebSocket
-        if (gameId.startsWith('game_') || gameId.startsWith('quick_')) {
-          setGameData({
-            id: gameId,
-            players: [],
-            score: { player1: 0, player2: 0 },
-            status: 'waiting',
-            spectatorCount: 0
-          });
-        } else if (gameId.startsWith('tournament_')) {
-          // Pour les matchs de tournoi
-          const matchId = gameId.replace('tournament_', '');
-          console.log('🎮 Loading tournament match:', { gameId, matchId });
-          
-          const response = await gameAPI.getMatch(parseInt(matchId));
-          const match = response.data;
-          
-          console.log('🎮 Tournament match data:', match);
-          
-          // Vérifier que match a les bonnes propriétés
-          if (!match || !match.player1 || !match.player2) {
-            throw new Error('Données de match incomplètes');
-          }
-          
-          // Adapter le format du match au format attendu par la page Game
-          setGameData({
-            id: gameId,
-            players: [
-              {
-                id: match.player1.id.toString(),
-                username: match.player1.username,
-                avatar: match.player1.avatar || '👤'
-              },
-              {
-                id: match.player2.id.toString(),
-                username: match.player2.username,
-                avatar: match.player2.avatar || '👤'
-              }
-            ],
-            score: { 
-              player1: match.player1Score || 0, 
-              player2: match.player2Score || 0 
-            },
-            status: match.status === 'active' ? 'playing' : (match.status === 'finished' ? 'finished' : 'waiting'),
-            spectatorCount: 0
-          });
-          
-          // Mettre à jour les noms des joueurs
-          setPlayerNames({
-            player1: match.player1.username,
-            player2: match.player2.username
-          });
-          
-          console.log('✅ Tournament match loaded successfully');
-        } else {
-          // Pour les matchs existants (ID numérique)
-          const response = await gameAPI.getGame(gameId);
-          setGameData(response.data);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Erreur de chargement');
-      } finally {
+    const initializeGame = () => {
+      if (!gameId) {
+        setError('ID de partie manquant');
         setIsLoading(false);
+        return;
       }
+
+      // Initialiser la partie avec des données par défaut
+      // Le WebSocket se chargera de mettre à jour les vraies données
+      setGameData({
+        id: gameId,
+        players: [],
+        score: { player1: 0, player2: 0 },
+        status: 'waiting',
+        spectatorCount: 0
+      });
+
+      console.log(`🎮 Game initialized for: ${gameId}`);
+      setIsLoading(false);
     };
 
-    fetchGameData();
+    initializeGame();
   }, [gameId]);
 
   const handleSendMessage = () => {
