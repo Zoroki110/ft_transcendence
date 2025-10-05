@@ -119,6 +119,27 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
     }
   };
 
+  const handleStartMatch = async (match: Match) => {
+    try {
+      console.log('🚀 Starting tournament match:', { tournamentId, matchId: match.id });
+      
+      const response = await tournamentAPI.startTournamentMatch(tournamentId, match.id);
+      console.log('✅ Match started:', response.data);
+      
+      // Rediriger vers le jeu
+      window.location.href = response.data.gameUrl;
+      
+    } catch (err: any) {
+      console.error('❌ Error starting match:', err);
+      alert(err.response?.data?.message || 'Erreur lors du démarrage du match');
+    }
+  };
+
+  const canUserPlayMatch = (match: Match): boolean => {
+    if (!user) return false;
+    return match.player1Id === user.id || match.player2Id === user.id;
+  };
+
   if (isLoading) {
     return (
       <div className="brackets-loading">
@@ -256,11 +277,34 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                           </div>
                         )}
 
-                        {isCreator && match.status === 'pending' && (
+                        {/* Actions selon le statut du match et le rôle de l'utilisateur */}
+                        {match.status === 'pending' && (
                           <div className="match-actions">
-                            <button className="btn btn-sm btn-primary">
-                              ⚙️ Gérer
-                            </button>
+                            {/* Bouton Jouer pour les participants */}
+                            {canUserPlayMatch(match) && (
+                              <button 
+                                className="btn btn-sm btn-success"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartMatch(match);
+                                }}
+                              >
+                                🎮 Jouer
+                              </button>
+                            )}
+                            
+                            {/* Bouton Gérer pour le créateur */}
+                            {isCreator && (
+                              <button className="btn btn-sm btn-primary">
+                                ⚙️ Gérer
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {match.status === 'active' && (
+                          <div className="match-actions">
+                            <span className="match-status-text">🎮 Match en cours...</span>
                           </div>
                         )}
                       </div>

@@ -47,6 +47,8 @@ const TournamentDetail: React.FC = () => {
     fetchTournament();
   }, [id]);
 
+  // Plus besoin d'auto-refresh car les brackets se génèrent seulement au démarrage
+
   const handleJoin = async () => {
     if (!tournament) return;
 
@@ -114,6 +116,27 @@ const TournamentDetail: React.FC = () => {
       navigate('/tournaments');
     } else {
       console.error('❌ DETAIL: Failed to delete tournament');
+    }
+  };
+
+  const handleResetBrackets = async () => {
+    if (!tournament) return;
+
+    if (!confirm('Êtes-vous sûr de vouloir réinitialiser les brackets ? Cette action supprimera tous les matches existants.')) {
+      return;
+    }
+
+    try {
+      console.log('🔄 DETAIL: Resetting tournament brackets', tournament.id);
+      await tournamentAPI.resetTournamentBrackets(tournament.id);
+      
+      // Recharger les données du tournoi
+      const response = await tournamentAPI.getTournament(tournament.id);
+      setTournament(response.data);
+      
+      console.log('✅ DETAIL: Tournament brackets reset successfully');
+    } catch (error: any) {
+      console.error('❌ DETAIL: Failed to reset brackets', error);
     }
   };
 
@@ -305,6 +328,31 @@ const TournamentDetail: React.FC = () => {
                     >
                       {actionState.isStarting ? '⏳ Démarrage...' : '🚀 Démarrer le tournoi'}
                     </button>
+                  )}
+
+                  {/* Message informatif pour démarrer le tournoi */}
+                  {permissions.isCreator && tournament.status === 'full' && !tournament.bracketGenerated && (
+                    <div className="info-message">
+                      <div className="info-icon">🎯</div>
+                      <p>Tournoi prêt à démarrer !</p>
+                      <small>Cliquez sur "Démarrer le tournoi" pour générer les brackets et lancer les matches.</small>
+                    </div>
+                  )}
+
+                  {/* Message d'erreur pour brackets corrompus */}
+                  {permissions.isCreator && permissions.hasBracketsIssue && (
+                    <div className="error-message">
+                      <div className="error-icon">⚠️</div>
+                      <p>Problème détecté avec les brackets</p>
+                      <small>Le tournoi a été marqué comme "en cours" mais il n'y a aucun match valide.</small>
+                      <button
+                        className="btn btn-warning btn-full"
+                        onClick={handleResetBrackets}
+                        style={{ marginTop: '10px' }}
+                      >
+                        🔧 Réparer les brackets
+                      </button>
+                    </div>
                   )}
 
                   {permissions.canDelete && (
