@@ -1,6 +1,6 @@
 # Makefile pour Transcendence DevOps
 
-.PHONY: help up down logs status clean up-infra up-full
+.PHONY: help up down logs status clean up-infra up-full backend frontend game restart-backend restart-frontend restart-game rebuild-backend rebuild-frontend rebuild-game
 
 help: ## Affiche cette aide
 	@echo 'Usage: make [target]'
@@ -63,3 +63,66 @@ test-infra: ## Teste l'infrastructure (ports, santé des services)
 	@curl -s http://localhost:3004/api/health > /dev/null && echo "✅ Grafana OK" || echo "❌ Grafana KO"
 	@echo "💾 PostgreSQL:"
 	@docker-compose -f docker/docker-compose.yml exec -T database pg_isready -U transcendence && echo "✅ PostgreSQL OK" || echo "❌ PostgreSQL KO"
+
+# ========== COMMANDES POUR SERVICES INDIVIDUELS ==========
+
+backend: ## Démarre uniquement le backend
+	@echo "🚀 Démarrage du backend..."
+	@docker-compose -f docker/docker-compose.yml up -d backend_a
+
+frontend: ## Démarre uniquement le frontend
+	@echo "🎨 Démarrage du frontend..."
+	@docker-compose -f docker/docker-compose.yml up -d frontend_b
+
+restart-backend: ## Redémarre le backend (sans rebuild)
+	@echo "🔄 Redémarrage du backend..."
+	@docker-compose -f docker/docker-compose.yml restart backend_a
+	@echo "✅ Backend redémarré"
+
+restart-frontend: ## Redémarre le frontend (sans rebuild)
+	@echo "🔄 Redémarrage du frontend..."
+	@docker-compose -f docker/docker-compose.yml restart frontend_b
+	@echo "✅ Frontend redémarré"
+
+rebuild-backend: ## Rebuild et redémarre le backend
+	@echo "🔨 Rebuild du backend..."
+	@docker-compose -f docker/docker-compose.yml build backend_a
+	@docker-compose -f docker/docker-compose.yml up -d backend_a
+	@echo "✅ Backend rebuild et redémarré"
+
+rebuild-frontend: ## Rebuild et redémarre le frontend
+	@echo "🔨 Rebuild du frontend..."
+	@docker-compose -f docker/docker-compose.yml build frontend_b
+	@docker-compose -f docker/docker-compose.yml up -d frontend_b
+	@echo "✅ Frontend rebuild et redémarré"
+
+logs-backend: ## Affiche les logs du backend
+	@docker-compose -f docker/docker-compose.yml logs -f backend_a
+
+logs-frontend: ## Affiche les logs du frontend
+	@docker-compose -f docker/docker-compose.yml logs -f frontend_b
+
+stop-backend: ## Arrête le backend
+	@echo "🛑 Arrêt du backend..."
+	@docker-compose -f docker/docker-compose.yml stop backend_a
+
+stop-frontend: ## Arrête le frontend
+	@echo "🛑 Arrêt du frontend..."
+	@docker-compose -f docker/docker-compose.yml stop frontend_b
+
+exec-backend: ## Ouvre un shell dans le conteneur backend
+	@echo "🐚 Connexion au backend..."
+	@docker-compose -f docker/docker-compose.yml exec backend_a sh
+
+exec-frontend: ## Ouvre un shell dans le conteneur frontend
+	@echo "🐚 Connexion au frontend..."
+	@docker-compose -f docker/docker-compose.yml exec frontend_b sh
+
+db-shell: ## Ouvre un shell psql dans la base de données
+	@echo "💾 Connexion à PostgreSQL..."
+	@docker-compose -f docker/docker-compose.yml exec database psql -U transcendence -d transcendence_dev
+
+db-migrate: ## Applique la migration pour les champs ready
+	@echo "🔄 Application de la migration ready fields..."
+	@docker-compose -f docker/docker-compose.yml exec -T database psql -U transcendence -d transcendence_dev < ../backend_a/add-ready-fields.sql
+	@echo "✅ Migration appliquée"
