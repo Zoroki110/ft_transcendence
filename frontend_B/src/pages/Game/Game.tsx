@@ -35,7 +35,7 @@ const Game: React.FC = () => {
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [gameEnded, setGameEnded] = useState(false);
-  const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any; playerNames?: any } | null>(null);
+  const [gameResult, setGameResult] = useState<{ winner: string; finalScore: any; playerNames?: any; endedByForfeit?: boolean } | null>(null);
   const [playerNames, setPlayerNames] = useState<{ player1: string; player2: string }>({ player1: 'Joueur 1', player2: 'Joueur 2' });
   const [rematchRequest, setRematchRequest] = useState<{ fromPlayer: string; fromName: string } | null>(null);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
@@ -109,12 +109,14 @@ const Game: React.FC = () => {
 
   const handleChatMessage = (messageData: { username: string; message: string; timestamp: string; senderId: string }) => {
     console.log('💬 GAME: Message de chat reçu:', messageData);
+    const isSystemMessage = messageData.senderId === 'system' || messageData.username === 'Système';
     setMessages(prev => [...prev, {
       username: messageData.username,
       message: messageData.message,
       timestamp: new Date(messageData.timestamp),
       senderId: messageData.senderId,
-      isOwnMessage: messageData.senderId === currentSocketId
+      isOwnMessage: messageData.senderId === currentSocketId,
+      isSystem: isSystemMessage
     }]);
   };
 
@@ -122,9 +124,9 @@ const Game: React.FC = () => {
     setCurrentSocketId(socketId);
   };
 
-  const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any, receivedPlayerNames: any) => {
+  const handleGameEnd = (winner: 'player1' | 'player2', finalScore: any, receivedPlayerNames: any, endedByForfeit?: boolean) => {
     setGameEnded(true);
-    setGameResult({ winner, finalScore, playerNames: receivedPlayerNames });
+    setGameResult({ winner, finalScore, playerNames: receivedPlayerNames, endedByForfeit });
     setPlayerNames(receivedPlayerNames);
 
     // Rafraîchir les statistiques du joueur après la partie
@@ -473,8 +475,8 @@ const Game: React.FC = () => {
                 >
                   🎮 Nouvelle partie
                 </button>
-                {/* Le rematch n'est pas disponible pour les matchs de tournoi */}
-                {!isTournamentMatch && (
+                {/* Le rematch n'est pas disponible pour les matchs de tournoi ni pour les parties terminées par forfait */}
+                {!isTournamentMatch && !gameResult?.endedByForfeit && (
                   <button
                     className="btn btn-secondary btn-large game-end-btn"
                     onClick={handleRematch}
@@ -482,6 +484,13 @@ const Game: React.FC = () => {
                   >
                     {waitingForRematch ? '⏳ En attente...' : '🔄 Rejouer'}
                   </button>
+                )}
+                {/* Message si la partie s'est terminée par forfait */}
+                {gameResult?.endedByForfeit && (
+                  <div className="forfeit-message">
+                    <p>🏳️ Partie terminée par abandon</p>
+                    <p className="forfeit-note">Le rematch n'est pas disponible</p>
+                  </div>
                 )}
                 <button
                   className="btn btn-danger btn-large game-end-btn"
@@ -494,8 +503,8 @@ const Game: React.FC = () => {
           </div>
         )}
 
-        {/* Demande de rematch reçue (seulement pour les parties normales) */}
-        {rematchRequest && !isTournamentMatch && (
+        {/* Demande de rematch reçue (seulement pour les parties normales et non terminées par forfait) */}
+        {rematchRequest && !isTournamentMatch && !gameResult?.endedByForfeit && (
           <div className="game-end-overlay">
             <div className="game-end-menu rematch-request">
               <div className="game-end-header">

@@ -240,32 +240,37 @@ const Friends: React.FC = () => {
           ) : friends.length > 0 ? (
             friends.map((friend) => (
               <div key={friend.id} className="user-card">
-                <img
-                  src={friend.avatar || '/default-avatar.png'}
-                  alt={friend.username}
-                  className="user-avatar"
-                />
-                <div className="user-info">
-                  <h3>{friend.displayName || friend.username}</h3>
-                  <p className={`status ${friend.isOnline ? 'online' : 'offline'}`}>
-                    {friend.isOnline ? 'Online' : 'Offline'}
-                  </p>
-                  <p className="stats">
-                    Wins: {friend.gamesWon || 0} / Losses: {friend.gamesLost || 0}
-                  </p>
+                <div className="user-header">
+                  <div className="avatar-container">
+                    <img
+                      src={friend.avatar || '/default-avatar.png'}
+                      alt={friend.username}
+                      className="user-avatar"
+                    />
+                    <span className={`status-indicator ${friend.isOnline ? 'online' : 'offline'}`}></span>
+                  </div>
+                  <div className="user-info">
+                    <h3>{friend.displayName || friend.username}</h3>
+                    <p className={`status-text ${friend.isOnline ? 'online' : 'offline'}`}>
+                      {friend.isOnline ? '🟢 En ligne' : '⚫ Hors ligne'}
+                    </p>
+                    <p className="stats">
+                      🏆 {friend.gamesWon || 0} victoires • ❌ {friend.gamesLost || 0} défaites
+                    </p>
+                  </div>
                 </div>
                 <div className="button-group">
                   <button className="btn-primary" onClick={() => navigate(`/profile/${friend.id}`)}>
-                    View Profile
+                    👤 Profil
                   </button>
                   <button className="btn-warning" onClick={() => navigate(`/challenges?user=${friend.id}`)}>
-                    Challenge
+                    ⚔️ Défier
                   </button>
                   <button className="btn-info" onClick={() => navigate(`/chat/${friend.id}`)}>
-                    Message
+                    💬 Message
                   </button>
                   <button className="btn-danger" onClick={() => removeFriend(friend.id)}>
-                    Remove
+                    🗑️ Retirer
                   </button>
                 </div>
               </div>

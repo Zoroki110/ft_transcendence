@@ -47,6 +47,8 @@ interface GameRoom {
   statsUpdated?: boolean;
   gameLoopId?: NodeJS.Timeout;
   rematchCount?: number;
+  disconnectTimers?: { player1?: NodeJS.Timeout; player2?: NodeJS.Timeout };
+  endedByForfeit?: boolean;
 }
 
 @WebSocketGateway({
@@ -113,32 +115,64 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         gameState: room.gameState,
       });
     } else {
+      // Vérifier si c'est une reconnexion d'un joueur déconnecté
+      const isReconnectingPlayer1 = !room.players.player1 && room.playersUserIds.player1 === userId;
+      const isReconnectingPlayer2 = !room.players.player2 && room.playersUserIds.player2 === userId;
+
       // Assigner le joueur
-      if (!room.players.player1) {
+      if (!room.players.player1 && !isReconnectingPlayer2) {
         room.players.player1 = client.id;
         room.playersNames.player1 = userName;
         room.playersUserIds.player1 = userId;
         room.gameState.players.player1 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
         this.logger.log(`🎮 PLAYER1 JOINED: userName=${userName}, userId=${userId}, gameState.players.player1.name=${room.gameState.players.player1.name}`);
+
+        // Annuler le timer d'abandon si reconnexion
+        if (isReconnectingPlayer1 && room.disconnectTimers?.player1) {
+          clearTimeout(room.disconnectTimers.player1);
+          room.disconnectTimers.player1 = undefined;
+          this.logger.log(`✅ RECONNECTION: player1 (${userName}) reconnected, timer cancelled`);
+          this.server.to(gameId).emit('playerReconnected', {
+            player: 'player1',
+            playerName: userName,
+            message: `${userName} s'est reconnecté !`
+          });
+        }
+
         client.emit('gameJoined', {
           role: 'player1',
           gameState: room.gameState,
         });
-      } else if (!room.players.player2) {
+      } else if (!room.players.player2 && !isReconnectingPlayer1) {
         room.players.player2 = client.id;
         room.playersNames.player2 = userName;
         room.playersUserIds.player2 = userId;
         room.gameState.players.player2 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
         this.logger.log(`🎮 PLAYER2 JOINED: userName=${userName}, gameState.players.player2.name=${room.gameState.players.player2.name}`);
+
+        // Annuler le timer d'abandon si reconnexion
+        if (isReconnectingPlayer2 && room.disconnectTimers?.player2) {
+          clearTimeout(room.disconnectTimers.player2);
+          room.disconnectTimers.player2 = undefined;
+          this.logger.log(`✅ RECONNECTION: player2 (${userName}) reconnected, timer cancelled`);
+          this.server.to(gameId).emit('playerReconnected', {
+            player: 'player2',
+            playerName: userName,
+            message: `${userName} s'est reconnecté !`
+          });
+        }
+
         client.emit('gameJoined', {
           role: 'player2',
           gameState: room.gameState,
         });
 
-        // Démarrer le jeu quand 2 joueurs sont présents
-        this.startGame(gameId);
+        // Démarrer le jeu quand 2 joueurs sont présents (seulement si c'est un nouveau jeu)
+        if (room.gameState.gameStatus === 'waiting') {
+          this.startGame(gameId);
+        }
       } else {
         // Déjà 2 joueurs, devenir spectateur
         room.spectators.add(client.id);
@@ -859,6 +893,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(gameId).emit('gameEnded', {
         winner,
         finalScore: room.gameState.score,
+        endedByForfeit: room.endedByForfeit || false,
       });
     }
 
@@ -877,8 +912,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Nettoyer la room après 30 secondes
     setTimeout(() => {
       const roomToDelete = this.gameRooms.get(gameId);
-      if (roomToDelete?.gameLoopId) {
-        clearInterval(roomToDelete.gameLoopId);
+      if (roomToDelete) {
+        // Nettoyer la boucle de jeu
+        if (roomToDelete.gameLoopId) {
+          clearInterval(roomToDelete.gameLoopId);
+        }
+        // Nettoyer les timers de déconnexion
+        if (roomToDelete.disconnectTimers) {
+          if (roomToDelete.disconnectTimers.player1) {
+            clearTimeout(roomToDelete.disconnectTimers.player1);
+          }
+          if (roomToDelete.disconnectTimers.player2) {
+            clearTimeout(roomToDelete.disconnectTimers.player2);
+          }
+        }
       }
       this.gameRooms.delete(gameId);
       // Nettoyer les mappings des joueurs
@@ -898,17 +945,103 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Retirer des spectateurs
     room.spectators.delete(client.id);
 
-    // Si c'est un joueur, marquer comme déconnecté
-    if (room.players.player1 === client.id) {
+    // Déterminer quel joueur s'est déconnecté
+    const isPlayer1 = room.players.player1 === client.id;
+    const isPlayer2 = room.players.player2 === client.id;
+
+    if (!isPlayer1 && !isPlayer2) {
+      // C'est juste un spectateur
+      this.playerToRoom.delete(client.id);
+      client.leave(gameId);
+      this.server.to(gameId).emit('playersUpdate', {
+        players: room.players,
+        spectatorCount: room.spectators.size,
+      });
+      return;
+    }
+
+    const disconnectedPlayer = isPlayer1 ? 'player1' : 'player2';
+    const disconnectedPlayerName = isPlayer1 ? room.playersNames.player1 : room.playersNames.player2;
+    const disconnectedUserId = isPlayer1 ? room.playersUserIds.player1 : room.playersUserIds.player2;
+
+    this.logger.log(`⚠️ PLAYER DISCONNECT: ${disconnectedPlayer} (${disconnectedPlayerName}) left game ${gameId}`);
+
+    // Si le jeu est en cours ou en pause, démarrer le timer d'abandon
+    if (room.gameState.gameStatus === 'playing' || room.gameState.gameStatus === 'paused') {
+      // Mettre en pause si on était en train de jouer
+      const wasPlaying = room.gameState.gameStatus === 'playing';
+      room.gameState.gameStatus = 'paused';
+
+      // Notifier l'autre joueur de la déconnexion
+      this.server.to(gameId).emit('playerDisconnected', {
+        disconnectedPlayer,
+        playerName: disconnectedPlayerName,
+        message: `${disconnectedPlayerName} s'est déconnecté. En attente de reconnexion (10s)...`
+      });
+
+      // Initialiser disconnectTimers s'il n'existe pas
+      if (!room.disconnectTimers) {
+        room.disconnectTimers = {};
+      }
+
+      // Annuler le timer précédent s'il existe
+      if (room.disconnectTimers[disconnectedPlayer]) {
+        clearTimeout(room.disconnectTimers[disconnectedPlayer]);
+      }
+
+      // Démarrer un timer de 10 secondes pour l'abandon
+      room.disconnectTimers[disconnectedPlayer] = setTimeout(() => {
+        this.logger.log(`⏰ DISCONNECT TIMEOUT: ${disconnectedPlayer} did not reconnect to game ${gameId}`);
+
+        // Vérifier que la room existe toujours
+        const currentRoom = this.gameRooms.get(gameId);
+        if (!currentRoom) return;
+
+        // Vérifier que le joueur n'est toujours pas reconnecté
+        const stillDisconnected = isPlayer1 ? !currentRoom.players.player1 : !currentRoom.players.player2;
+
+        if (stillDisconnected && currentRoom.gameState.gameStatus === 'paused') {
+          this.logger.log(`🏳️ FORFEIT: ${disconnectedPlayer} abandoned game ${gameId}`);
+
+          // Marquer la partie comme terminée par forfait
+          currentRoom.endedByForfeit = true;
+
+          // Donner la victoire à l'autre joueur par abandon
+          if (isPlayer1) {
+            currentRoom.gameState.score.player2 = 5; // Score gagnant
+          } else {
+            currentRoom.gameState.score.player1 = 5; // Score gagnant
+          }
+
+          // Notifier l'abandon avant de terminer le jeu
+          this.server.to(gameId).emit('playerAbandoned', {
+            abandonedPlayer: disconnectedPlayer,
+            playerName: disconnectedPlayerName,
+            winner: isPlayer1 ? 'player2' : 'player1',
+            message: `${disconnectedPlayerName} a abandonné la partie !`
+          });
+
+          // Terminer le jeu
+          this.endGame(gameId);
+        }
+      }, 10000); // 10 secondes
+
+      this.logger.log(`⏳ DISCONNECT TIMER: Started 10s timer for ${disconnectedPlayer} in game ${gameId}`);
+    }
+
+    // Marquer le joueur comme déconnecté
+    if (isPlayer1) {
       room.players.player1 = undefined;
-      room.playersNames.player1 = undefined;
-      room.gameState.players.player1 = { name: 'En attente...', id: undefined };
-      room.gameState.gameStatus = 'paused';
-    } else if (room.players.player2 === client.id) {
+      room.gameState.players.player1 = {
+        name: `${disconnectedPlayerName} (déconnecté)`,
+        id: undefined
+      };
+    } else {
       room.players.player2 = undefined;
-      room.playersNames.player2 = undefined;
-      room.gameState.players.player2 = { name: 'En attente...', id: undefined };
-      room.gameState.gameStatus = 'paused';
+      room.gameState.players.player2 = {
+        name: `${disconnectedPlayerName} (déconnecté)`,
+        id: undefined
+      };
     }
 
     this.playerToRoom.delete(client.id);
@@ -919,6 +1052,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       players: room.players,
       spectatorCount: room.spectators.size,
     });
+
+    this.server.to(gameId).emit('gameStateUpdate', room.gameState);
   }
 
 
