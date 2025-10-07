@@ -28,13 +28,13 @@ interface GameState {
 interface PongGameProps {
   gameId: string;
   isSpectator?: boolean;
-  onGameEnd?: (winner: 'player1' | 'player2', finalScore: any, playerNames: any) => void;
-  onTournamentMatchEnd?: (data: { 
-    winner: string; 
-    finalScore: any; 
-    tournamentId: number; 
-    matchId: number; 
-    redirectUrl: string; 
+  onGameEnd?: (winner: 'player1' | 'player2', finalScore: any, playerNames: any, endedByForfeit?: boolean) => void;
+  onTournamentMatchEnd?: (data: {
+    winner: string;
+    finalScore: any;
+    tournamentId: number;
+    matchId: number;
+    redirectUrl: string;
     message: string;
   }) => void;
   onPlayerNamesUpdate?: (playerNames: any) => void;
@@ -401,8 +401,8 @@ const PongGame: React.FC<PongGameProps> = ({
       gameStateRef.current = gameState;
     });
 
-    socket.on('gameEnded', (data: { winner: string; finalScore: any }) => {
-      console.log(`🔵 WEBSOCKET: gameEnded reçu, winner=${data.winner}`);
+    socket.on('gameEnded', (data: { winner: string; finalScore: any; endedByForfeit?: boolean }) => {
+      console.log(`🔵 WEBSOCKET: gameEnded reçu, winner=${data.winner}, endedByForfeit=${data.endedByForfeit}`);
       // Utiliser gameStateRef.current pour obtenir les noms actuels des joueurs
       const currentGameState = gameStateRef.current;
       console.log(`🔍 DEBUG gameEnded: currentGameState =`, currentGameState);
@@ -411,7 +411,7 @@ const PongGame: React.FC<PongGameProps> = ({
         player2: currentGameState?.players?.player2?.name || 'Joueur 2'
       };
       console.log(`🔍 DEBUG gameEnded: playerNames =`, playerNames);
-      onGameEnd?.(data.winner as any, data.finalScore, playerNames);
+      onGameEnd?.(data.winner as any, data.finalScore, playerNames, data.endedByForfeit);
     });
 
     // Événement spécifique pour les matches de tournoi
@@ -454,6 +454,48 @@ const PongGame: React.FC<PongGameProps> = ({
     socket.on('chatMessage', (messageData: { username: string; message: string; timestamp: string; senderId: string }) => {
       console.log(`💬 WEBSOCKET: chatMessage reçu, username=${messageData.username}, message=${messageData.message}`);
       onChatMessage?.(messageData);
+    });
+
+    // Déconnexion d'un joueur
+    socket.on('playerDisconnected', (data: { disconnectedPlayer: string; playerName: string; message: string }) => {
+      console.log(`⚠️ WEBSOCKET: Player disconnected - ${data.playerName}`);
+      // Afficher une notification visuelle
+      if (onChatMessage) {
+        onChatMessage({
+          username: 'Système',
+          message: data.message,
+          timestamp: new Date().toISOString(),
+          senderId: 'system'
+        });
+      }
+    });
+
+    // Reconnexion d'un joueur
+    socket.on('playerReconnected', (data: { player: string; playerName: string; message: string }) => {
+      console.log(`✅ WEBSOCKET: Player reconnected - ${data.playerName}`);
+      // Afficher une notification visuelle
+      if (onChatMessage) {
+        onChatMessage({
+          username: 'Système',
+          message: data.message,
+          timestamp: new Date().toISOString(),
+          senderId: 'system'
+        });
+      }
+    });
+
+    // Abandon d'un joueur
+    socket.on('playerAbandoned', (data: { abandonedPlayer: string; playerName: string; winner: string; message: string }) => {
+      console.log(`🏳️ WEBSOCKET: Player abandoned - ${data.playerName}, winner: ${data.winner}`);
+      // Afficher une notification visuelle importante
+      if (onChatMessage) {
+        onChatMessage({
+          username: 'Système',
+          message: `🏳️ ${data.message}`,
+          timestamp: new Date().toISOString(),
+          senderId: 'system'
+        });
+      }
     });
 
     socket.on('connect_error', () => {

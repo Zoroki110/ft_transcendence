@@ -381,6 +381,30 @@
   box-shadow: 0 0 25px rgba(255, 0, 255, 0.8);
 }
 
+/* Message de forfait */
+.forfeit-message {
+  padding: 1.5rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.forfeit-message p {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+  color: #ffc107;
+  font-weight: bold;
+}
+
+.forfeit-note {
+  font-size: 0.9rem;
+  color: #e0a800;
+  font-weight: normal;
+  font-style: italic;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -455,13 +479,26 @@
   padding-left: 8px;
 }
 
+/* Message système pour les déconnexions/reconnexions */
+.chat-message.system-message {
+  background: rgba(255, 193, 7, 0.1);
+  border-left: 3px solid #ffc107;
+  font-style: italic;
+}
+
+.chat-message.system-message .chat-username {
+  color: #ffc107;
+  font-weight: bold;
+}
+
 .chat-username {
   font-weight: bold;
   text-shadow: 0 0 10px currentColor;
 }
 
 .chat-text {
-  color: #ffffff;
+  color: #000000;
+  font-weight: 500;
 }
 
 /* Responsive pour le menu de fin */
