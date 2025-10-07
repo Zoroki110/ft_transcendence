@@ -460,4 +460,38 @@ export class UsersService {
     const updated = await this.userRepo.findOne({ where: { id: userId } });
     return toSafe(updated)!;
   }
+
+  // ===============================
+  // NOUVELLES MÉTHODES - RECHERCHE D'UTILISATEURS
+  // ===============================
+
+  async searchUsers(searchQuery: string, currentUserId?: number): Promise<SafeUser[]> {
+    const queryBuilder = this.userRepo
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.username',
+        'user.email',
+        'user.avatar',
+        'user.displayName',
+        'user.isOnline',
+        'user.gamesWon',
+        'user.gamesLost',
+      ])
+      .where('LOWER(user.username) LIKE LOWER(:search)', {
+        search: `%${searchQuery}%`,
+      })
+      .orWhere('LOWER(user.displayName) LIKE LOWER(:search)', {
+        search: `%${searchQuery}%`,
+      });
+
+    // Exclure l'utilisateur actuel des résultats
+    if (currentUserId) {
+      queryBuilder.andWhere('user.id != :currentUserId', { currentUserId });
+    }
+
+    const users = await queryBuilder.orderBy('user.username', 'ASC').take(20).getMany();
+
+    return users.map((user) => toSafe(user)!);
+  }
 }
