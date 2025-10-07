@@ -42,7 +42,7 @@ const Game: React.FC = () => {
   const [currentSocketId, setCurrentSocketId] = useState<string | null>(null);
 
   // Détecter si c'est un match de tournoi
-  const isTournamentMatch = (gameId || lobbyId)?.startsWith('tournament_') || false;
+  const isTournamentMatch = (gameId || lobbyId)?.includes('game_tournament_') || false;
 
   // Fonction pour générer une couleur basée sur le nom d'utilisateur
   const getUserColor = (username: string): string => {
@@ -213,10 +213,17 @@ const Game: React.FC = () => {
       const player1Score = data.finalScore.player1 || 0;
       const player2Score = data.finalScore.player2 || 0;
       
-      // Maintenant on a les vrais IDs des joueurs du backend
-      const winnerId = data.winner === 'player1' ? data.player1Id : data.player2Id;
+      // Déterminer le winnerId correct en fonction des scores
+      let winnerId: number;
+      if (player1Score > player2Score) {
+        winnerId = data.player1Id;
+        console.log('🏆 TOURNAMENT: Player1 gagne avec score supérieur');
+      } else {
+        winnerId = data.player2Id;
+        console.log('🏆 TOURNAMENT: Player2 gagne avec score supérieur');
+      }
 
-      console.log('🏆 TOURNAMENT: Mise à jour du tournoi avec winner:', winnerId);
+      console.log('🏆 TOURNAMENT: Mise à jour du tournoi avec winner:', winnerId, 'scores:', player1Score, 'vs', player2Score);
       
       // Mettre à jour le tournoi avec le résultat
       await tournamentAPI.advanceWinner(data.tournamentId, data.matchId, {
@@ -235,10 +242,11 @@ const Game: React.FC = () => {
       alert(`${data.message}\nGagnant: ${data.winner}\nScore: ${data.finalScore.player1} - ${data.finalScore.player2}\n\n⚠️ Erreur lors de la mise à jour des brackets: ${error.response?.data?.message || error.message}`);
     }
     
-    // Rediriger vers le tournoi après un délai
+    // Rediriger vers le tournoi après un délai plus court
     setTimeout(() => {
+      console.log('🔄 TOURNAMENT: Redirection automatique vers:', data.redirectUrl || `/tournaments/${data.tournamentId}`);
       navigate(data.redirectUrl || `/tournaments/${data.tournamentId}`);
-    }, 4000);
+    }, 2000);
   };
 
   const handleQuitToHome = () => {
@@ -321,7 +329,7 @@ const Game: React.FC = () => {
             <div id="game-canvas-container" className="game-canvas">
               {(lobbyId || gameId) ? (
                 <PongGame
-                  gameId={lobbyId || gameId}
+                  gameId={lobbyId || gameId || ''}
                   isSpectator={isSpectator}
                   onGameEnd={handleGameEnd}
                   onTournamentMatchEnd={handleTournamentMatchEnd}
