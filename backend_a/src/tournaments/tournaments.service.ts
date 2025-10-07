@@ -1043,10 +1043,31 @@ export class TournamentsService {
 
     const matches: Match[] = [];
 
+    // Create matches directly with SQL to avoid TypeORM relation issues
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
-        // Create match with TypeORM to ensure proper column mapping
+        console.log(`🔧 CREATING SQL: Creating match with player1=${participants[i].id}, player2=${participants[i + 1].id}, tournament_id=${tournamentId}`);
+        
+        const result = await this.matchRepository.query(`
+          INSERT INTO match (player1_id, player2_id, tournament_id, round, bracket_position, status, "player1Score", "player2Score") 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+          RETURNING id, player1_id, player2_id, tournament_id, round, bracket_position, status
+        `, [
+          participants[i].id,
+          participants[i + 1].id,
+          tournamentId,
+          1,
+          Math.floor(i / 2),
+          'pending',
+          0,
+          0
+        ]);
+
+        console.log(`🔧 SQL RESULT:`, result[0]);
+        
+        // Create a Match object for the return array
         const match = this.matchRepository.create({
+          id: result[0].id,
           player1: participants[i],
           player2: participants[i + 1],
           round: 1,
@@ -1055,32 +1076,15 @@ export class TournamentsService {
           player1Score: 0,
           player2Score: 0,
         });
-        
-        const savedMatch = await this.matchRepository.save(match);
-        
-        // Explicitly set tournament_id with raw SQL to ensure it's saved
-        console.log(`🔧 UPDATING: Setting tournament_id=${tournamentId} for match ${savedMatch.id}`);
-        const updateResult = await this.matchRepository.query(
-          'UPDATE match SET tournament_id = $1 WHERE id = $2',
-          [tournamentId, savedMatch.id]
-        );
-        console.log('🔧 UPDATE RESULT:', updateResult);
-        
-        // Verify the update worked
-        const verification = await this.matchRepository.query(
-          'SELECT id, tournament_id FROM match WHERE id = $1',
-          [savedMatch.id]
-        );
-        console.log('🔍 VERIFICATION:', verification);
 
         console.log(`Created match ${matches.length + 1}:`, {
-          id: savedMatch.id,
+          id: result[0].id,
           player1: participants[i].username,
           player2: participants[i + 1].username,
           tournament_id: tournamentId
         });
 
-        matches.push(savedMatch);
+        matches.push(match);
       }
     }
 
