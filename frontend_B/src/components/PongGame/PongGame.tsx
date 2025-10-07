@@ -29,6 +29,14 @@ interface PongGameProps {
   gameId: string;
   isSpectator?: boolean;
   onGameEnd?: (winner: 'player1' | 'player2', finalScore: any, playerNames: any) => void;
+  onTournamentMatchEnd?: (data: { 
+    winner: string; 
+    finalScore: any; 
+    tournamentId: number; 
+    matchId: number; 
+    redirectUrl: string; 
+    message: string;
+  }) => void;
   onPlayerNamesUpdate?: (playerNames: any) => void;
   onRematchRequest?: () => void;
   onRematchRequested?: (data: { fromPlayer: string; fromName: string }) => void;
@@ -45,6 +53,7 @@ const PongGame: React.FC<PongGameProps> = ({
   gameId,
   isSpectator = false,
   onGameEnd,
+  onTournamentMatchEnd,
   onPlayerNamesUpdate,
   onRematchRequest,
   onRematchRequested,
@@ -403,6 +412,20 @@ const PongGame: React.FC<PongGameProps> = ({
       };
       console.log(`🔍 DEBUG gameEnded: playerNames =`, playerNames);
       onGameEnd?.(data.winner as any, data.finalScore, playerNames);
+    });
+
+    // Événement spécifique pour les matches de tournoi
+    socket.on('tournamentMatchEnded', (data: { 
+      winner: string; 
+      finalScore: any; 
+      tournamentId: number; 
+      matchId: number; 
+      redirectUrl: string; 
+      message: string;
+    }) => {
+      console.log(`🏆 WEBSOCKET: tournamentMatchEnded reçu, winner=${data.winner}, tournamentId=${data.tournamentId}`);
+      console.log(`🏆 Message: ${data.message}`);
+      onTournamentMatchEnd?.(data);
     });
 
     socket.on('playersUpdate', (data: { players: any; spectatorCount: number }) => {
