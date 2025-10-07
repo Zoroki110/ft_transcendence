@@ -579,6 +579,53 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
+  // Créer une room spécifique pour un match de tournoi
+  createTournamentRoom(gameId: string, matchId: number, player1: any, player2: any): GameRoom {
+    const room: GameRoom = {
+      id: gameId,
+      players: {},
+      playersNames: {
+        player1: player1.username,
+        player2: player2.username,
+      },
+      playersUserIds: {
+        player1: player1.id,
+        player2: player2.id,
+      },
+      spectators: new Set(),
+      rematchRequests: { player1: false, player2: false },
+      rematchCount: 0,
+      matchId: matchId, // Lier au match de tournoi
+      gameState: {
+        ball: {
+          x: 400,
+          y: 200,
+          velocityX: 8,
+          velocityY: 6,
+        },
+        paddles: {
+          player1: { y: 150 },
+          player2: { y: 150 },
+        },
+        score: {
+          player1: 0,
+          player2: 0,
+        },
+        players: {
+          player1: { name: player1.username, id: player1.id.toString() },
+          player2: { name: player2.username, id: player2.id.toString() },
+        },
+        gameStatus: 'waiting',
+      },
+      lastUpdate: Date.now(),
+    };
+
+    this.gameRooms.set(gameId, room);
+    this.logger.log(`🏆 Tournament room created: ${gameId} for match ${matchId}`);
+    
+    return room;
+  }
+
   private startGame(gameId: string) {
     const room = this.gameRooms.get(gameId);
     if (!room) return;

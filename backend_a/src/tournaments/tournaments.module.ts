@@ -12,7 +12,7 @@ import { GameGateway } from '../game/game.gateway';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tournament, User, Match]),
-    GameModule
+    GameModule, // Import du GameModule pour accéder à GameGateway
   ],
   controllers: [TournamentsController],
   providers: [

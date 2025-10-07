@@ -22,12 +22,14 @@ import Profile from './pages/Profile/Profile';
 import Leaderboard from './pages/Leaderboard/Leaderboard';
 import Game from './pages/Game/Game';
 import Matchmaking from './pages/Matchmaking/Matchmaking';
-import Lobby from './pages/Lobby/Lobby';
 import Login from './pages/Login/Login';
 import Settings from './pages/Settings/Settings';
 import History from './pages/History/History';
 import APITest from './pages/APITest/APITest';
 import TestSignup from './pages/TestSignup';
+import Friends from './pages/Friends/Friends';
+import Challenges from './pages/Challenges/Challenges';
+import Chat from './pages/Chat/Chat';
 
 import './App.css';
 
@@ -56,16 +58,20 @@ function App() {
                 <Route path="/brackets-demo" element={<BracketsDemo />} />
                 
                 {/* Jeu */}
-                <Route path="/matchmaking" element={<ProtectedRoute><Matchmaking /></ProtectedRoute>} />
-                <Route path="/lobby/:lobbyId" element={<ProtectedRoute><Lobby /></ProtectedRoute>} />
-                <Route path="/game" element={<ProtectedRoute><Game /></ProtectedRoute>} />
+                <Route path="/matchmaking/:gameId" element={<ProtectedRoute><Matchmaking /></ProtectedRoute>} />
                 <Route path="/game/:gameId" element={<Game />} />
                 
                 {/* Utilisateur - Routes protégées */}
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/profile/:id" element={<Profile />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-                
+
+                {/* Social - Routes protégées */}
+                <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
+                <Route path="/chat/:userId?" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+
                 {/* Classement */}
                 <Route path="/leaderboard" element={<Leaderboard />} />
 

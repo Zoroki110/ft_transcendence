@@ -62,6 +62,20 @@ export class UsersController {
     return this.usersService.findOne(req.user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('search')
+  @ApiOperation({ summary: 'Search users by username' })
+  async searchUsers(@Query('q') searchQuery: string, @Req() req) {
+    if (!searchQuery || searchQuery.length < 2) {
+      throw new BadRequestException(
+        'Search query must be at least 2 characters',
+      );
+    }
+
+    return this.usersService.searchUsers(searchQuery, req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -301,20 +315,6 @@ export class UsersController {
   // ===============================
   // ENDPOINTS UTILITAIRES
   // ===============================
-
-  @Get('search')
-  @ApiOperation({ summary: 'Search users by username' })
-  async searchUsers(@Query('q') searchQuery: string) {
-    if (!searchQuery || searchQuery.length < 2) {
-      throw new BadRequestException(
-        'Search query must be at least 2 characters',
-      );
-    }
-
-    // On implémentera cette méthode dans le service plus tard
-    // return this.usersService.searchUsers(searchQuery);
-    return { message: 'Search feature coming soon', query: searchQuery };
-  }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

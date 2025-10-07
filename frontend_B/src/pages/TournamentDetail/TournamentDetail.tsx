@@ -48,54 +48,7 @@ const TournamentDetail: React.FC = () => {
     fetchTournament();
   }, [id]);
 
-  // WebSocket pour les événements de tournoi
-  useEffect(() => {
-    if (!tournament || !user) return;
-
-    console.log(`🔌 Setting up WebSocket listeners for tournament ${tournament.id}`);
-
-    // Se connecter au tournoi WebSocket
-    socketService.joinTournament(tournament.id, user.id, user.username);
-
-    // Écouter le début du tournoi
-    socketService.onTournamentStarted((data) => {
-      console.log('🏆 Tournoi commencé ! WebSocket event:', data);
-      
-      // Recharger les données du tournoi
-      const refetchTournament = async () => {
-        try {
-          const response = await tournamentAPI.getTournament(tournament.id);
-          setTournament(response.data);
-        } catch (err) {
-          console.error('❌ Erreur rechargement tournoi:', err);
-        }
-      };
-      refetchTournament();
-    });
-
-    // Écouter l'assignation d'un match
-    socketService.onTournamentMatchAssigned((data) => {
-      if (data.tournamentId === tournament.id) {
-        console.log('🎯 Match assigné ! WebSocket event:', data);
-        
-        // Afficher une notification et rediriger vers le match
-        const redirectToMatch = () => {
-          alert(`${data.message}\nVous allez être redirigé vers votre match.`);
-          navigate(data.gameUrl);
-        };
-        
-        // Délai court pour permettre à l'utilisateur de voir la notification
-        setTimeout(redirectToMatch, 2000);
-      }
-    });
-
-    // Nettoyage lors du démontage
-    return () => {
-      console.log(`🔌 Cleaning up WebSocket listeners for tournament ${tournament.id}`);
-      socketService.offTournamentEvents();
-      socketService.leaveTournament(tournament.id, user.id, user.username);
-    };
-  }, [tournament, user, navigate]);
+  // Plus besoin d'auto-refresh car les brackets se génèrent seulement au démarrage
 
   const handleJoin = async () => {
     if (!tournament) return;
@@ -164,6 +117,27 @@ const TournamentDetail: React.FC = () => {
       navigate('/tournaments');
     } else {
       console.error('❌ DETAIL: Failed to delete tournament');
+    }
+  };
+
+  const handleResetBrackets = async () => {
+    if (!tournament) return;
+
+    if (!confirm('Êtes-vous sûr de vouloir réinitialiser les brackets ? Cette action supprimera tous les matches existants.')) {
+      return;
+    }
+
+    try {
+      console.log('🔄 DETAIL: Resetting tournament brackets', tournament.id);
+      await tournamentAPI.resetTournamentBrackets(tournament.id);
+      
+      // Recharger les données du tournoi
+      const response = await tournamentAPI.getTournament(tournament.id);
+      setTournament(response.data);
+      
+      console.log('✅ DETAIL: Tournament brackets reset successfully');
+    } catch (error: any) {
+      console.error('❌ DETAIL: Failed to reset brackets', error);
     }
   };
 
@@ -355,6 +329,31 @@ const TournamentDetail: React.FC = () => {
                     >
                       {actionState.isStarting ? '⏳ Démarrage...' : '🚀 Démarrer le tournoi'}
                     </button>
+                  )}
+
+                  {/* Message informatif pour démarrer le tournoi */}
+                  {permissions.isCreator && tournament.status === 'full' && !tournament.bracketGenerated && (
+                    <div className="info-message">
+                      <div className="info-icon">🎯</div>
+                      <p>Tournoi prêt à démarrer !</p>
+                      <small>Cliquez sur "Démarrer le tournoi" pour générer les brackets et lancer les matches.</small>
+                    </div>
+                  )}
+
+                  {/* Message d'erreur pour brackets corrompus */}
+                  {permissions.isCreator && permissions.hasBracketsIssue && (
+                    <div className="error-message">
+                      <div className="error-icon">⚠️</div>
+                      <p>Problème détecté avec les brackets</p>
+                      <small>Le tournoi a été marqué comme "en cours" mais il n'y a aucun match valide.</small>
+                      <button
+                        className="btn btn-warning btn-full"
+                        onClick={handleResetBrackets}
+                        style={{ marginTop: '10px' }}
+                      >
+                        🔧 Réparer les brackets
+                      </button>
+                    </div>
                   )}
 
                   {permissions.canDelete && (

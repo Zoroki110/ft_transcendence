@@ -9,6 +9,7 @@ import { GameModule } from './game/game.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthController } from './health/health.controller';
 import { TournamentsModule } from './tournaments/tournaments.module';
+import { ChallengesModule } from './challenges/challenges.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { TournamentsModule } from './tournaments/tournaments.module';
     GameModule,
     ChatModule,
     TournamentsModule,
+    ChallengesModule,
   ],
   providers: [],
   controllers: [HealthController],
