@@ -1,7 +1,7 @@
 // frontend_B/src/pages/Game/Game.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { gameAPI } from '../../services/api';
+import { gameAPI, tournamentAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import PongGame from '../../components/PongGame/PongGame';
 import './Game.css';
@@ -25,6 +25,10 @@ const Game: React.FC = () => {
   const { gameId, lobbyId } = useParams<{ gameId?: string; lobbyId?: string }>();
   const navigate = useNavigate();
   const { loadStats } = useUser();
+  
+  // Détecter le mode spectateur depuis les paramètres d'URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const isSpectator = searchParams.get('spectator') === 'true';
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +40,9 @@ const Game: React.FC = () => {
   const [rematchRequest, setRematchRequest] = useState<{ fromPlayer: string; fromName: string } | null>(null);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
   const [currentSocketId, setCurrentSocketId] = useState<string | null>(null);
+
+  // Détecter si c'est un match de tournoi
+  const isTournamentMatch = (gameId || lobbyId)?.startsWith('tournament_') || false;
 
   // Fonction pour générer une couleur basée sur le nom d'utilisateur
   const getUserColor = (username: string): string => {
@@ -191,23 +198,49 @@ const Game: React.FC = () => {
   };
 
   // Handler pour les matches de tournoi
-  const handleTournamentMatchEnd = (data: {
+  const handleTournamentMatchEnd = async (data: {
     winner: string;
     finalScore: any;
     tournamentId: number;
     matchId: number;
     redirectUrl: string;
     message: string;
+    player1Id: number;
+    player2Id: number;
   }) => {
     console.log('🏆 GAME: Match de tournoi terminé:', data);
     
-    // Afficher le message de fin
-    alert(`${data.message}\nGagnant: ${data.winner}\nScore: ${data.finalScore.player1} - ${data.finalScore.player2}`);
+    try {
+      // Déterminer le winnerId en fonction du winner ('player1' ou 'player2')
+      const player1Score = data.finalScore.player1 || 0;
+      const player2Score = data.finalScore.player2 || 0;
+      
+      // Maintenant on a les vrais IDs des joueurs du backend
+      const winnerId = data.winner === 'player1' ? data.player1Id : data.player2Id;
+
+      console.log('🏆 TOURNAMENT: Mise à jour du tournoi avec winner:', winnerId);
+      
+      // Mettre à jour le tournoi avec le résultat
+      await tournamentAPI.advanceWinner(data.tournamentId, data.matchId, {
+        winnerId: winnerId,
+        player1Score: player1Score,
+        player2Score: player2Score
+      });
+
+      console.log('✅ TOURNAMENT: Brackets mis à jour avec succès');
+      
+      // Afficher le message de fin avec succès
+      alert(`${data.message}\nGagnant: ${data.winner}\nScore: ${player1Score} - ${player2Score}\n\nLes brackets ont été mis à jour !`);
+      
+    } catch (error: any) {
+      console.error('❌ TOURNAMENT: Erreur mise à jour brackets:', error);
+      alert(`${data.message}\nGagnant: ${data.winner}\nScore: ${data.finalScore.player1} - ${data.finalScore.player2}\n\n⚠️ Erreur lors de la mise à jour des brackets: ${error.response?.data?.message || error.message}`);
+    }
     
-    // Rediriger vers le lobby du tournoi après un délai
+    // Rediriger vers le tournoi après un délai
     setTimeout(() => {
-      navigate(data.redirectUrl);
-    }, 3000);
+      navigate(data.redirectUrl || `/tournaments/${data.tournamentId}`);
+    }, 4000);
   };
 
   const handleQuitToHome = () => {
@@ -267,10 +300,28 @@ const Game: React.FC = () => {
         <div className="game-layout">
           
           <div className="card game-area">
+            {isSpectator && (
+              <div className="spectator-banner" style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '12px 20px',
+                textAlign: 'center',
+                fontWeight: 'bold',
+                borderRadius: '8px 8px 0 0',
+                marginBottom: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                👁️ <span>Mode Spectateur - Tournoi</span> 👁️
+              </div>
+            )}
             <div id="game-canvas-container" className="game-canvas">
               {(lobbyId || gameId) ? (
                 <PongGame
                   gameId={lobbyId || gameId}
+                  isSpectator={isSpectator}
                   onGameEnd={handleGameEnd}
                   onTournamentMatchEnd={handleTournamentMatchEnd}
                   onPlayerNamesUpdate={handlePlayerNamesUpdate}
@@ -367,8 +418,41 @@ const Game: React.FC = () => {
           </div>
         </div>
 
-        {/* Menu de fin de partie */}
-        {gameEnded && gameResult && (
+        {/* Message pour les spectateurs de tournoi */}
+        {gameEnded && gameResult && isSpectator && isTournamentMatch && (
+          <div className="game-end-overlay">
+            <div className="game-end-menu spectator-message">
+              <div className="game-end-header">
+                <h2 className="game-end-title">
+                  🏆 Match de Tournoi Terminé
+                </h2>
+                <div className="game-end-winner">
+                  Gagnant : <span className="winner-name">{gameResult.winner === 'player1' ? playerNames.player1 : playerNames.player2}</span>
+                </div>
+                <div className="game-end-score">
+                  Score final : {gameResult.finalScore.player1} - {gameResult.finalScore.player2}
+                </div>
+              </div>
+              <div className="game-end-actions">
+                <button
+                  className="btn btn-primary btn-large game-end-btn"
+                  onClick={() => navigate('/tournaments')}
+                >
+                  🏆 Retour aux Tournois
+                </button>
+                <button
+                  className="btn btn-secondary btn-large game-end-btn"
+                  onClick={() => navigate('/')}
+                >
+                  🏠 Accueil
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Menu de fin de partie (pas pour les spectateurs de tournoi) */}
+        {gameEnded && gameResult && !isSpectator && (
           <div className="game-end-overlay">
             <div className="game-end-menu">
               <div className="game-end-header">
@@ -390,13 +474,16 @@ const Game: React.FC = () => {
                 >
                   🎮 Nouvelle partie
                 </button>
-                <button
-                  className="btn btn-secondary btn-large game-end-btn"
-                  onClick={handleRematch}
-                  disabled={waitingForRematch}
-                >
-                  {waitingForRematch ? '⏳ En attente...' : '🔄 Rejouer'}
-                </button>
+                {/* Le rematch n'est pas disponible pour les matchs de tournoi */}
+                {!isTournamentMatch && (
+                  <button
+                    className="btn btn-secondary btn-large game-end-btn"
+                    onClick={handleRematch}
+                    disabled={waitingForRematch}
+                  >
+                    {waitingForRematch ? '⏳ En attente...' : '🔄 Rejouer'}
+                  </button>
+                )}
                 <button
                   className="btn btn-danger btn-large game-end-btn"
                   onClick={handleQuitToHome}
@@ -408,8 +495,8 @@ const Game: React.FC = () => {
           </div>
         )}
 
-        {/* Demande de rematch reçue */}
-        {rematchRequest && (
+        {/* Demande de rematch reçue (seulement pour les parties normales) */}
+        {rematchRequest && !isTournamentMatch && (
           <div className="game-end-overlay">
             <div className="game-end-menu rematch-request">
               <div className="game-end-header">

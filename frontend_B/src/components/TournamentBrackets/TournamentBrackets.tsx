@@ -1,6 +1,7 @@
 // frontend_B/src/components/TournamentBrackets/TournamentBrackets.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { tournamentAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import './TournamentBrackets.css';
@@ -15,6 +16,7 @@ interface Match {
   player2Score: number;
   status: string;
   bracketPosition: number;
+  gameId?: string;
 }
 
 interface BracketData {
@@ -38,6 +40,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
   onMatchUpdate
 }) => {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [bracketData, setBracketData] = useState<BracketData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,11 +259,41 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                           </div>
                         )}
 
-                        {isCreator && match.status === 'pending' && (
+                        {match.status === 'pending' && match.gameId && (
                           <div className="match-actions">
-                            <button className="btn btn-sm btn-primary">
-                              ⚙️ Gérer
-                            </button>
+                            {/* Seuls les joueurs concernés peuvent jouer */}
+                            {(user && (match.player1Id === user.id || match.player2Id === user.id)) && (
+                              <button 
+                                className="btn btn-sm btn-success"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const gameUrl = `/game/${match.gameId}`;
+                                  console.log(`🚀 Lancement du match: ${gameUrl}`);
+                                  navigate(gameUrl);
+                                }}
+                              >
+                                🎮 Jouer
+                              </button>
+                            )}
+                            {/* Spectateurs peuvent regarder */}
+                            {(user && match.player1Id !== user.id && match.player2Id !== user.id) && (
+                              <button 
+                                className="btn btn-sm btn-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const gameUrl = `/game/${match.gameId}?spectator=true`;
+                                  console.log(`👁️ Mode spectateur pour le match: ${gameUrl}`);
+                                  navigate(gameUrl);
+                                }}
+                              >
+                                👁️ Regarder
+                              </button>
+                            )}
+                            {isCreator && (
+                              <button className="btn btn-sm btn-primary">
+                                ⚙️ Gérer
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>

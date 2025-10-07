@@ -793,7 +793,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         tournamentId,
         matchId,
         redirectUrl: `/tournaments/${tournamentId}`,
-        message: 'Match terminé ! Retour au lobby du tournoi...'
+        message: 'Match terminé ! Retour au lobby du tournoi...',
+        player1Id: room.playersUserIds.player1,
+        player2Id: room.playersUserIds.player2
       });
       
       // Notifier aussi la room du tournoi

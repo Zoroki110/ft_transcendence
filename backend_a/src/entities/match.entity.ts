@@ -65,4 +65,7 @@ export class Match {
 
   @Column({ name: 'bracket_position', nullable: true })
   bracketPosition: number; // Position dans l'arbre d'élimination
+
+  @Column({ name: 'game_id', nullable: true })
+  gameId: string; // ID de jeu compatible avec le système existant
 }
