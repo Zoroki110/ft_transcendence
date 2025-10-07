@@ -22,7 +22,7 @@ interface GameData {
 }
 
 const Game: React.FC = () => {
-  const { gameId } = useParams<{ gameId: string }>();
+  const { gameId, lobbyId } = useParams<{ gameId?: string; lobbyId?: string }>();
   const navigate = useNavigate();
   const { loadStats } = useUser();
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -66,35 +66,33 @@ const Game: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchGameData = async () => {
-      if (!gameId) return;
-
-      try {
-        setIsLoading(true);
-        // Pour les parties rapides, pas besoin d'appeler l'API
-        // Les données sont gérées par WebSocket
-        if (gameId.startsWith('game_') || gameId.startsWith('quick_')) {
-          setGameData({
-            id: gameId,
-            players: [],
-            score: { player1: 0, player2: 0 },
-            status: 'waiting',
-            spectatorCount: 0
-          });
-        } else {
-          // Pour les matchs existants (ID numérique)
-          const response = await gameAPI.getGame(gameId);
-          setGameData(response.data);
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Erreur de chargement');
-      } finally {
+    const initializeGame = () => {
+      // Utiliser lobbyId si disponible, sinon gameId
+      const currentGameId = lobbyId || gameId;
+      
+      if (!currentGameId) {
+        setError('ID de partie manquant');
         setIsLoading(false);
+        return;
       }
+
+      console.log(`🎮 GAME: Initialisation de la partie ${currentGameId}`);
+      
+      // Initialiser la partie avec des données par défaut
+      // Le WebSocket se chargera de mettre à jour les vraies données
+      setGameData({
+        id: currentGameId,
+        players: [],
+        score: { player1: 0, player2: 0 },
+        status: 'waiting',
+        spectatorCount: 0
+      });
+      
+      setIsLoading(false);
     };
 
-    fetchGameData();
-  }, [gameId]);
+    initializeGame();
+  }, [gameId, lobbyId]);
 
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
@@ -140,17 +138,9 @@ const Game: React.FC = () => {
   };
 
   // Fonctions pour le menu de fin de partie
-  const handleNewGame = async () => {
-    try {
-      console.log('🎮 GAME: Création d\'une nouvelle partie');
-      const response = await gameAPI.createQuickMatch();
-      const newGameId = response.data.gameId;
-      console.log('🎮 GAME: Nouvelle partie créée:', newGameId);
-      navigate(`/game/${newGameId}`);
-    } catch (error) {
-      console.error('🔴 GAME: Erreur lors de la création d\'une nouvelle partie:', error);
-      alert('Impossible de créer une nouvelle partie. Veuillez réessayer.');
-    }
+  const handleNewGame = () => {
+    console.log('🎮 GAME: Redirection vers matchmaking pour nouvelle partie');
+    navigate('/matchmaking');
   };
 
   const handleRematch = () => {
@@ -198,6 +188,26 @@ const Game: React.FC = () => {
     console.log('❌ GAME: Rematch refusé par l\'adversaire');
     setRematchRequest(null);
     setWaitingForRematch(false);
+  };
+
+  // Handler pour les matches de tournoi
+  const handleTournamentMatchEnd = (data: {
+    winner: string;
+    finalScore: any;
+    tournamentId: number;
+    matchId: number;
+    redirectUrl: string;
+    message: string;
+  }) => {
+    console.log('🏆 GAME: Match de tournoi terminé:', data);
+    
+    // Afficher le message de fin
+    alert(`${data.message}\nGagnant: ${data.winner}\nScore: ${data.finalScore.player1} - ${data.finalScore.player2}`);
+    
+    // Rediriger vers le lobby du tournoi après un délai
+    setTimeout(() => {
+      navigate(data.redirectUrl);
+    }, 3000);
   };
 
   const handleQuitToHome = () => {
@@ -258,10 +268,11 @@ const Game: React.FC = () => {
           
           <div className="card game-area">
             <div id="game-canvas-container" className="game-canvas">
-              {gameId ? (
+              {(lobbyId || gameId) ? (
                 <PongGame
-                  gameId={gameId}
+                  gameId={lobbyId || gameId}
                   onGameEnd={handleGameEnd}
+                  onTournamentMatchEnd={handleTournamentMatchEnd}
                   onPlayerNamesUpdate={handlePlayerNamesUpdate}
                   onRematchRequest={handleRematch}
                   onRematchRequested={handleRematchRequested}

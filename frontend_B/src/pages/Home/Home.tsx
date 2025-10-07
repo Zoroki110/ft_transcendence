@@ -23,9 +23,8 @@ const Home: React.FC = () => {
       console.log('🟢 FRONTEND: Appel API createQuickMatch à', new Date().toISOString());
       const response = await gameAPI.createQuickMatch();
       console.log('🟢 FRONTEND: Réponse API reçue:', response.data);
-      const gameId = response.data.gameId;
-      console.log('🟢 FRONTEND: Navigation vers /game/' + gameId);
-      navigate(`/game/${gameId}`);
+      console.log('🟢 FRONTEND: Navigation vers /matchmaking');
+      navigate('/matchmaking');
     } catch (error) {
       console.error('🔴 FRONTEND: Erreur lors de la création de la partie:', error);
       alert('Impossible de créer une partie. Veuillez réessayer.');
@@ -145,7 +144,7 @@ const Home: React.FC = () => {
             Rejoignez des milliers de joueurs et montrez vos compétences
           </p>
           <div className="home-cta-actions">
-            <Link to={isLoggedIn ? "/game" : "/login"} className="btn btn-primary btn-large">
+            <Link to={isLoggedIn ? "/matchmaking" : "/login"} className="btn btn-primary btn-large">
               🚀 {isLoggedIn ? "Jouer maintenant" : "S'inscrire gratuitement"}
             </Link>
             <Link to="/leaderboard" className="btn btn-secondary btn-large">

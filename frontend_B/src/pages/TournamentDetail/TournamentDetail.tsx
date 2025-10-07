@@ -7,6 +7,7 @@ import { Tournament } from '../../types';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
 import { useTournamentActions } from '../../hooks/useTournamentActions';
 import TournamentBrackets from '../../components/TournamentBrackets/TournamentBrackets';
+import { socketService } from '../../services/socket';
 import './TournamentDetail.css';
 
 const TournamentDetail: React.FC = () => {
@@ -46,6 +47,55 @@ const TournamentDetail: React.FC = () => {
 
     fetchTournament();
   }, [id]);
+
+  // WebSocket pour les événements de tournoi
+  useEffect(() => {
+    if (!tournament || !user) return;
+
+    console.log(`🔌 Setting up WebSocket listeners for tournament ${tournament.id}`);
+
+    // Se connecter au tournoi WebSocket
+    socketService.joinTournament(tournament.id, user.id, user.username);
+
+    // Écouter le début du tournoi
+    socketService.onTournamentStarted((data) => {
+      console.log('🏆 Tournoi commencé ! WebSocket event:', data);
+      
+      // Recharger les données du tournoi
+      const refetchTournament = async () => {
+        try {
+          const response = await tournamentAPI.getTournament(tournament.id);
+          setTournament(response.data);
+        } catch (err) {
+          console.error('❌ Erreur rechargement tournoi:', err);
+        }
+      };
+      refetchTournament();
+    });
+
+    // Écouter l'assignation d'un match
+    socketService.onTournamentMatchAssigned((data) => {
+      if (data.tournamentId === tournament.id) {
+        console.log('🎯 Match assigné ! WebSocket event:', data);
+        
+        // Afficher une notification et rediriger vers le match
+        const redirectToMatch = () => {
+          alert(`${data.message}\nVous allez être redirigé vers votre match.`);
+          navigate(data.gameUrl);
+        };
+        
+        // Délai court pour permettre à l'utilisateur de voir la notification
+        setTimeout(redirectToMatch, 2000);
+      }
+    });
+
+    // Nettoyage lors du démontage
+    return () => {
+      console.log(`🔌 Cleaning up WebSocket listeners for tournament ${tournament.id}`);
+      socketService.offTournamentEvents();
+      socketService.leaveTournament(tournament.id, user.id, user.username);
+    };
+  }, [tournament, user, navigate]);
 
   const handleJoin = async () => {
     if (!tournament) return;
