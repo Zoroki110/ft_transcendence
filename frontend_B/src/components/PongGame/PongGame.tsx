@@ -36,6 +36,8 @@ interface PongGameProps {
     matchId: number;
     redirectUrl: string;
     message: string;
+    player1Id: number;
+    player2Id: number;
   }) => void;
   onPlayerNamesUpdate?: (playerNames: any) => void;
   onRematchRequest?: () => void;

@@ -281,7 +281,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                         )}
 
                         {/* Actions selon le statut du match et le rôle de l'utilisateur */}
-                        {match.status === 'pending' && (
+                        {(match.status === 'pending' || match.status === 'active') && (
                           <div className="match-actions">
                             {/* Bouton Jouer pour les participants */}
                             {canUserPlayMatch(match) && (
@@ -292,7 +292,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                                   handleStartMatch(match);
                                 }}
                               >
-                                🎮 Jouer
+                                {match.status === 'active' ? '🎮 Rejoindre' : '🎮 Jouer'}
                               </button>
                             )}
                             
