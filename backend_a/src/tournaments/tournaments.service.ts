@@ -774,22 +774,33 @@ export class TournamentsService {
       throw new ForbiddenException('Vous n\'êtes pas participant à ce match');
     }
 
-    // Vérifier que le match n'est pas déjà commencé
-    if (match.status !== 'pending') {
-      throw new BadRequestException(`Match déjà ${match.status}`);
+    // Vérifier que le match n'est pas terminé
+    if (match.status === 'finished') {
+      throw new BadRequestException('Ce match est déjà terminé');
     }
 
-    // Mettre le match en statut "active"
-    await this.matchRepository.update(matchId, {
-      status: 'active',
-    });
+    // Mettre le match en statut "active" seulement s'il ne l'est pas déjà
+    if (match.status === 'pending') {
+      await this.matchRepository.update(matchId, {
+        status: 'active',
+      });
+      console.log(`🚀 Match ${matchId} activé par ${userId}`);
+    } else {
+      console.log(`🔄 Joueur ${userId} rejoint le match ${matchId} déjà actif`);
+    }
 
-    // Créer une game room pour ce match de tournoi
-    const gameId = `tournament_${matchId}`;
-    this.gameGateway.createTournamentRoom(gameId, matchId, match.player1, match.player2);
+    // Créer ou réutiliser la game room pour ce match de tournoi
+    const gameId = `game_tournament_${tournamentId}_match_${matchId}`;
+    
+    // Vérifier si la room existe déjà
+    if (!this.gameGateway.gameRooms?.has(gameId)) {
+      this.gameGateway.createTournamentRoom(gameId, matchId, match.player1, match.player2);
+      console.log(`🎮 Game room créée: ${gameId}`);
+    } else {
+      console.log(`🔄 Game room ${gameId} déjà existante, réutilisation`);
+    }
 
-    console.log(`✅ Match ${matchId} démarré entre ${match.player1.username} et ${match.player2.username}`);
-    console.log(`🎮 Game room créée: ${gameId}`);
+    console.log(`✅ Match ${matchId} accessible pour ${match.player1.username} et ${match.player2.username}`);
 
     // Retourner les informations pour que le frontend puisse rediriger vers le jeu
     return {
@@ -820,20 +831,27 @@ export class TournamentsService {
   ): Promise<any> {
     const tournament = await this.findOne(tournamentId, userId);
 
-    if (tournament.creatorId !== userId) {
-      throw new ForbiddenException(
-        'Seul le créateur peut faire avancer les gagnants',
-      );
-    }
-
+    // Vérifier si l'utilisateur peut faire avancer le tournoi
+    // Autorisé: créateur du tournoi OU participant du match concerné
     const match = await this.matchRepository.findOne({
       where: { id: matchId, tournament: { id: tournamentId } },
-      relations: ['player1', 'player2'],
+      relations: ['player1', 'player2', 'tournament'],
     });
 
     if (!match) {
       throw new NotFoundException('Match introuvable');
     }
+
+    const isCreator = tournament.creatorId === userId;
+    const isParticipant = match.player1.id === userId || match.player2.id === userId;
+
+    if (!isCreator && !isParticipant) {
+      throw new ForbiddenException(
+        'Seul le créateur du tournoi ou les participants du match peuvent faire avancer le tournoi',
+      );
+    }
+
+    // Le match a déjà été récupéré ci-dessus pour la vérification des permissions
 
     if (match.status === 'finished') {
       throw new BadRequestException('Ce match est déjà terminé');
@@ -1261,16 +1279,13 @@ export class TournamentsService {
     // Create matches directly with SQL using the transactional entity manager
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
-        // Générer un game_id compatible avec le système existant 
-        const gameId = `tournament_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        console.log(`🔧 CREATING MATCH: Creating match with player1=${participants[i].id}, player2=${participants[i + 1].id}, tournament_id=${tournamentId} (type: ${typeof tournamentId}), game_id=${gameId}`);
+        console.log(`🔧 CREATING MATCH: Creating match with player1=${participants[i].id}, player2=${participants[i + 1].id}, tournament_id=${tournamentId} (type: ${typeof tournamentId})`);
         
         // Use direct SQL with explicit column names and values to avoid any TypeORM issues
         const manager = transactionalEntityManager || this.matchRepository.manager;
         const result = await manager.query(`
-          INSERT INTO match (player1_id, player2_id, tournament_id, round, bracket_position, status, "player1Score", "player2Score", game_id) 
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+          INSERT INTO match (player1_id, player2_id, tournament_id, round, bracket_position, status, "player1Score", "player2Score") 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
           RETURNING *
         `, [
           participants[i].id,      // $1
@@ -1281,8 +1296,15 @@ export class TournamentsService {
           'pending',               // $6
           0,                       // $7
           0,                       // $8
-          gameId                   // $9
         ]);
+        
+        // Maintenant générer le gameId avec l'ID du match créé
+        const gameId = `game_tournament_${tournamentId}_match_${result[0].id}`;
+        
+        // Mettre à jour le match avec le gameId
+        await manager.query(`
+          UPDATE match SET game_id = $1 WHERE id = $2
+        `, [gameId, result[0].id]);
         
         console.log(`🔧 INSERTED MATCH:`, result[0]);
 
