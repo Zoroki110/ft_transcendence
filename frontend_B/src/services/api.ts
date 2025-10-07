@@ -212,9 +212,9 @@ export const tournamentAPI = {
   getParticipants: (id: number) =>
     apiClient.get(`/tournaments/${id}/participants`),
 
-  // Démarrer un tournoi (génère les brackets)
+  // Démarrer un tournoi (avec brackets déjà générés)
   startTournament: (id: number) =>
-    apiClient.post(`/tournaments/${id}/generate-brackets`),
+    apiClient.post(`/tournaments/${id}/start`),
 
   // Brackets et matches
   generateBrackets: (id: number) =>
@@ -222,6 +222,9 @@ export const tournamentAPI = {
 
   forceRegenerateBrackets: (id: number) =>
     apiClient.post(`/tournaments/${id}/force-regenerate-brackets`),
+
+  resetTournamentBrackets: (id: number) =>
+    apiClient.post(`/tournaments/${id}/reset-brackets`),
 
   getBrackets: (id: number) =>
     apiClient.get(`/tournaments/${id}/brackets`),
@@ -242,6 +245,10 @@ export const tournamentAPI = {
   // Mes tournois
   getMyTournaments: (params?: any) =>
     apiClient.get('/tournaments/user/my-tournaments', { params }),
+
+  // Démarrer un match de tournoi
+  startTournamentMatch: (tournamentId: number, matchId: number) =>
+    apiClient.post(`/tournaments/${tournamentId}/matches/${matchId}/start`),
 };
 
 // ===== GAMES API =====
@@ -288,4 +295,6 @@ export const healthAPI = {
     apiClient.get('/health'),
 };
 
+// Export par défaut et alias pour compatibilité
 export default apiClient;
+export const api = apiClient;

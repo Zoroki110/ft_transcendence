@@ -41,6 +41,9 @@ const Navigation: React.FC = () => {
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/matchmaking', label: 'Matchmaking', icon: '🎮' },
     { path: '/tournaments', label: 'Tournaments', icon: '🏆' },
+    { path: '/friends', label: 'Friends', icon: '👥' },
+    { path: '/challenges', label: 'Challenges', icon: '⚔️' },
+    { path: '/chat', label: 'Messages', icon: '💬' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '📊' },
     { path: '/profile', label: 'Profile', icon: '👤' },
   ];
@@ -83,6 +86,15 @@ const Navigation: React.FC = () => {
         break;
       case 'tournaments':
         navigate('/tournaments');
+        break;
+      case 'friends':
+        navigate('/friends');
+        break;
+      case 'challenges':
+        navigate('/challenges');
+        break;
+      case 'chat':
+        navigate('/chat');
         break;
       case 'logout':
         if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
@@ -363,7 +375,79 @@ const Navigation: React.FC = () => {
                       <span className="dropdown-icon">🏆</span>
                       <span>Mes Tournois</span>
                     </button>
-                    
+
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleDropdownItemClick('friends')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4a5568',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span className="dropdown-icon">👥</span>
+                      <span>Mes Amis</span>
+                    </button>
+
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleDropdownItemClick('challenges')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4a5568',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span className="dropdown-icon">⚔️</span>
+                      <span>Mes Défis</span>
+                    </button>
+
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleDropdownItemClick('chat')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4a5568',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span className="dropdown-icon">💬</span>
+                      <span>Messages</span>
+                    </button>
+
                     <button
                       className="dropdown-item"
                       onClick={() => handleDropdownItemClick('settings')}

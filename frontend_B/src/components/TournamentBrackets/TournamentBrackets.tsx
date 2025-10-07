@@ -122,6 +122,27 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
     }
   };
 
+  const handleStartMatch = async (match: Match) => {
+    try {
+      console.log('🚀 Starting tournament match:', { tournamentId, matchId: match.id });
+      
+      const response = await tournamentAPI.startTournamentMatch(tournamentId, match.id);
+      console.log('✅ Match started:', response.data);
+      
+      // Rediriger vers le jeu
+      window.location.href = response.data.gameUrl;
+      
+    } catch (err: any) {
+      console.error('❌ Error starting match:', err);
+      alert(err.response?.data?.message || 'Erreur lors du démarrage du match');
+    }
+  };
+
+  const canUserPlayMatch = (match: Match): boolean => {
+    if (!user) return false;
+    return match.player1Id === user.id || match.player2Id === user.id;
+  };
+
   if (isLoading) {
     return (
       <div className="brackets-loading">
@@ -259,41 +280,34 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                           </div>
                         )}
 
-                        {match.status === 'pending' && match.gameId && (
+                        {/* Actions selon le statut du match et le rôle de l'utilisateur */}
+                        {match.status === 'pending' && (
                           <div className="match-actions">
-                            {/* Seuls les joueurs concernés peuvent jouer */}
-                            {(user && (match.player1Id === user.id || match.player2Id === user.id)) && (
+                            {/* Bouton Jouer pour les participants */}
+                            {canUserPlayMatch(match) && (
                               <button 
                                 className="btn btn-sm btn-success"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const gameUrl = `/game/${match.gameId}`;
-                                  console.log(`🚀 Lancement du match: ${gameUrl}`);
-                                  navigate(gameUrl);
+                                  handleStartMatch(match);
                                 }}
                               >
                                 🎮 Jouer
                               </button>
                             )}
-                            {/* Spectateurs peuvent regarder */}
-                            {(user && match.player1Id !== user.id && match.player2Id !== user.id) && (
-                              <button 
-                                className="btn btn-sm btn-secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const gameUrl = `/game/${match.gameId}?spectator=true`;
-                                  console.log(`👁️ Mode spectateur pour le match: ${gameUrl}`);
-                                  navigate(gameUrl);
-                                }}
-                              >
-                                👁️ Regarder
-                              </button>
-                            )}
+                            
+                            {/* Bouton Gérer pour le créateur */}
                             {isCreator && (
                               <button className="btn btn-sm btn-primary">
                                 ⚙️ Gérer
                               </button>
                             )}
+                          </div>
+                        )}
+
+                        {match.status === 'active' && (
+                          <div className="match-actions">
+                            <span className="match-status-text">🎮 Match en cours...</span>
                           </div>
                         )}
                       </div>

@@ -74,32 +74,28 @@ const Game: React.FC = () => {
 
   useEffect(() => {
     const initializeGame = () => {
-      // Utiliser lobbyId si disponible, sinon gameId
-      const currentGameId = lobbyId || gameId;
-      
-      if (!currentGameId) {
+      if (!gameId) {
         setError('ID de partie manquant');
         setIsLoading(false);
         return;
       }
 
-      console.log(`🎮 GAME: Initialisation de la partie ${currentGameId}`);
-      
       // Initialiser la partie avec des données par défaut
       // Le WebSocket se chargera de mettre à jour les vraies données
       setGameData({
-        id: currentGameId,
+        id: gameId,
         players: [],
         score: { player1: 0, player2: 0 },
         status: 'waiting',
         spectatorCount: 0
       });
-      
+
+      console.log(`🎮 Game initialized for: ${gameId}`);
       setIsLoading(false);
     };
 
     initializeGame();
-  }, [gameId, lobbyId]);
+  }, [gameId]);
 
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
@@ -260,11 +256,14 @@ const Game: React.FC = () => {
     );
   }
 
-  if (error || !gameData) {
+  if (error || !gameData || !gameData.score || !playerNames) {
     return (
       <div className="game-error">
         <div className="error-icon">⚠️</div>
         <p className="error-message">{error || 'Partie introuvable'}</p>
+        <p style={{ fontSize: '0.8rem', color: '#666' }}>
+          Debug: gameData={!!gameData}, score={!!gameData?.score}, playerNames={!!playerNames}
+        </p>
       </div>
     );
   }
