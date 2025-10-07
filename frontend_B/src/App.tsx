@@ -27,6 +27,9 @@ import Settings from './pages/Settings/Settings';
 import History from './pages/History/History';
 import APITest from './pages/APITest/APITest';
 import TestSignup from './pages/TestSignup';
+import Friends from './pages/Friends/Friends';
+import Challenges from './pages/Challenges/Challenges';
+import Chat from './pages/Chat/Chat';
 
 import './App.css';
 
@@ -60,9 +63,15 @@ function App() {
                 
                 {/* Utilisateur - Routes protégées */}
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/profile/:id" element={<Profile />} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-                
+
+                {/* Social - Routes protégées */}
+                <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
+                <Route path="/chat/:userId?" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+
                 {/* Classement */}
                 <Route path="/leaderboard" element={<Leaderboard />} />
 

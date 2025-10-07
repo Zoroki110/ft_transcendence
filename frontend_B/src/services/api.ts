@@ -285,4 +285,6 @@ export const healthAPI = {
     apiClient.get('/health'),
 };
 
+// Export par défaut et alias pour compatibilité
 export default apiClient;
+export const api = apiClient;

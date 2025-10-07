@@ -12,11 +12,9 @@ export const APP_CONFIG = {
   DEBUG: import.meta.env.DEV || false
 };
 
-// Fonction utilitaire pour les logs de debug
+// Fonction utilitaire pour les logs de debug (désactivé)
 export const debugLog = (message: string, ...args: any[]) => {
-  if (APP_CONFIG.DEBUG) {
-    console.log(`🔧 [DEBUG] ${message}`, ...args);
-  }
+  // Logs désactivés
 };
 
 // Fonction pour valider la configuration au démarrage
