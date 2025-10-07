@@ -20,7 +20,6 @@ import { Match } from '../entities/match.entity';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
-import { GameGateway } from '../game/game.gateway';
 
 @Injectable()
 export class TournamentsService {
@@ -575,12 +574,12 @@ export class TournamentsService {
     tournament.bracketGenerated = false;
 
     // Forcer la génération même si le statut est IN_PROGRESS
+    const matches: any[] = [];
     if (tournament.participants && tournament.participants.length >= 2) {
       console.log('🚀 FORCE REGENERATE: Generating new matches');
-      
+
       if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
         // Générer les matches avec SQL direct
-        const matches: any[] = [];
         for (let i = 0; i < tournament.participants.length; i += 2) {
           if (i + 1 < tournament.participants.length) {
             const result = await this.matchRepository.query(`
@@ -609,20 +608,14 @@ export class TournamentsService {
       throw new BadRequestException('Pas assez de participants pour générer les brackets');
     }
 
-          tournament.bracketGenerated = true;
-          tournament.status = TournamentStatus.IN_PROGRESS;
-        } else {
-          throw new BadRequestException('Pas assez de participants pour générer les brackets');
-        }
+    const result = await transactionalEntityManager.save(Tournament, tournament);
+    console.log('🎉 FORCE REGENERATE: Tournament updated successfully');
 
-        const result = await transactionalEntityManager.save(Tournament, tournament);
-        console.log('🎉 FORCE REGENERATE: Tournament updated successfully');
-        
-        if (matches.length > 0) {
-          console.log(`🎯 TOURNAMENT: Tournament ${tournament.id} regenerated with ${matches.length} matches`);
-        }
-        
-        return result;
+    if (matches.length > 0) {
+      console.log(`🎯 TOURNAMENT: Tournament ${tournament.id} regenerated with ${matches.length} matches`);
+    }
+
+    return result;
       },
     );
   }

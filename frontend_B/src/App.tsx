@@ -21,6 +21,7 @@ import ManageTournament from './pages/ManageTournament/ManageTournament';
 import Profile from './pages/Profile/Profile';
 import Leaderboard from './pages/Leaderboard/Leaderboard';
 import Game from './pages/Game/Game';
+import GamesList from './pages/GamesList/GamesList';
 import Matchmaking from './pages/Matchmaking/Matchmaking';
 import Login from './pages/Login/Login';
 import Settings from './pages/Settings/Settings';
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/brackets-demo" element={<BracketsDemo />} />
                 
                 {/* Jeu */}
+                <Route path="/matchmaking" element={<ProtectedRoute><GamesList /></ProtectedRoute>} />
                 <Route path="/matchmaking/:gameId" element={<ProtectedRoute><Matchmaking /></ProtectedRoute>} />
                 <Route path="/game/:gameId" element={<Game />} />
                 
