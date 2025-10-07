@@ -5,9 +5,11 @@ import {
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { GameGateway } from '../game/game.gateway';
 import {
   Tournament,
   TournamentStatus,
@@ -28,6 +30,7 @@ export class TournamentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   // ===== CRUD BASIQUE =====
@@ -472,7 +475,51 @@ export class TournamentsService {
     tournament.bracketGenerated = true;
     tournament.status = TournamentStatus.IN_PROGRESS;
 
-    return await this.tournamentRepository.save(tournament);
+    const savedTournament = await this.tournamentRepository.save(tournament);
+
+    // Envoyer les notifications WebSocket aux participants
+    console.log(`🎯 TOURNAMENT: Tournament ${tournament.id} started with ${matches.length} matches`);
+    
+    // Notifier tous les participants que le tournoi a commencé
+    tournament.participants.forEach(participant => {
+      this.gameGateway.server.to(`user_${participant.id}`).emit('tournamentStarted', {
+        tournamentId: tournament.id,
+        message: `Le tournoi "${tournament.name}" a commencé ! Les brackets ont été générés.`
+      });
+    });
+
+    // Assigner les matches de premier tour aux joueurs
+    const firstRoundMatches = matches.filter(match => match.round === 1);
+    firstRoundMatches.forEach(match => {
+      if (match.player1 && match.player2) {
+        const gameId = `tournament_${tournament.id}_match_${match.id}`;
+        const gameUrl = `/game/${gameId}`;
+        
+        // Notifier le joueur 1
+        this.gameGateway.server.to(`user_${match.player1.id}`).emit('tournamentMatchAssigned', {
+          tournamentId: tournament.id,
+          matchId: match.id,
+          opponentId: match.player2.id,
+          opponentUsername: match.player2.username,
+          gameUrl: gameUrl,
+          round: match.round,
+          message: `Votre match de tournoi contre ${match.player2.username} est prêt !`
+        });
+
+        // Notifier le joueur 2
+        this.gameGateway.server.to(`user_${match.player2.id}`).emit('tournamentMatchAssigned', {
+          tournamentId: tournament.id,
+          matchId: match.id,
+          opponentId: match.player1.id,
+          opponentUsername: match.player1.username,
+          gameUrl: gameUrl,
+          round: match.round,
+          message: `Votre match de tournoi contre ${match.player1.username} est prêt !`
+        });
+      }
+    });
+
+    return savedTournament;
   }
 
   async forceRegenerateBrackets(
@@ -505,10 +552,10 @@ export class TournamentsService {
     tournament.bracketGenerated = false;
 
     // Forcer la génération même si le statut est IN_PROGRESS
+    let matches: Match[] = [];
     if (tournament.participants && tournament.participants.length >= 2) {
       console.log('🚀 FORCE REGENERATE: Generating new matches');
       
-      let matches: Match[] = [];
       if (tournament.type === TournamentType.SINGLE_ELIMINATION) {
         matches = await this.generateSingleEliminationMatches(
           tournament.participants,
@@ -529,6 +576,11 @@ export class TournamentsService {
 
     const result = await this.tournamentRepository.save(tournament);
     console.log('🎉 FORCE REGENERATE: Tournament updated successfully');
+    
+    // TODO: Implémenter notification WebSocket pour la régénération
+    if (matches.length > 0) {
+      console.log(`🎯 TOURNAMENT: Tournament ${tournament.id} regenerated with ${matches.length} matches`);
+    }
     
     return result;
   }
@@ -993,32 +1045,8 @@ export class TournamentsService {
 
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
-        // Create match with direct SQL approach to ensure tournament_id is set
-        const result = await this.matchRepository.query(`
-          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING id
-        `, [
-          participants[i].id,
-          participants[i + 1].id,
-          1,
-          Math.floor(i / 2),
-          'pending',
-          0,
-          0,
-          tournamentId
-        ]);
-
-        console.log(`Created match ${matches.length + 1}:`, {
-          id: result[0].id,
-          player1: participants[i].username,
-          player2: participants[i + 1].username,
-          tournament_id: tournamentId
-        });
-
-        // Create a Match object for return (not for saving, just for tracking)
+        // Create match with TypeORM to ensure proper column mapping
         const match = this.matchRepository.create({
-          id: result[0].id,
           player1: participants[i],
           player2: participants[i + 1],
           round: 1,
@@ -1026,10 +1054,33 @@ export class TournamentsService {
           status: 'pending',
           player1Score: 0,
           player2Score: 0,
-          tournament: tournament
+        });
+        
+        const savedMatch = await this.matchRepository.save(match);
+        
+        // Explicitly set tournament_id with raw SQL to ensure it's saved
+        console.log(`🔧 UPDATING: Setting tournament_id=${tournamentId} for match ${savedMatch.id}`);
+        const updateResult = await this.matchRepository.query(
+          'UPDATE match SET tournament_id = $1 WHERE id = $2',
+          [tournamentId, savedMatch.id]
+        );
+        console.log('🔧 UPDATE RESULT:', updateResult);
+        
+        // Verify the update worked
+        const verification = await this.matchRepository.query(
+          'SELECT id, tournament_id FROM match WHERE id = $1',
+          [savedMatch.id]
+        );
+        console.log('🔍 VERIFICATION:', verification);
+
+        console.log(`Created match ${matches.length + 1}:`, {
+          id: savedMatch.id,
+          player1: participants[i].username,
+          player2: participants[i + 1].username,
+          tournament_id: tournamentId
         });
 
-        matches.push(match);
+        matches.push(savedMatch);
       }
     }
 
