@@ -145,7 +145,7 @@ const Home: React.FC = () => {
             Rejoignez des milliers de joueurs et montrez vos compétences
           </p>
           <div className="home-cta-actions">
-            <Link to={isLoggedIn ? "/game" : "/login"} className="btn btn-primary btn-large">
+            <Link to={isLoggedIn ? "/matchmaking" : "/login"} className="btn btn-primary btn-large">
               🚀 {isLoggedIn ? "Jouer maintenant" : "S'inscrire gratuitement"}
             </Link>
             <Link to="/leaderboard" className="btn btn-secondary btn-large">

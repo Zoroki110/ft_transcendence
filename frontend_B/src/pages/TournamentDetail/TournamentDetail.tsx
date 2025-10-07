@@ -7,6 +7,7 @@ import { Tournament } from '../../types';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
 import { useTournamentActions } from '../../hooks/useTournamentActions';
 import TournamentBrackets from '../../components/TournamentBrackets/TournamentBrackets';
+import { socketService } from '../../services/socket';
 import './TournamentDetail.css';
 
 const TournamentDetail: React.FC = () => {

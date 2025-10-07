@@ -8,7 +8,10 @@ import { GameGateway } from './game.gateway';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Match]), UsersModule],
+  imports: [
+    TypeOrmModule.forFeature([Match]), 
+    UsersModule
+  ],
   providers: [GameService, GameGateway],
   controllers: [GameController, PublicGameController],
   exports: [GameService, GameGateway],

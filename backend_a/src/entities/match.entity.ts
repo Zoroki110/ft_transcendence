@@ -57,12 +57,15 @@ export class Match {
   @JoinColumn({ name: 'tournament_id' })
   tournament: Tournament;
 
-  /*@Column({ name: 'tournament_id', nullable: true })
-  tournamentId: number;*/
+  @Column({ name: 'tournament_id', nullable: true })
+  tournamentId: number;
 
   @Column({ name: 'round', nullable: true })
   round: number; // Pour savoir à quel tour du tournoi appartient ce match
 
   @Column({ name: 'bracket_position', nullable: true })
   bracketPosition: number; // Position dans l'arbre d'élimination
+
+  @Column({ name: 'game_id', nullable: true })
+  gameId: string; // ID de jeu compatible avec le système existant
 }

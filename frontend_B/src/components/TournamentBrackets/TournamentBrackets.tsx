@@ -1,6 +1,7 @@
 // frontend_B/src/components/TournamentBrackets/TournamentBrackets.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { tournamentAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import './TournamentBrackets.css';
@@ -15,6 +16,7 @@ interface Match {
   player2Score: number;
   status: string;
   bracketPosition: number;
+  gameId?: string;
 }
 
 interface BracketData {
@@ -38,6 +40,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
   onMatchUpdate
 }) => {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [bracketData, setBracketData] = useState<BracketData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

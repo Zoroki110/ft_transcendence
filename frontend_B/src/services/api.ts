@@ -277,6 +277,16 @@ export const gameAPI = {
   // Parties en attente
   getWaitingRoomsCount: () =>
     apiClient.get('/games/waiting-rooms/count'),
+
+  // Lobbys
+  createLobby: () =>
+    apiClient.post('/games/lobbys'),
+
+  getAllLobbys: () =>
+    apiClient.get('/games/lobbys'),
+
+  joinLobby: (lobbyId: string) =>
+    apiClient.post(`/games/lobbys/${lobbyId}/join`),
 };
 
 // ===== HEALTH API =====

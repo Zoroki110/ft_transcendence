@@ -8,6 +8,7 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { GameService } from './game.service';
@@ -60,5 +61,41 @@ export class GameController {
     return {
       count: this.gameService.getWaitingRoomsCount(),
     };
+  }
+
+  // Nouveaux endpoints pour les lobbys
+  @Post('lobbys')
+  createLobby(@Request() req) {
+    const user = req.user;
+    console.log('🔍 DEBUG createLobby req.user:', user);
+    console.log('🔍 DEBUG user.sub:', user?.sub);
+    console.log('🔍 DEBUG user.username:', user?.username);
+    console.log('🔍 DEBUG user.avatar:', user?.avatar);
+    
+    // JWT payload has 'sub' field for user ID, not 'id'
+    const userId = user.sub;
+    const username = user.username;
+    const avatar = user.avatar || null; // avatar might not be in JWT payload
+    
+    return this.gameService.createLobby(userId, username, avatar);
+  }
+
+  @Get('lobbys')
+  getAllLobbys() {
+    return this.gameService.getAllWaitingLobbys();
+  }
+
+  @Post('lobbys/:lobbyId/join')
+  joinLobby(@Param('lobbyId') lobbyId: string, @Request() req) {
+    const user = req.user;
+    console.log('🔍 DEBUG joinLobby req.user:', user);
+    console.log('🔍 DEBUG user.sub:', user?.sub);
+    console.log('🔍 DEBUG user.username:', user?.username);
+    
+    // JWT payload has 'sub' field for user ID, not 'id'
+    const userId = user.sub;
+    const username = user.username;
+    
+    return this.gameService.joinLobby(lobbyId, userId, username);
   }
 }

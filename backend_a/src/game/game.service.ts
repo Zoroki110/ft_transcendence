@@ -8,11 +8,17 @@ import { FinishMatchDto } from './dto/finish-match.dto';
 @Injectable()
 export class GameService {
   private readonly logger = new Logger('GameService');
+  private gameGateway: any; // Injection manuelle via setter
 
   constructor(
     @InjectRepository(Match)
     private matchRepo: Repository<Match>,
   ) {}
+
+  // Setter pour éviter la dépendance circulaire
+  setGameGateway(gameGateway: any) {
+    this.gameGateway = gameGateway;
+  }
 
   async createMatch(createMatchDto: CreateMatchDto) {
     const match = this.matchRepo.create({
@@ -76,6 +82,18 @@ export class GameService {
 
   // File d'attente globale pour le matchmaking
   private static waitingGameId: string | null = null;
+  
+  // Liste des lobbys en attente
+  private static waitingLobbys: Map<string, {
+    id: string;
+    hostId: number;
+    hostUsername: string;
+    hostAvatar?: string;
+    createdAt: Date;
+    status: 'waiting' | 'full';
+    playersCount: number;
+    maxPlayers: number;
+  }> = new Map();
 
   async createQuickMatchWithWaiting() {
     const currentTime = new Date().toISOString();
@@ -120,5 +138,109 @@ export class GameService {
 
   getWaitingRoomsCount(): number {
     return GameService.waitingGameId ? 1 : 0;
+  }
+
+  // Nouvelles méthodes pour gérer les lobbys
+  createLobby(hostId: number, hostUsername: string, hostAvatar?: string) {
+    const gameId = `lobby_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const lobby = {
+      id: gameId,
+      hostId,
+      hostUsername,
+      hostAvatar,
+      createdAt: new Date(),
+      status: 'waiting' as const,
+      playersCount: 1,
+      maxPlayers: 2,
+    };
+
+    GameService.waitingLobbys.set(gameId, lobby);
+    
+    this.logger.log(`🏓 Lobby créé: ${gameId} par ${hostUsername}`);
+    
+    return {
+      gameId,
+      message: 'Lobby créé ! En attente d\'un adversaire.',
+      gameUrl: `/lobby/${gameId}`,
+      isWaiting: true,
+    };
+  }
+
+  getAllWaitingLobbys() {
+    this.logger.log(`📋 Nombre total de lobbys en Map: ${GameService.waitingLobbys.size}`);
+    
+    const allLobbys = Array.from(GameService.waitingLobbys.values());
+    this.logger.log(`📋 Lobbys bruts:`, JSON.stringify(allLobbys, null, 2));
+    
+    const lobbys = allLobbys
+      .filter(lobby => lobby.status === 'waiting')
+      .map(lobby => {
+        if (!lobby.hostId) {
+          this.logger.error(`❌ Lobby ${lobby.id} a un hostId undefined:`, JSON.stringify(lobby, null, 2));
+          return null;
+        }
+        return {
+          id: lobby.id,
+          host: {
+            id: lobby.hostId.toString(),
+            username: lobby.hostUsername,
+            avatar: lobby.hostAvatar,
+          },
+          status: lobby.status,
+          createdAt: lobby.createdAt.toISOString(),
+          playersCount: lobby.playersCount,
+          maxPlayers: lobby.maxPlayers,
+        };
+      })
+      .filter(lobby => lobby !== null);
+
+    this.logger.log(`📋 Récupération de ${lobbys.length} lobbys en attente valides`);
+    return lobbys;
+  }
+
+  joinLobby(lobbyId: string, playerId: number, playerUsername: string) {
+    const lobby = GameService.waitingLobbys.get(lobbyId);
+    
+    if (!lobby) {
+      throw new Error('Lobby introuvable');
+    }
+
+    if (lobby.status !== 'waiting') {
+      throw new Error('Ce lobby n\'est plus disponible');
+    }
+
+    if (lobby.playersCount >= lobby.maxPlayers) {
+      throw new Error('Lobby complet');
+    }
+
+    // Marquer le lobby comme complet
+    lobby.status = 'full';
+    lobby.playersCount = 2;
+    GameService.waitingLobbys.set(lobbyId, lobby);
+
+    this.logger.log(`🎯 ${playerUsername} rejoint le lobby ${lobbyId}`);
+
+    // Notifier via WebSocket que le lobby est maintenant complet
+    const gameUrl = `/game/${lobbyId}`;
+    if (this.gameGateway && this.gameGateway.notifyLobbyComplete) {
+      this.gameGateway.notifyLobbyComplete(lobbyId, gameUrl);
+      this.logger.log(`🔔 WebSocket notification sent for lobby ${lobbyId}`);
+    }
+
+    return {
+      gameId: lobbyId,
+      message: 'Lobby rejoint ! La partie va commencer.',
+      gameUrl,
+      isWaiting: false,
+    };
+  }
+
+  removeLobby(lobbyId: string) {
+    const deleted = GameService.waitingLobbys.delete(lobbyId);
+    if (deleted) {
+      this.logger.log(`🗑️ Lobby supprimé: ${lobbyId}`);
+    }
+    return deleted;
   }
 }

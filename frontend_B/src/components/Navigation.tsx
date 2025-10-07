@@ -27,9 +27,8 @@ const Navigation: React.FC = () => {
       console.log('🟢 NAVIGATION: Appel API createQuickMatch à', new Date().toISOString());
       const response = await gameAPI.createQuickMatch();
       console.log('🟢 NAVIGATION: Réponse API reçue:', response.data);
-      const gameId = response.data.gameId;
-      console.log('🟢 NAVIGATION: Navigation vers /game/' + gameId);
-      navigate(`/game/${gameId}`);
+      console.log('🟢 NAVIGATION: Navigation vers /matchmaking');
+      navigate('/matchmaking');
     } catch (error) {
       console.error('🔴 NAVIGATION: Erreur lors de la création de la partie:', error);
       alert('Impossible de créer une partie. Veuillez réessayer.');
@@ -40,7 +39,7 @@ const Navigation: React.FC = () => {
 
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/game', label: 'Jouer', icon: '🎮' },
+    { path: '/matchmaking', label: 'Matchmaking', icon: '🎮' },
     { path: '/tournaments', label: 'Tournaments', icon: '🏆' },
     { path: '/friends', label: 'Friends', icon: '👥' },
     { path: '/challenges', label: 'Challenges', icon: '⚔️' },
@@ -134,7 +133,7 @@ const Navigation: React.FC = () => {
         <div className="nav-links">
           {navItems.map((item) => {
             // Cas spécial pour "Jouer" - utiliser handleQuickPlay au lieu d'un lien
-            if (item.path === '/game') {
+            if (item.path === '/matchmaking') {
               return (
                 <button
                   key={item.path}
@@ -145,7 +144,16 @@ const Navigation: React.FC = () => {
                     background: 'none',
                     border: 'none',
                     cursor: isCreatingGame ? 'wait' : 'pointer',
-                    opacity: isCreatingGame ? 0.7 : 1
+                    opacity: isCreatingGame ? 0.7 : 1,
+                    fontSize: 'inherit',
+                    fontFamily: 'inherit',
+                    color: 'inherit',
+                    padding: '0',
+                    margin: '0',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
                 >
                   <span className="nav-icon">{item.icon}</span>

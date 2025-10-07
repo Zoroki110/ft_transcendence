@@ -67,7 +67,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private gameService: GameService,
     private usersService: UsersService,
-  ) {}
+  ) {
+    // Établir la référence bidirectionnelle pour éviter les dépendances circulaires
+    this.gameService.setGameGateway(this);
+  }
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -322,6 +325,155 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       message: message.trim(),
       timestamp: new Date().toISOString(),
       senderId: client.id
+    });
+  }
+
+  // === LOBBY MANAGEMENT ===
+  
+  @SubscribeMessage('joinLobby')
+  handleJoinLobby(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { lobbyId: string; userId: number; username: string },
+  ) {
+    const { lobbyId, userId, username } = data;
+    
+    this.logger.log(`🏓 LOBBY JOIN WEBSOCKET: lobbyId=${lobbyId}, userId=${userId}, username=${username}`);
+    
+    // Joindre la room WebSocket pour ce lobby
+    client.join(lobbyId);
+    
+    // Notifier les autres participants du lobby qu'un joueur s'est connecté
+    client.to(lobbyId).emit('lobbyPlayerConnected', {
+      userId,
+      username,
+      message: `${username} est maintenant connecté au lobby`
+    });
+  }
+
+  @SubscribeMessage('leaveLobby')
+  handleLeaveLobby(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { lobbyId: string; userId: number; username: string },
+  ) {
+    const { lobbyId, userId, username } = data;
+    
+    this.logger.log(`🏓 LOBBY LEAVE WEBSOCKET: lobbyId=${lobbyId}, userId=${userId}, username=${username}`);
+    
+    // Quitter la room WebSocket
+    client.leave(lobbyId);
+    
+    // Notifier les autres participants
+    client.to(lobbyId).emit('lobbyPlayerDisconnected', {
+      userId,
+      username,
+      message: `${username} a quitté le lobby`
+    });
+  }
+
+  // Méthode pour notifier qu'un lobby est maintenant complet depuis le service
+  notifyLobbyComplete(lobbyId: string, gameUrl: string) {
+    this.logger.log(`🎯 LOBBY COMPLETE NOTIFICATION: lobbyId=${lobbyId}, gameUrl=${gameUrl}`);
+    
+    // Notifier tous les clients connectés à ce lobby
+    this.server.to(lobbyId).emit('lobbyComplete', {
+      lobbyId,
+      gameUrl,
+      message: 'Le lobby est complet ! Redirection vers le jeu...'
+    });
+  }
+
+  // === TOURNAMENT MANAGEMENT ===
+
+  @SubscribeMessage('joinTournament')
+  handleJoinTournament(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { tournamentId: number; userId: number; username: string },
+  ) {
+    const { tournamentId, userId, username } = data;
+    const tournamentRoom = `tournament_${tournamentId}`;
+    
+    this.logger.log(`🏆 TOURNAMENT JOIN WEBSOCKET: tournamentId=${tournamentId}, userId=${userId}, username=${username}`);
+    
+    // Joindre la room WebSocket pour ce tournoi
+    client.join(tournamentRoom);
+    
+    // Notifier les autres participants du tournoi
+    client.to(tournamentRoom).emit('tournamentPlayerConnected', {
+      userId,
+      username,
+      message: `${username} a rejoint le tournoi`
+    });
+  }
+
+  @SubscribeMessage('leaveTournament')
+  handleLeaveTournament(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { tournamentId: number; userId: number; username: string },
+  ) {
+    const { tournamentId, userId, username } = data;
+    const tournamentRoom = `tournament_${tournamentId}`;
+    
+    this.logger.log(`🏆 TOURNAMENT LEAVE WEBSOCKET: tournamentId=${tournamentId}, userId=${userId}, username=${username}`);
+    
+    // Quitter la room WebSocket
+    client.leave(tournamentRoom);
+    
+    // Notifier les autres participants
+    client.to(tournamentRoom).emit('tournamentPlayerDisconnected', {
+      userId,
+      username,
+      message: `${username} a quitté le tournoi`
+    });
+  }
+
+  // Méthode pour notifier que le tournoi a commencé et les brackets sont générés
+  notifyTournamentStarted(tournamentId: number, matches: any[]) {
+    const tournamentRoom = `tournament_${tournamentId}`;
+    
+    this.logger.log(`🏆 TOURNAMENT STARTED NOTIFICATION: tournamentId=${tournamentId}, matches=${matches.length}`);
+    
+    // Créer la liste des matchs avec les infos des joueurs pour redirection
+    const matchNotifications = matches.map(match => ({
+      matchId: match.id,
+      player1Id: match.player1.id,
+      player2Id: match.player2.id,
+      player1Username: match.player1.username,
+      player2Username: match.player2.username,
+      gameUrl: `/game/tournament_${tournamentId}_match_${match.id}`,
+      round: match.round,
+      bracketPosition: match.bracketPosition
+    }));
+    
+    // Notifier tous les clients connectés à ce tournoi
+    this.server.to(tournamentRoom).emit('tournamentStarted', {
+      tournamentId,
+      message: 'Le tournoi a commencé ! Les brackets ont été générés.',
+      matches: matchNotifications
+    });
+
+    // Notifier individuellement chaque joueur de son match
+    matchNotifications.forEach(match => {
+      // Notifier player1
+      this.server.emit('tournamentMatchAssigned', {
+        tournamentId,
+        matchId: match.matchId,
+        opponentId: match.player2Id,
+        opponentUsername: match.player2Username,
+        gameUrl: match.gameUrl,
+        round: match.round,
+        message: `Votre premier match vous attend contre ${match.player2Username} !`
+      });
+
+      // Notifier player2
+      this.server.emit('tournamentMatchAssigned', {
+        tournamentId,
+        matchId: match.matchId,
+        opponentId: match.player1Id,
+        opponentUsername: match.player1Username,
+        gameUrl: match.gameUrl,
+        round: match.round,
+        message: `Votre premier match vous attend contre ${match.player1Username} !`
+      });
     });
   }
 
@@ -624,6 +776,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     room.gameState.gameStatus = 'finished';
 
+    // Déterminer si c'est une partie de tournoi ou de matchmaking
+    const isTournamentMatch = gameId.includes('tournament_') && gameId.includes('match_');
+    let tournamentId: number | null = null;
+    let matchId: number | null = null;
+
+    if (isTournamentMatch) {
+      // Extraire l'ID du tournoi et du match depuis le gameId
+      const parts = gameId.split('_');
+      tournamentId = parseInt(parts[1]); // tournament_123_match_456 -> 123
+      matchId = parseInt(parts[3]); // tournament_123_match_456 -> 456
+      this.logger.log(`🏆 TOURNAMENT MATCH END: gameId=${gameId}, tournamentId=${tournamentId}, matchId=${matchId}`);
+    }
+
     // Arrêter la boucle de jeu proprement
     if (room.gameLoopId) {
       clearInterval(room.gameLoopId);
@@ -666,11 +831,36 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.warn(`Cannot update stats: missing user IDs - player1UserId=${player1UserId}, player2UserId=${player2UserId}`);
     }
 
-    // Notifier la fin du jeu
-    this.server.to(gameId).emit('gameEnded', {
-      winner,
-      finalScore: room.gameState.score,
-    });
+    // Notifier la fin du jeu différemment selon le type de partie
+    if (isTournamentMatch && tournamentId && matchId) {
+      // Pour les parties de tournoi : redirection vers le lobby du tournoi
+      this.server.to(gameId).emit('tournamentMatchEnded', {
+        winner,
+        finalScore: room.gameState.score,
+        tournamentId,
+        matchId,
+        redirectUrl: `/tournaments/${tournamentId}`,
+        message: 'Match terminé ! Retour au lobby du tournoi...',
+        player1Id: room.playersUserIds.player1,
+        player2Id: room.playersUserIds.player2
+      });
+      
+      // Notifier aussi la room du tournoi
+      const tournamentRoom = `tournament_${tournamentId}`;
+      this.server.to(tournamentRoom).emit('tournamentMatchResult', {
+        matchId,
+        winner: winner === 'player1' ? room.gameState.players.player1?.name : room.gameState.players.player2?.name,
+        finalScore: room.gameState.score,
+        player1: room.gameState.players.player1?.name,
+        player2: room.gameState.players.player2?.name
+      });
+    } else {
+      // Pour les parties de matchmaking classiques : comportement normal avec rematch
+      this.server.to(gameId).emit('gameEnded', {
+        winner,
+        finalScore: room.gameState.score,
+      });
+    }
 
     // Sauvegarder le résultat si c'est un match officiel
     if (room.matchId) {
