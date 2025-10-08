@@ -69,7 +69,15 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
     fetchBrackets();
   }, [tournamentId]);
 
+  const isAwaitingPlayers = (match: Match) => {
+    return !match.player1 || !match.player2 || match.player1 === 'TBD' || match.player2 === 'TBD';
+  };
+
   const getMatchStatusIcon = (match: Match) => {
+    if (isAwaitingPlayers(match)) {
+      return '🔲';
+    }
+    
     switch (match.status) {
       case 'pending':
         return '⏳';
@@ -79,6 +87,8 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
         return '✅';
       case 'cancelled':
         return '❌';
+      case 'awaiting_players':
+        return '🔲';
       default:
         return '❓';
     }
@@ -281,7 +291,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                         )}
 
                         {/* Actions selon le statut du match et le rôle de l'utilisateur */}
-                        {match.status === 'pending' && (
+                        {(match.status === 'pending' || match.status === 'active') && !isAwaitingPlayers(match) && (
                           <div className="match-actions">
                             {/* Bouton Jouer pour les participants */}
                             {canUserPlayMatch(match) && (
@@ -292,7 +302,7 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
                                   handleStartMatch(match);
                                 }}
                               >
-                                🎮 Jouer
+                                {match.status === 'active' ? '🎮 Rejoindre' : '🎮 Jouer'}
                               </button>
                             )}
                             

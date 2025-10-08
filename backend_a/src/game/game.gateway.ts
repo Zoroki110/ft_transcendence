@@ -63,7 +63,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private logger = new Logger('GameGateway');
-  private gameRooms = new Map<string, GameRoom>();
+  public gameRooms = new Map<string, GameRoom>(); // Public pour permettre l'accès depuis TournamentsService
   private playerToRoom = new Map<string, string>();
 
   constructor(
@@ -119,67 +119,78 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const isReconnectingPlayer1 = !room.players.player1 && room.playersUserIds.player1 === userId;
       const isReconnectingPlayer2 = !room.players.player2 && room.playersUserIds.player2 === userId;
 
-      // Assigner le joueur
-      if (!room.players.player1 && !isReconnectingPlayer2) {
+      // Assigner le joueur - prioriser la détection par userId pour les tournois
+      if (room.playersUserIds.player1 === userId) {
+        // Ce joueur doit être player1
         room.players.player1 = client.id;
         room.playersNames.player1 = userName;
-        room.playersUserIds.player1 = userId;
         room.gameState.players.player1 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
-        this.logger.log(`🎮 PLAYER1 JOINED: userName=${userName}, userId=${userId}, gameState.players.player1.name=${room.gameState.players.player1.name}`);
-
-        // Annuler le timer d'abandon si reconnexion
-        if (isReconnectingPlayer1 && room.disconnectTimers?.player1) {
-          clearTimeout(room.disconnectTimers.player1);
-          room.disconnectTimers.player1 = undefined;
-          this.logger.log(`✅ RECONNECTION: player1 (${userName}) reconnected, timer cancelled`);
-          this.server.to(gameId).emit('playerReconnected', {
-            player: 'player1',
-            playerName: userName,
-            message: `${userName} s'est reconnecté !`
-          });
-        }
+        this.logger.log(`🎮 TOURNAMENT PLAYER1 JOINED: userName=${userName}, userId=${userId}`);
 
         client.emit('gameJoined', {
           role: 'player1',
           gameState: room.gameState,
         });
-      } else if (!room.players.player2 && !isReconnectingPlayer1) {
+      } else if (room.playersUserIds.player2 === userId) {
+        // Ce joueur doit être player2
         room.players.player2 = client.id;
         room.playersNames.player2 = userName;
-        room.playersUserIds.player2 = userId;
         room.gameState.players.player2 = { name: userName, id: client.id };
         this.playerToRoom.set(client.id, gameId);
-        this.logger.log(`🎮 PLAYER2 JOINED: userName=${userName}, gameState.players.player2.name=${room.gameState.players.player2.name}`);
-
-        // Annuler le timer d'abandon si reconnexion
-        if (isReconnectingPlayer2 && room.disconnectTimers?.player2) {
-          clearTimeout(room.disconnectTimers.player2);
-          room.disconnectTimers.player2 = undefined;
-          this.logger.log(`✅ RECONNECTION: player2 (${userName}) reconnected, timer cancelled`);
-          this.server.to(gameId).emit('playerReconnected', {
-            player: 'player2',
-            playerName: userName,
-            message: `${userName} s'est reconnecté !`
-          });
-        }
+        this.logger.log(`🎮 TOURNAMENT PLAYER2 JOINED: userName=${userName}, userId=${userId}`);
 
         client.emit('gameJoined', {
           role: 'player2',
           gameState: room.gameState,
         });
+      } else if (!room.players.player1 && !room.playersUserIds.player1) {
+        // Room normale de matchmaking - assignation libre
+        room.players.player1 = client.id;
+        room.playersNames.player1 = userName;
+        room.playersUserIds.player1 = userId;
+        room.gameState.players.player1 = { name: userName, id: client.id };
+        this.playerToRoom.set(client.id, gameId);
+        this.logger.log(`🎮 MATCHMAKING PLAYER1 JOINED: userName=${userName}, userId=${userId}`);
 
-        // Démarrer le jeu quand 2 joueurs sont présents (seulement si c'est un nouveau jeu)
-        if (room.gameState.gameStatus === 'waiting') {
-          this.startGame(gameId);
-        }
-      } else {
-        // Déjà 2 joueurs, devenir spectateur
-        room.spectators.add(client.id);
         client.emit('gameJoined', {
-          role: 'spectator',
+          role: 'player1',
           gameState: room.gameState,
         });
+      } else if (!room.players.player2 && !room.playersUserIds.player2) {
+        // Room normale de matchmaking - assignation libre
+        room.players.player2 = client.id;
+        room.playersNames.player2 = userName;
+        room.playersUserIds.player2 = userId;
+        room.gameState.players.player2 = { name: userName, id: client.id };
+        this.playerToRoom.set(client.id, gameId);
+        this.logger.log(`🎮 MATCHMAKING PLAYER2 JOINED: userName=${userName}, userId=${userId}`);
+
+        client.emit('gameJoined', {
+          role: 'player2',
+          gameState: room.gameState,
+        });
+      }
+
+      // Si aucun rôle assigné, devenir spectateur
+      if (!room.players.player1 || room.players.player1 !== client.id) {
+        if (!room.players.player2 || room.players.player2 !== client.id) {
+          // Pas assigné comme joueur, devenir spectateur
+          room.spectators.add(client.id);
+          client.emit('gameJoined', {
+            role: 'spectator',
+            gameState: room.gameState,
+          });
+        }
+      }
+
+      // Démarrer le jeu quand 2 joueurs sont présents ET connectés
+      this.logger.log(`🔍 DEBUG AUTOSTART: gameId=${gameId}, status=${room.gameState.gameStatus}, player1=${!!room.players.player1}, player2=${!!room.players.player2}`);
+      this.logger.log(`🔍 DEBUG PLAYERS: player1=${room.players.player1}, player2=${room.players.player2}`);
+      
+      if (room.gameState.gameStatus === 'waiting' && room.players.player1 && room.players.player2) {
+        this.logger.log(`🎮 BOTH PLAYERS CONNECTED: Starting game ${gameId}`);
+        this.startGame(gameId);
       }
     }
 
@@ -249,6 +260,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = this.gameRooms.get(roomId);
     if (!room || room.gameState.gameStatus !== 'finished') return;
 
+    // Empêcher les rematchs pour les parties de tournoi
+    if (roomId.includes('game_tournament_')) {
+      this.logger.log(`❌ REMATCH BLOCKED: Tournament matches cannot be rematched (roomId: ${roomId})`);
+      client.emit('rematchBlocked', {
+        message: 'Les rematchs ne sont pas autorisés dans les tournois'
+      });
+      return;
+    }
+
     const isPlayer1 = room.players.player1 === client.id;
     const isPlayer2 = room.players.player2 === client.id;
 
@@ -292,6 +312,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const room = this.gameRooms.get(roomId);
     if (!room || room.gameState.gameStatus !== 'finished') return;
+
+    // Empêcher les rematchs pour les parties de tournoi
+    if (roomId.includes('game_tournament_')) {
+      this.logger.log(`❌ REMATCH BLOCKED: Tournament matches cannot be rematched (roomId: ${roomId})`);
+      client.emit('rematchBlocked', {
+        message: 'Les rematchs ne sont pas autorisés dans les tournois'
+      });
+      return;
+    }
 
     const isPlayer1 = room.players.player1 === client.id;
     const isPlayer2 = room.players.player2 === client.id;
@@ -473,7 +502,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       player2Id: match.player2.id,
       player1Username: match.player1.username,
       player2Username: match.player2.username,
-      gameUrl: `/game/tournament_${tournamentId}_match_${match.id}`,
+      gameUrl: `/game/game_tournament_${tournamentId}_match_${match.id}`,
       round: match.round,
       bracketPosition: match.bracketPosition
     }));
@@ -615,6 +644,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Créer une room spécifique pour un match de tournoi
   createTournamentRoom(gameId: string, matchId: number, player1: any, player2: any): GameRoom {
+    this.logger.log(`🔍 DEBUG TOURNAMENT ROOM: Creating room ${gameId} with player1=${player1.username} (id=${player1.id}), player2=${player2.username} (id=${player2.id})`);
+    
     const room: GameRoom = {
       id: gameId,
       players: {},
@@ -811,15 +842,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     room.gameState.gameStatus = 'finished';
 
     // Déterminer si c'est une partie de tournoi ou de matchmaking
-    const isTournamentMatch = gameId.includes('tournament_') && gameId.includes('match_');
+    const isTournamentMatch = gameId.includes('game_tournament_') && gameId.includes('match_');
     let tournamentId: number | null = null;
     let matchId: number | null = null;
 
     if (isTournamentMatch) {
       // Extraire l'ID du tournoi et du match depuis le gameId
       const parts = gameId.split('_');
-      tournamentId = parseInt(parts[1]); // tournament_123_match_456 -> 123
-      matchId = parseInt(parts[3]); // tournament_123_match_456 -> 456
+      tournamentId = parseInt(parts[2]); // game_tournament_123_match_456 -> 123
+      matchId = parseInt(parts[4]); // game_tournament_123_match_456 -> 456
       this.logger.log(`🏆 TOURNAMENT MATCH END: gameId=${gameId}, tournamentId=${tournamentId}, matchId=${matchId}`);
     }
 
@@ -834,7 +865,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     room.rematchRequests = { player1: false, player2: false };
     this.logger.log(`🔄 REMATCH: Requests reset for game ${gameId}`);
 
+    // Déterminer le gagnant en fonction des scores réels
     const winner = room.gameState.score.player1 > room.gameState.score.player2 ? 'player1' : 'player2';
+    
+    this.logger.log(`🏆 WINNER DETERMINATION: score1=${room.gameState.score.player1}, score2=${room.gameState.score.player2}, winner=${winner}`);
 
     this.logger.log(`🏆 GAME END: winner=${winner}, player1=${room.gameState.players.player1?.name}, player2=${room.gameState.players.player2?.name}`);
 
@@ -867,17 +901,75 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notifier la fin du jeu différemment selon le type de partie
     if (isTournamentMatch && tournamentId && matchId) {
-      // Pour les parties de tournoi : redirection vers le lobby du tournoi
-      this.server.to(gameId).emit('tournamentMatchEnded', {
-        winner,
-        finalScore: room.gameState.score,
-        tournamentId,
-        matchId,
-        redirectUrl: `/tournaments/${tournamentId}`,
-        message: 'Match terminé ! Retour au lobby du tournoi...',
-        player1Id: room.playersUserIds.player1,
-        player2Id: room.playersUserIds.player2
-      });
+      // Récupérer les vrais IDs depuis la base de données pour éviter les erreurs d'attribution
+      try {
+        const match = await this.gameService.findOneMatch(matchId);
+        const realPlayer1Id = match.player1.id;
+        const realPlayer2Id = match.player2.id;
+        
+        // CORRECTION CRUCIALE : Déterminer le vrai gagnant en mappant room vers DB
+        let realWinner: string;
+        let realWinnerId: number;
+        
+        // Qui a le meilleur score dans la room ?
+        const roomPlayer1Score = room.gameState.score.player1;
+        const roomPlayer2Score = room.gameState.score.player2;
+        
+        if (roomPlayer1Score > roomPlayer2Score) {
+          // Le player1 de la ROOM a gagné, mais qui est-ce en DB ?
+          const roomWinnerUserId = room.playersUserIds.player1;
+          if (roomWinnerUserId === realPlayer1Id) {
+            realWinner = 'player1';
+            realWinnerId = realPlayer1Id;
+          } else {
+            realWinner = 'player2';
+            realWinnerId = realPlayer2Id;
+          }
+        } else {
+          // Le player2 de la ROOM a gagné, mais qui est-ce en DB ?
+          const roomWinnerUserId = room.playersUserIds.player2;
+          if (roomWinnerUserId === realPlayer1Id) {
+            realWinner = 'player1';
+            realWinnerId = realPlayer1Id;
+          } else {
+            realWinner = 'player2';
+            realWinnerId = realPlayer2Id;
+          }
+        }
+        
+        this.logger.log(`🏆 REAL PLAYER IDS: DB player1=${realPlayer1Id}, DB player2=${realPlayer2Id}`);
+        this.logger.log(`🏆 ROOM PLAYER IDS: room player1=${room.playersUserIds.player1}, room player2=${room.playersUserIds.player2}`);
+        this.logger.log(`🏆 ROOM SCORES: player1=${roomPlayer1Score}, player2=${roomPlayer2Score}`);
+        this.logger.log(`🏆 WINNER MAPPING: room winner has userId=${roomPlayer1Score > roomPlayer2Score ? room.playersUserIds.player1 : room.playersUserIds.player2}`);
+        this.logger.log(`🏆 REAL WINNER: ${realWinner} (userId=${realWinnerId})`);
+        
+        // Pour les parties de tournoi : redirection vers le lobby du tournoi
+        this.server.to(gameId).emit('tournamentMatchEnded', {
+          winner: realWinner, // Utiliser le vrai winner mappé
+          finalScore: room.gameState.score,
+          tournamentId,
+          matchId,
+          redirectUrl: `/tournaments/${tournamentId}`,
+          message: 'Match terminé ! Retour au lobby du tournoi...',
+          player1Id: realPlayer1Id,
+          player2Id: realPlayer2Id
+        });
+        
+        // L'avancement sera géré par le frontend pour éviter les dépendances circulaires
+      } catch (error) {
+        this.logger.error(`❌ Error getting real player IDs for match ${matchId}:`, error);
+        // Fallback aux IDs de la room
+        this.server.to(gameId).emit('tournamentMatchEnded', {
+          winner,
+          finalScore: room.gameState.score,
+          tournamentId,
+          matchId,
+          redirectUrl: `/tournaments/${tournamentId}`,
+          message: 'Match terminé ! Retour au lobby du tournoi...',
+          player1Id: room.playersUserIds.player1,
+          player2Id: room.playersUserIds.player2
+        });
+      }
       
       // Notifier aussi la room du tournoi
       const tournamentRoom = `tournament_${tournamentId}`;

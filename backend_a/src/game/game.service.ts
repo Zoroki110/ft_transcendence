@@ -57,7 +57,17 @@ export class GameService {
   }
 
   async finishMatch(id: number, finishMatchDto: FinishMatchDto) {
-    const match = await this.findOneMatch(id);
+    // Charger le match avec ses relations complètes
+    const match = await this.matchRepo.findOne({
+      where: { id },
+      relations: ['player1', 'player2', 'tournament'],
+    });
+
+    if (!match) {
+      throw new NotFoundException(`Match ${id} not found`);
+    }
+
+    this.logger.log(`🏁 FINISH MATCH: Finishing match ${id}, tournament: ${match.tournament?.id}`);
 
     Object.assign(match, {
       player1Score: finishMatchDto.player1Score,
@@ -66,7 +76,15 @@ export class GameService {
       finishedAt: new Date(),
     });
 
-    return this.matchRepo.save(match);
+    const savedMatch = await this.matchRepo.save(match);
+
+    // Log pour le debug mais pas d'avancement automatique pour éviter les dépendances circulaires
+    if (match.tournament) {
+      this.logger.log(`🏁 TOURNAMENT MATCH FINISHED: Match ${id} from tournament ${match.tournament.id}`);
+      this.logger.log(`📊 SCORES: Player1=${finishMatchDto.player1Score}, Player2=${finishMatchDto.player2Score}`);
+    }
+
+    return savedMatch;
   }
 
   async createQuickMatch() {
