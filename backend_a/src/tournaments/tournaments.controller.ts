@@ -27,6 +27,7 @@ import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { JoinTournamentDto } from './dto/join-tournament.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
+import { AdvanceWinnerDto } from './dto/advance-winner.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 
 @ApiTags('tournaments')
@@ -350,10 +351,15 @@ export class TournamentsController {
   async advanceWinner(
     @Param('id', ParseIntPipe) tournamentId: number,
     @Param('matchId', ParseIntPipe) matchId: number,
-    @Body()
-    body: { winnerId: number; player1Score: number; player2Score: number },
+    @Body() body: AdvanceWinnerDto,
     @Req() req,
   ) {
+    console.log(`🔍 CONTROLLER ADVANCE WINNER: REQUÊTE REÇUE !`);
+    console.log(`🔍 tournamentId=${tournamentId}, matchId=${matchId}`);
+    console.log(`🔍 body=`, JSON.stringify(body));
+    console.log(`🔍 user=`, req.user?.sub, req.user?.username);
+    console.log(`🔍 headers=`, req.headers.authorization ? 'Auth présent' : 'PAS D\'AUTH');
+    
     return this.tournamentsService.advanceWinner(
       tournamentId,
       matchId,
