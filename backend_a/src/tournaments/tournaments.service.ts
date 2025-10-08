@@ -404,6 +404,20 @@ export class TournamentsService {
 
   // ===== GESTION DES BRACKETS =====
 
+  private calculateTotalRounds(participantCount: number): number {
+    // Pour un tournoi à élimination simple : log2(participants)
+    return Math.ceil(Math.log2(participantCount));
+  }
+
+  private calculateMatchesPerRound(participantCount: number, round: number): number {
+    // Round 1: participantCount / 2
+    // Round 2: participantCount / 4  
+    // Round 3: participantCount / 8, etc.
+    // Mais on doit s'assurer que le nombre est entier et correct
+    const matchesInRound = Math.floor(participantCount / Math.pow(2, round));
+    return Math.max(1, matchesInRound); // Au minimum 1 match (la finale)
+  }
+
   async generateBrackets(
     tournamentId: number,
     userId: number,
@@ -438,7 +452,7 @@ export class TournamentsService {
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
         const result = await this.matchRepository.query(`
-          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id, createdat)
+          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, "player1Score", "player2Score", tournament_id, createdat)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
           RETURNING id
         `, [
@@ -505,26 +519,19 @@ export class TournamentsService {
     const shuffled = [...tournament.participants].sort(() => Math.random() - 0.5);
     console.log('🎲 ORDRE ALÉATOIRE:', shuffled.map(p => p.username));
 
-    // ÉTAPE 3: Créer les matches du premier round avec TypeORM
-    for (let i = 0; i < shuffled.length; i += 2) {
-      if (i + 1 < shuffled.length) {
-        const player1 = shuffled[i];
-        const player2 = shuffled[i + 1];
-        
-        const match = this.matchRepository.create({
-          player1: player1,
-          player2: player2,
-          round: 1,
-          bracketPosition: Math.floor(i / 2),
-          status: 'pending',
-          player1Score: 0,
-          player2Score: 0,
-          tournament: tournament
-        });
-
-        await this.matchRepository.save(match);
-        console.log(`🆚 MATCH CRÉÉ: ${player1.username} vs ${player2.username}`);
-      }
+    // ÉTAPE 3: Créer tous les matches du tournoi (structure complète)
+    console.log('🏗️ CREATING FULL TOURNAMENT STRUCTURE...');
+    
+    try {
+      await this.generateSingleEliminationMatchesInTransaction(
+        shuffled,
+        tournamentId,
+        this.matchRepository.manager // Utiliser le manager par défaut
+      );
+      console.log('✅ FULL TOURNAMENT STRUCTURE CREATED');
+    } catch (error) {
+      console.error('❌ ERROR CREATING TOURNAMENT STRUCTURE:', error);
+      throw error;
     }
 
     // ÉTAPE 4: Démarrer le tournoi avec TypeORM
@@ -583,7 +590,7 @@ export class TournamentsService {
         for (let i = 0; i < tournament.participants.length; i += 2) {
           if (i + 1 < tournament.participants.length) {
             const result = await this.matchRepository.query(`
-              INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
+              INSERT INTO match (player1_id, player2_id, round, bracket_position, status, "player1Score", "player2Score", tournament_id)
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
               RETURNING id
             `, [
@@ -668,6 +675,13 @@ export class TournamentsService {
     }
 
     const matches = await this.getMatchesWithPlayers(tournamentId);
+    
+    // CALCUL FORCÉ DE LA STRUCTURE COMPLÈTE
+    const participantCount = tournament.participants?.length || 4;
+    const expectedTotalRounds = this.calculateTotalRounds(participantCount);
+    
+    console.log(`🔍 BRACKETS DEBUG: Tournament ${tournamentId} with ${participantCount} participants should have ${expectedTotalRounds} rounds`);
+    console.log(`🔍 BRACKETS DEBUG: Found ${matches.length} matches in database`);
 
     // Organiser les matches par round
     const bracketsByRound = matches.reduce(
@@ -693,12 +707,41 @@ export class TournamentsService {
       {} as Record<number, any[]>,
     );
 
+    // S'ASSURER que tous les rounds existent même s'ils sont vides
+    for (let round = 1; round <= expectedTotalRounds; round++) {
+      if (!bracketsByRound[round]) {
+        console.log(`🔧 BRACKETS FIX: Creating empty round ${round}`);
+        bracketsByRound[round] = [];
+        
+        // Créer des matches vides pour ce round
+        const matchesInRound = this.calculateMatchesPerRound(participantCount, round);
+        for (let i = 0; i < matchesInRound; i++) {
+          bracketsByRound[round].push({
+            id: null,
+            player1: 'TBD',
+            player2: 'TBD',
+            player1Id: null,
+            player2Id: null,
+            player1Score: 0,
+            player2Score: 0,
+            status: 'pending',
+            bracketPosition: i,
+            gameId: null,
+          });
+        }
+      }
+    }
+
+    const finalTotalRounds = Math.max(expectedTotalRounds, Object.keys(bracketsByRound).length);
+    
+    console.log(`🏆 BRACKETS FINAL: Returning ${finalTotalRounds} rounds for tournament ${tournamentId}`);
+
     return {
       tournamentId,
       tournamentName: tournament.name,
       status: tournament.status,
       type: tournament.type,
-      totalRounds: Object.keys(bracketsByRound).length,
+      totalRounds: finalTotalRounds,
       brackets: bracketsByRound,
     };
   }
@@ -736,8 +779,8 @@ export class TournamentsService {
       id: match.id,
       player1: { id: match.player1_id, username: match.player1_username },
       player2: { id: match.player2_id, username: match.player2_username },
-      player1Score: match.player1score || 0,
-      player2Score: match.player2score || 0,
+      player1Score: match.player1Score || 0,
+      player2Score: match.player2Score || 0,
       status: match.status,
       round: match.round,
       bracketPosition: match.bracket_position,
@@ -794,6 +837,7 @@ export class TournamentsService {
     
     // Vérifier si la room existe déjà
     if (!this.gameGateway.gameRooms?.has(gameId)) {
+      console.log(`🔍 DEBUG ROOM CREATION: match.player1=${match.player1.username} (id=${match.player1.id}), match.player2=${match.player2.username} (id=${match.player2.id})`);
       this.gameGateway.createTournamentRoom(gameId, matchId, match.player1, match.player2);
       console.log(`🎮 Game room créée: ${gameId}`);
     } else {
@@ -829,6 +873,8 @@ export class TournamentsService {
     player2Score: number,
     userId: number,
   ): Promise<any> {
+    console.log(`🏆 ADVANCE WINNER: tournamentId=${tournamentId}, matchId=${matchId}, winnerId=${winnerId}, scores=${player1Score}-${player2Score}, userId=${userId}`);
+    
     const tournament = await this.findOne(tournamentId, userId);
 
     // Vérifier si l'utilisateur peut faire avancer le tournoi
@@ -949,28 +995,44 @@ export class TournamentsService {
         };
       }
 
-      // Créer les matches du round suivant
-      const nextRoundMatches: Partial<Match>[] = [];
+      // Créer les nouveaux matches pour le round suivant avec les gagnants
+      console.log(`🏆 WINNERS: ${winners.length} winners to place: ${winners.map(w => w.username).join(', ')}`);
+      console.log(`🎯 NEXT-ROUND: Creating ${Math.floor(winners.length / 2)} new matches for round ${nextRound}`);
+
+      let newMatchesCreated = 0;
       for (let i = 0; i < winners.length; i += 2) {
         if (i + 1 < winners.length) {
-          nextRoundMatches.push({
+          // Créer un nouveau match avec les deux gagnants
+          const newMatch = await this.matchRepository.create({
             player1: winners[i],
             player2: winners[i + 1],
-            tournament: { id: tournament.id } as Tournament,
+            tournament: tournament,
             round: nextRound,
             bracketPosition: Math.floor(i / 2),
             status: 'pending',
+            player1Score: 0,
+            player2Score: 0,
           });
+
+          const savedMatch = await this.matchRepository.save(newMatch);
+
+          // Générer le gameId pour ce match
+          const gameId = `game_tournament_${tournament.id}_match_${savedMatch.id}`;
+          await this.matchRepository.update(savedMatch.id, {
+            gameId: gameId
+          });
+
+          console.log(`✅ CREATED NEW MATCH ${savedMatch.id}: ${winners[i].username} vs ${winners[i + 1].username} (Round ${nextRound})`);
+          newMatchesCreated++;
         }
       }
 
-      if (nextRoundMatches.length > 0) {
-        await this.matchRepository.save(nextRoundMatches);
+      if (newMatchesCreated > 0) {
         return {
           isChampion: false,
           nextRoundCreated: true,
           nextRound: nextRound,
-          matchesCreated: nextRoundMatches.length,
+          matchesCreated: newMatchesCreated,
         };
       }
     }
@@ -1142,36 +1204,40 @@ export class TournamentsService {
     tournamentId: number,
     transactionalEntityManager: any
   ): Promise<Match[]> {
-    console.log('🎯 AUTO-BRACKETS: Generating matches within transaction');
+    console.log('🏆 FULL-BRACKETS: Generating complete tournament structure');
     
-    const matches: Match[] = [];
+    const allMatches: Match[] = [];
+    const totalRounds = this.calculateTotalRounds(participants.length);
+    
+    console.log(`🏆 FULL-BRACKETS: Creating ${totalRounds} rounds for ${participants.length} participants`);
+    
+    // Logs détaillés de la structure du tournoi
+    for (let r = 1; r <= totalRounds; r++) {
+      const matchesInRound = this.calculateMatchesPerRound(participants.length, r);
+      console.log(`📊 STRUCTURE: Round ${r} will have ${matchesInRound} matches`);
+    }
 
+    // ROUND 1: Créer tous les matches avec les vrais participants
     for (let i = 0; i < participants.length; i += 2) {
       if (i + 1 < participants.length) {
-        // Utiliser le transactionalEntityManager pour la requête SQL
         const result = await transactionalEntityManager.query(`
-          INSERT INTO match (player1_id, player2_id, round, bracket_position, status, player1score, player2score, tournament_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING id
+          INSERT INTO match (player1_id, player2_id, tournament_id, round, bracket_position, status, "player1Score", "player2Score") 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+          RETURNING *
         `, [
-          participants[i].id,
-          participants[i + 1].id,
-          1,
-          Math.floor(i / 2),
-          'pending',
+          participants[i].id,      // Player1 réel
+          participants[i + 1].id,  // Player2 réel
+          tournamentId,
+          1,                       // Round 1
+          Math.floor(i / 2),       // Position dans le bracket
+          'pending',               
           0,
-          0,
-          tournamentId
+          0
         ]);
-
-        console.log(`🎯 AUTO-BRACKETS: Created match ${matches.length + 1}:`, {
-          id: result[0].id,
-          player1: participants[i].username,
-          player2: participants[i + 1].username,
-          tournament_id: tournamentId
-        });
-
-        // Créer un objet Match pour le retour
+        
+        console.log(`🎮 ROUND 1: Created match ${result[0].id} - ${participants[i].username} vs ${participants[i + 1].username}`);
+        
+        // Créer l'objet Match pour le retour
         const match = this.matchRepository.create({});
         match.id = result[0].id;
         match.player1 = participants[i];
@@ -1181,13 +1247,27 @@ export class TournamentsService {
         match.status = 'pending';
         match.player1Score = 0;
         match.player2Score = 0;
-
-        matches.push(match);
+        
+        allMatches.push(match);
       }
     }
 
-    console.log('🎯 AUTO-BRACKETS: Total matches created:', matches.length);
-    return matches;
+    // ROUNDS 2+: Ne pas créer de matches vides maintenant car player1_id/player2_id sont NOT NULL
+    // Les matches des rounds suivants seront créés automatiquement lors de l'avancement des gagnants
+    console.log(`🎯 STRUCTURE: Only creating Round 1 matches. Future rounds will be created when winners advance.`);
+
+    console.log(`✅ FULL-BRACKETS: Complete tournament structure created with ${totalRounds} rounds`);
+    console.log(`🎯 FULL-BRACKETS: Returning ${allMatches.length} playable matches from round 1`);
+    
+    // Vérification finale - compter les matches créés par round
+    for (let r = 1; r <= totalRounds; r++) {
+      const countResult = await transactionalEntityManager.query(`
+        SELECT COUNT(*) as count FROM match WHERE tournament_id = $1 AND round = $2
+      `, [tournamentId, r]);
+      console.log(`✅ VERIFICATION: Round ${r} has ${countResult[0].count} matches in database`);
+    }
+    
+    return allMatches;
   }
 
   private async getCurrentRound(tournamentId: number): Promise<number> {
