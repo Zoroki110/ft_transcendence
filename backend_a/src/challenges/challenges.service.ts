@@ -3,26 +3,36 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Challenge, ChallengeStatus } from '../entities/challenge.entity';
 import { User } from '../entities/user.entity';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
+import { GameService } from '../game/game.service';
+import { GameGateway } from '../game/game.gateway';
 
 @Injectable()
 export class ChallengesService {
+  private readonly logger = new Logger('ChallengesService');
+
   constructor(
     @InjectRepository(Challenge)
     private readonly challengeRepo: Repository<Challenge>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly gameService: GameService,
+    @Inject(forwardRef(() => GameGateway))
+    private readonly gameGateway: GameGateway,
   ) {}
 
   async createChallenge(
     challengerId: number,
     dto: CreateChallengeDto,
-  ): Promise<Challenge> {
+  ): Promise<Challenge & { gameId?: string }> {
     // Vérifier que les deux utilisateurs existent
     const [challenger, challenged] = await Promise.all([
       this.userRepo.findOne({ where: { id: challengerId } }),
@@ -57,10 +67,35 @@ export class ChallengesService {
       status: ChallengeStatus.PENDING,
     });
 
-    return await this.challengeRepo.save(challenge);
+    let savedChallenge = await this.challengeRepo.save(challenge);
+
+    // Créer immédiatement la room de jeu en attente
+    const gameId = `challenge_${savedChallenge.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(`🎮 Défi créé #${savedChallenge.id}: ${challenger.username} défie ${challenged.username}`);
+    this.logger.log(`🎮 Room créée en attente: ${gameId}`);
+
+    // Créer la room avec les joueurs pré-assignés
+    this.gameService.createChallengeRoom(
+      gameId,
+      challengerId,
+      dto.challengedId,
+      challenger.username,
+      challenged.username,
+    );
+
+    // Sauvegarder le gameId dans le challenge
+    savedChallenge.gameId = gameId;
+    savedChallenge = await this.challengeRepo.save(savedChallenge);
+
+    // Retourner le challenge avec le gameId pour que le frontend redirige le challenger
+    return {
+      ...savedChallenge,
+      gameId,
+    };
   }
 
-  async acceptChallenge(challengeId: number, userId: number): Promise<Challenge> {
+  async acceptChallenge(challengeId: number, userId: number): Promise<Challenge & { gameId?: string }> {
     const challenge = await this.challengeRepo.findOne({
       where: { id: challengeId },
       relations: ['challenger', 'challenged'],
@@ -77,7 +112,32 @@ export class ChallengesService {
     }
 
     challenge.status = ChallengeStatus.ACCEPTED;
-    return await this.challengeRepo.save(challenge);
+    const savedChallenge = await this.challengeRepo.save(challenge);
+
+    // Récupérer le gameId existant (créé lors de l'envoi du défi)
+    const gameId = challenge.gameId;
+
+    if (!gameId) {
+      this.logger.error(`❌ No gameId found for challenge ${challengeId}`);
+      throw new BadRequestException('Challenge game room not found');
+    }
+
+    this.logger.log(`🎮 Défi accepté #${challengeId}: ${challenge.challenger.username} vs ${challenge.challenged.username}`);
+    this.logger.log(`🎮 Utilisation du gameId existant: ${gameId}`);
+
+    // Notifier le challenger via WebSocket qu'il peut rejoindre (il attend déjà dans la room)
+    this.gameGateway.notifyChallengeAccepted(
+      challenge.challengerId,
+      gameId,
+      challenge.challenged.username,
+    );
+    this.logger.log(`🔔 Notification envoyée au challenger (ID: ${challenge.challengerId})`);
+
+    // Retourner le challenge avec le gameId pour que le frontend puisse rediriger
+    return {
+      ...savedChallenge,
+      gameId,
+    };
   }
 
   async declineChallenge(challengeId: number, userId: number): Promise<void> {

@@ -4,9 +4,13 @@ import { ChallengesController } from './challenges.controller';
 import { ChallengesService } from './challenges.service';
 import { Challenge } from '../entities/challenge.entity';
 import { User } from '../entities/user.entity';
+import { GameModule } from '../game/game.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Challenge, User])],
+  imports: [
+    TypeOrmModule.forFeature([Challenge, User]),
+    GameModule,
+  ],
   controllers: [ChallengesController],
   providers: [ChallengesService],
   exports: [ChallengesService],
