@@ -135,12 +135,14 @@ const Leaderboard: React.FC = () => {
   const currentUserRank = rankedUsers.find(u => u.id === user?.id)?.rank;
 
   const getPodiumIcon = (rank: number) => {
-    switch (rank) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `#${rank}`;
+    if (rank <= 3) {
+      return (
+        <svg className={`medal-icon rank-${rank}`} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </svg>
+      );
     }
+    return <span className="rank-number">#{rank}</span>;
   };
 
   const getSortLabel = (sort: SortType) => {
@@ -157,13 +159,20 @@ const Leaderboard: React.FC = () => {
       <div className="leaderboard-page">
         <div className="page-header">
           <div className="container">
-            <h1 className="page-title">🏆 Leaderboard</h1>
-            <p className="page-subtitle">Classement des joueurs</p>
+            <div className="header-content">
+              <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              <div>
+                <h1 className="page-title">Leaderboard</h1>
+                <p className="page-subtitle">Classement des joueurs</p>
+              </div>
+            </div>
           </div>
         </div>
         <div className="container">
           <div className="leaderboard-loading">
-            <div className="loading-icon">⏳</div>
+            <div className="loading-spinner"></div>
             <p>Chargement du classement...</p>
           </div>
         </div>
@@ -176,16 +185,28 @@ const Leaderboard: React.FC = () => {
       <div className="leaderboard-page">
         <div className="page-header">
           <div className="container">
-            <h1 className="page-title">🏆 Leaderboard</h1>
-            <p className="page-subtitle">Classement des joueurs</p>
+            <div className="header-content">
+              <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              <div>
+                <h1 className="page-title">Leaderboard</h1>
+                <p className="page-subtitle">Classement des joueurs</p>
+              </div>
+            </div>
           </div>
         </div>
         <div className="container">
           <div className="leaderboard-error">
-            <div className="error-icon">❌</div>
+            <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             <p>{error}</p>
             <button onClick={fetchLeaderboardData} className="btn btn-primary">
-              🔄 Réessayer
+              <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Réessayer
             </button>
           </div>
         </div>
@@ -197,11 +218,25 @@ const Leaderboard: React.FC = () => {
     <div className="leaderboard-page">
       <div className="page-header">
         <div className="container">
-          <h1 className="page-title">🏆 Leaderboard</h1>
-          <p className="page-subtitle">
-            Classement des {rankedUsers.length} joueurs
-            {currentUserRank && ` • Votre position: ${getPodiumIcon(currentUserRank)}`}
-          </p>
+          <div className="header-content">
+            <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+            <div>
+              <h1 className="page-title">Leaderboard</h1>
+              <p className="page-subtitle">
+                Classement des {rankedUsers.length} joueurs
+                {currentUserRank && (
+                  <span className="user-rank-badge">
+                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    Votre position: #{currentUserRank}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -210,29 +245,39 @@ const Leaderboard: React.FC = () => {
           <div className="card">
             <div className="controls-section">
               <div className="control-group">
-                <label className="control-label">Trier par:</label>
+                <label className="control-label">
+                  <svg className="label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                  Trier par
+                </label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortType)}
                   className="select"
                 >
-                  <option value="winRate">🎯 Taux de victoire</option>
-                  <option value="gamesWon">🏆 Victoires</option>
-                  <option value="tournamentsWon">🏅 Tournois gagnés</option>
-                  <option value="totalScore">📊 Score total</option>
+                  <option value="winRate">Taux de victoire</option>
+                  <option value="gamesWon">Victoires</option>
+                  <option value="tournamentsWon">Tournois gagnés</option>
+                  <option value="totalScore">Score total</option>
                 </select>
               </div>
 
               <div className="control-group">
-                <label className="control-label">Filtrer:</label>
+                <label className="control-label">
+                  <svg className="label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filtrer
+                </label>
                 <select
                   value={filterBy}
                   onChange={(e) => setFilterBy(e.target.value as FilterType)}
                   className="select"
                 >
-                  <option value="all">👥 Tous les joueurs</option>
-                  <option value="active">🟢 Joueurs en ligne</option>
-                  <option value="top10">⭐ Top 10</option>
+                  <option value="all">Tous les joueurs</option>
+                  <option value="active">Joueurs en ligne</option>
+                  <option value="top10">Top 10</option>
                 </select>
               </div>
 
@@ -241,7 +286,10 @@ const Leaderboard: React.FC = () => {
                 className="btn btn-secondary"
                 disabled={loading}
               >
-                🔄 Actualiser
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Actualiser
               </button>
             </div>
           </div>
@@ -250,7 +298,9 @@ const Leaderboard: React.FC = () => {
         {rankedUsers.length === 0 ? (
           <div className="card">
             <div className="leaderboard-empty">
-              <div className="empty-icon">🏆</div>
+              <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
               <h3>Aucun joueur trouvé</h3>
               <p>Aucun joueur ne correspond aux critères sélectionnés.</p>
             </div>
@@ -261,16 +311,47 @@ const Leaderboard: React.FC = () => {
             {rankedUsers.length >= 3 && filterBy !== 'active' && (
               <div className="leaderboard-podium">
                 <div className="card">
-                  <h3 className="podium-title">🏆 Podium</h3>
+                  <div className="podium-header">
+                    <svg className="podium-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    <h3 className="podium-title">Podium</h3>
+                  </div>
                   <div className="podium-grid">
                     {rankedUsers.slice(0, 3).map((rankedUser, index) => (
                       <div key={rankedUser.id} className={`podium-position position-${index + 1}`}>
-                        <div className="podium-rank">{getPodiumIcon(index + 1)}</div>
-                        <div className="podium-avatar">{rankedUser.avatar}</div>
+                        <div className="podium-rank-badge">
+                          {index === 0 && (
+                            <svg className="medal-svg gold" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                            </svg>
+                          )}
+                          {index === 1 && (
+                            <svg className="medal-svg silver" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                            </svg>
+                          )}
+                          {index === 2 && (
+                            <svg className="medal-svg bronze" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="podium-avatar">
+                          {rankedUser.avatar || (
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                          )}
+                        </div>
                         <div className="podium-info">
                           <div className="podium-name">
                             {rankedUser.displayName || rankedUser.username}
-                            {rankedUser.isOnline && <span className="online-indicator">🟢</span>}
+                            {rankedUser.isOnline && (
+                              <span className="online-indicator">
+                                <span className="online-dot"></span>
+                              </span>
+                            )}
                           </div>
                           <div className="podium-stat">
                             {sortBy === 'winRate' && `${rankedUser.winRate.toFixed(1)}%`}
