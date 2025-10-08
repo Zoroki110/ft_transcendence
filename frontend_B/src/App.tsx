@@ -4,6 +4,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { TournamentProvider } from './contexts/TournamentContext';
 import { UserProvider } from './contexts/UserContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Navigation from './components/Navigation';
 import ErrorBoundary from './components/ErrorBoundary';
 // import OnlineStatusManager from './components/OnlineStatusManager'; // ← DÉSACTIVÉ temporairement
@@ -38,13 +39,14 @@ function App() {
   return (
     <ErrorBoundary>
       <UserProvider>
-        <TournamentProvider>
-          <Router>
-            <div className="app">
-              {/* <OnlineStatusManager /> */}
-              <TabSyncManager />
-              <Navigation />
-              <main className="main-content">
+        <NotificationProvider>
+          <TournamentProvider>
+            <Router>
+              <div className="app">
+                {/* <OnlineStatusManager /> */}
+                <TabSyncManager />
+                <Navigation />
+                <main className="main-content">
                 <Routes>
                 {/* Pages publiques */}
                 <Route path="/" element={<Home />} />
@@ -85,7 +87,8 @@ function App() {
           </div>
         </Router>
       </TournamentProvider>
-    </UserProvider>
+        </NotificationProvider>
+      </UserProvider>
     </ErrorBoundary>
   );
 }

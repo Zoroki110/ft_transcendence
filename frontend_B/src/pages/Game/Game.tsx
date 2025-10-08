@@ -1,7 +1,7 @@
 // frontend_B/src/pages/Game/Game.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { gameAPI, tournamentAPI } from '../../services/api';
+import { gameAPI, tournamentAPI, api, userAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import PongGame from '../../components/PongGame/PongGame';
 import './Game.css';
@@ -40,6 +40,7 @@ const Game: React.FC = () => {
   const [rematchRequest, setRematchRequest] = useState<{ fromPlayer: string; fromName: string } | null>(null);
   const [waitingForRematch, setWaitingForRematch] = useState(false);
   const [currentSocketId, setCurrentSocketId] = useState<string | null>(null);
+  const [friendRequestSent, setFriendRequestSent] = useState<Set<string>>(new Set());
 
   // Détecter si c'est un match de tournoi
   const isTournamentMatch = (gameId || lobbyId)?.startsWith('tournament_') || false;
@@ -193,6 +194,36 @@ const Game: React.FC = () => {
     console.log('❌ GAME: Rematch refusé par l\'adversaire');
     setRematchRequest(null);
     setWaitingForRematch(false);
+  };
+
+  const handleAddFriend = async (playerUsername: string) => {
+    try {
+      console.log(`🔍 Recherche du joueur: ${playerUsername}`);
+
+      // Trouver l'ID du joueur par son username
+      const response = await userAPI.searchUsers(playerUsername);
+      console.log('📋 Résultats de recherche:', response.data);
+
+      const players = response.data;
+      const player = players.find((p: any) => p.username === playerUsername);
+
+      if (!player) {
+        console.error(`❌ Joueur "${playerUsername}" introuvable`);
+        alert('Joueur introuvable');
+        return;
+      }
+
+      console.log(`✅ Joueur trouvé: ID=${player.id}, username=${player.username}`);
+
+      // Envoyer la demande d'ami
+      await userAPI.sendFriendRequest(player.id);
+      setFriendRequestSent(prev => new Set(prev).add(playerUsername));
+      alert(`Demande d'ami envoyée à ${playerUsername} !`);
+      console.log(`✓ Demande d'ami envoyée à ${playerUsername} (ID: ${player.id})`);
+    } catch (err: any) {
+      console.error('❌ Erreur lors de la demande d\'ami:', err);
+      alert(err.response?.data?.message || 'Erreur lors de l\'envoi de la demande d\'ami');
+    }
   };
 
   // Handler pour les matches de tournoi
@@ -351,12 +382,30 @@ const Game: React.FC = () => {
           <div className="game-sidebar">
             <div className="card game-players">
               <h3 className="sidebar-title">👥 Joueurs</h3>
-              {gameData.players.map((player) => (
-                <div key={player.id} className="player-item">
-                  <span className="player-avatar">{player.avatar || '😀'}</span>
-                  <span className="player-username">{player.username}</span>
-                </div>
-              ))}
+              <div className="player-item">
+                <span className="player-username">{playerNames.player1}</span>
+                {playerNames.player1 !== 'Joueur 1' && playerNames.player1 !== 'En attente...' && (
+                  <button
+                    className="btn-add-friend"
+                    onClick={() => handleAddFriend(playerNames.player1)}
+                    disabled={friendRequestSent.has(playerNames.player1)}
+                  >
+                    {friendRequestSent.has(playerNames.player1) ? '✓ Envoyé' : '👥 Ami'}
+                  </button>
+                )}
+              </div>
+              <div className="player-item">
+                <span className="player-username">{playerNames.player2}</span>
+                {playerNames.player2 !== 'Joueur 2' && playerNames.player2 !== 'En attente...' && (
+                  <button
+                    className="btn-add-friend"
+                    onClick={() => handleAddFriend(playerNames.player2)}
+                    disabled={friendRequestSent.has(playerNames.player2)}
+                  >
+                    {friendRequestSent.has(playerNames.player2) ? '✓ Envoyé' : '👥 Ami'}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="card game-spectators">

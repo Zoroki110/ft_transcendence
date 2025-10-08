@@ -224,11 +224,6 @@ const Chat: React.FC = () => {
                 className={`conversation-item ${selectedConversation?.id === conv.user.id ? 'active' : ''}`}
                 onClick={() => selectConversation(conv.user)}
               >
-                <img
-                  src={conv.user.avatar || '/default-avatar.png'}
-                  alt={conv.user.username}
-                  className="conversation-avatar"
-                />
                 <div className="conversation-info">
                   <h3>{conv.user.displayName || conv.user.username}</h3>
                   <p className="last-message">
@@ -240,7 +235,6 @@ const Chat: React.FC = () => {
                 {conv.unreadCount > 0 && (
                   <span className="unread-badge">{conv.unreadCount}</span>
                 )}
-                <span className={`status-indicator ${conv.user.isOnline ? 'online' : 'offline'}`} />
               </div>
             ))
           ) : (
@@ -253,17 +247,7 @@ const Chat: React.FC = () => {
         {selectedConversation ? (
           <>
             <div className="chat-header">
-              <img
-                src={selectedConversation.avatar || '/default-avatar.png'}
-                alt={selectedConversation.username}
-                className="header-avatar"
-              />
-              <div>
-                <h2>{selectedConversation.displayName || selectedConversation.username}</h2>
-                <p className={`status ${selectedConversation.isOnline ? 'online' : 'offline'}`}>
-                  {selectedConversation.isOnline ? 'Online' : 'Offline'}
-                </p>
-              </div>
+              <h2>{selectedConversation.displayName || selectedConversation.username}</h2>
             </div>
 
             <div className="messages-container">

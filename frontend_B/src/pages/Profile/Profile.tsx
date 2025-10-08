@@ -39,7 +39,9 @@ const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
-  
+  const [isFriend, setIsFriend] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
+
   // Déterminer si c'est mon profil ou celui d'un autre
   const isMyProfile = !profileUserId || (currentUser && profileUserId === currentUser.id.toString());
   const targetUserId = isMyProfile ? currentUser?.id : parseInt(profileUserId || '0');
@@ -64,7 +66,19 @@ const Profile: React.FC = () => {
       setProfileUser(userResponse.data);
       setUserStats(statsResponse.data);
       setLastUpdateTime(new Date().toLocaleTimeString());
-      
+
+      // Vérifier si l'utilisateur est déjà ami (seulement si ce n'est pas mon profil)
+      if (!isMyProfile && currentUser) {
+        try {
+          const friendsResponse = await userAPI.getMyFriends();
+          const friends = friendsResponse.data;
+          const isAlreadyFriend = friends.some((friend: any) => friend.id === userId);
+          setIsFriend(isAlreadyFriend);
+        } catch (err) {
+          console.error('Erreur lors de la vérification des amis:', err);
+        }
+      }
+
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur de chargement du profil';
       setError(message);
@@ -72,7 +86,7 @@ const Profile: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isMyProfile]);
+  }, [isMyProfile, currentUser]);
   
   // Charger les données au montage et quand l'utilisateur change
   useEffect(() => {
@@ -111,6 +125,19 @@ const Profile: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [targetUserId, loadUserData]);
   
+  // Fonction pour envoyer une demande d'ami
+  const handleAddFriend = async () => {
+    if (!targetUserId) return;
+
+    try {
+      await userAPI.sendFriendRequest(targetUserId);
+      setFriendRequestSent(true);
+      alert('Demande d\'ami envoyée !');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de l\'envoi de la demande d\'ami');
+    }
+  };
+
   // Fonction pour forcer le rechargement
   const handleRefresh = useCallback(() => {
     if (targetUserId) {
@@ -248,18 +275,26 @@ const Profile: React.FC = () => {
                 </button>
               ) : (
                 <div className="profile-public-actions">
-                  <button 
+                  <button
                     onClick={() => navigate(`/game/challenge/${profileUser.id}`)}
                     className="btn btn-secondary"
                   >
                     🎮 Défier en duel
                   </button>
-                  <button 
-                    onClick={() => {/* TODO: Add friend logic */}}
-                    className="btn btn-primary"
-                  >
-                    👤 Ajouter ami
-                  </button>
+                  {!isFriend && (
+                    <button
+                      onClick={handleAddFriend}
+                      className="btn btn-primary"
+                      disabled={friendRequestSent}
+                    >
+                      {friendRequestSent ? '✓ Demande envoyée' : '👤 Ajouter ami'}
+                    </button>
+                  )}
+                  {isFriend && (
+                    <div className="friend-badge">
+                      ✓ Ami
+                    </div>
+                  )}
                 </div>
               )}
             </div>
