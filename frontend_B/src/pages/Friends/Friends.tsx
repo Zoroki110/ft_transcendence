@@ -39,6 +39,32 @@ const Friends: React.FC = () => {
     }
   }, [activeTab]);
 
+  // Recharger les requests périodiquement pour détecter les nouvelles demandes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeTab === 'requests') {
+        loadPendingRequests();
+      } else {
+        // Charger silencieusement le nombre sans changer d'onglet
+        api.get('/users/me/friends/requests').then(response => {
+          setPendingRequests(response.data);
+        }).catch(() => {});
+      }
+    }, 5000); // Toutes les 5 secondes
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  // Écouter l'événement de nouvelle demande d'ami
+  useEffect(() => {
+    const handleFriendRequestReceived = () => {
+      loadPendingRequests();
+    };
+
+    window.addEventListener('friendRequestReceived', handleFriendRequestReceived);
+    return () => window.removeEventListener('friendRequestReceived', handleFriendRequestReceived);
+  }, []);
+
   const loadFriends = async () => {
     try {
       setLoading(true);
@@ -164,25 +190,17 @@ const Friends: React.FC = () => {
             ) : searchResults.length > 0 ? (
               searchResults.map((user) => (
                 <div key={user.id} className="user-card">
-                  <img
-                    src={user.avatar || '/default-avatar.png'}
-                    alt={user.username}
-                    className="user-avatar"
-                  />
                   <div className="user-info">
                     <h3>{user.displayName || user.username}</h3>
-                    <p className={`status ${user.isOnline ? 'online' : 'offline'}`}>
-                      {user.isOnline ? 'Online' : 'Offline'}
-                    </p>
                     <p className="stats">
-                      Wins: {user.gamesWon || 0} / Losses: {user.gamesLost || 0}
+                      🏆 {user.gamesWon || 0} victoires • ❌ {user.gamesLost || 0} défaites
                     </p>
                   </div>
                   <button
                     className="btn-primary"
                     onClick={() => sendFriendRequest(user.id)}
                   >
-                    Add Friend
+                    👥 Ajouter ami
                   </button>
                 </div>
               ))
@@ -200,15 +218,10 @@ const Friends: React.FC = () => {
           ) : pendingRequests.length > 0 ? (
             pendingRequests.map((request) => (
               <div key={request.id} className="user-card">
-                <img
-                  src={request.requester.avatar || '/default-avatar.png'}
-                  alt={request.requester.username}
-                  className="user-avatar"
-                />
                 <div className="user-info">
                   <h3>{request.requester.displayName || request.requester.username}</h3>
                   <p className="request-date">
-                    Sent {new Date(request.createdAt).toLocaleDateString()}
+                    📅 Envoyée le {new Date(request.createdAt).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
                 <div className="button-group">
@@ -216,13 +229,13 @@ const Friends: React.FC = () => {
                     className="btn-success"
                     onClick={() => acceptFriendRequest(request.id)}
                   >
-                    Accept
+                    ✓ Accepter
                   </button>
                   <button
                     className="btn-danger"
                     onClick={() => rejectFriendRequest(request.id)}
                   >
-                    Reject
+                    ✕ Refuser
                   </button>
                 </div>
               </div>
@@ -240,24 +253,11 @@ const Friends: React.FC = () => {
           ) : friends.length > 0 ? (
             friends.map((friend) => (
               <div key={friend.id} className="user-card">
-                <div className="user-header">
-                  <div className="avatar-container">
-                    <img
-                      src={friend.avatar || '/default-avatar.png'}
-                      alt={friend.username}
-                      className="user-avatar"
-                    />
-                    <span className={`status-indicator ${friend.isOnline ? 'online' : 'offline'}`}></span>
-                  </div>
-                  <div className="user-info">
-                    <h3>{friend.displayName || friend.username}</h3>
-                    <p className={`status-text ${friend.isOnline ? 'online' : 'offline'}`}>
-                      {friend.isOnline ? '🟢 En ligne' : '⚫ Hors ligne'}
-                    </p>
-                    <p className="stats">
-                      🏆 {friend.gamesWon || 0} victoires • ❌ {friend.gamesLost || 0} défaites
-                    </p>
-                  </div>
+                <div className="user-info">
+                  <h3>{friend.displayName || friend.username}</h3>
+                  <p className="stats">
+                    🏆 {friend.gamesWon || 0} victoires • ❌ {friend.gamesLost || 0} défaites
+                  </p>
                 </div>
                 <div className="button-group">
                   <button className="btn-primary" onClick={() => navigate(`/profile/${friend.id}`)}>

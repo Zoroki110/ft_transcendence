@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
-import { gameAPI } from '../services/api';
+import { gameAPI, userAPI } from '../services/api';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -14,6 +14,7 @@ const Navigation: React.FC = () => {
   // 🎯 UTILISER LE VRAI CONTEXTE UTILISATEUR
   const { user, isLoggedIn, logout } = useUser();
   const [isCreatingGame, setIsCreatingGame] = useState(false);
+  const [friendRequestsCount, setFriendRequestsCount] = useState(0);
 
   // 🎮 Fonction pour créer une partie rapide (identique à Home.tsx)
   const handleQuickPlay = async () => {
@@ -47,6 +48,37 @@ const Navigation: React.FC = () => {
     { path: '/leaderboard', label: 'Leaderboard', icon: '📊' },
     { path: '/profile', label: 'Profile', icon: '👤' },
   ];
+
+  // Charger le nombre de demandes d'ami en attente
+  useEffect(() => {
+    const loadFriendRequests = async () => {
+      if (!isLoggedIn) return;
+
+      try {
+        const response = await userAPI.getPendingFriendRequests();
+        setFriendRequestsCount(response.data.length);
+      } catch (err) {
+        console.error('Erreur lors du chargement des demandes d\'ami:', err);
+      }
+    };
+
+    loadFriendRequests();
+
+    // Recharger toutes les 30 secondes
+    const interval = setInterval(loadFriendRequests, 30000);
+
+    // Écouter l'événement de nouvelle demande d'ami
+    const handleFriendRequestReceived = () => {
+      loadFriendRequests();
+    };
+
+    window.addEventListener('friendRequestReceived', handleFriendRequestReceived);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('friendRequestReceived', handleFriendRequestReceived);
+    };
+  }, [isLoggedIn]);
 
   // Fermer le dropdown si on clique ailleurs
   useEffect(() => {
@@ -173,6 +205,9 @@ const Navigation: React.FC = () => {
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
+                {item.path === '/friends' && friendRequestsCount > 0 && (
+                  <span className="nav-badge">{friendRequestsCount}</span>
+                )}
               </Link>
             );
           })}
