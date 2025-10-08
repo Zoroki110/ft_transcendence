@@ -56,7 +56,7 @@ const Leaderboard: React.FC = () => {
               id: userData.id,
               username: userData.username,
               displayName: userData.displayName,
-              avatar: userData.avatar || '😀',
+              avatar: userData.avatar,
               gamesWon: stats.gamesWon || 0,
               gamesLost: stats.gamesLost || 0,
               tournamentsWon: stats.tournamentsWon || 0,
@@ -70,7 +70,7 @@ const Leaderboard: React.FC = () => {
               id: userData.id,
               username: userData.username,
               displayName: userData.displayName,
-              avatar: userData.avatar || '😀',
+              avatar: userData.avatar,
               gamesWon: 0,
               gamesLost: 0,
               tournamentsWon: 0,
@@ -219,23 +219,32 @@ const Leaderboard: React.FC = () => {
       <div className="page-header">
         <div className="container">
           <div className="header-content">
-            <svg className="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-            </svg>
-            <div>
-              <h1 className="page-title">Leaderboard</h1>
-              <p className="page-subtitle">
-                Classement des {rankedUsers.length} joueurs
-                {currentUserRank && (
-                  <span className="user-rank-badge">
-                    <svg className="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                    Votre position: #{currentUserRank}
-                  </span>
-                )}
-              </p>
+            <div className="header-left">
+              <div className="header-icon-wrapper">
+                <svg className="header-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                </svg>
+              </div>
+              <div className="header-text">
+                <h1 className="page-title">Classement des Joueurs</h1>
+                <p className="page-subtitle">
+                  {rankedUsers.length} joueur{rankedUsers.length > 1 ? 's' : ''} au total
+                </p>
+              </div>
             </div>
+            {currentUserRank && (
+              <div className="user-rank-badge">
+                <div className="rank-badge-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <div className="rank-badge-content">
+                  <span className="rank-badge-label">Votre position</span>
+                  <span className="rank-badge-value">#{currentUserRank}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -371,15 +380,27 @@ const Leaderboard: React.FC = () => {
             <div className="leaderboard-list">
               <div className="card">
                 <div className="leaderboard-header">
-                  <h3>📋 Classement complet - {getSortLabel(sortBy)}</h3>
+                  <svg className="list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  <h3>Classement complet - {getSortLabel(sortBy)}</h3>
                 </div>
                 
                 <div className="leaderboard-table">
                   <div className="table-header">
                     <div className="col-rank">Rang</div>
                     <div className="col-player">Joueur</div>
-                    <div className="col-stats">Statistiques</div>
-                    <div className="col-performance">Performance</div>
+                    <div className="col-stats">
+                      <div className="stat-header-item">Victoires</div>
+                      <div className="stat-header-item">Défaites</div>
+                      <div className="stat-header-item">Tournois</div>
+                    </div>
+                    <div className="col-performance">
+                      {sortBy === 'winRate' && 'Taux victoire'}
+                      {sortBy === 'gamesWon' && 'Victoires'}
+                      {sortBy === 'tournamentsWon' && 'Tournois'}
+                      {sortBy === 'totalScore' && 'Score'}
+                    </div>
                   </div>
 
                   {rankedUsers.map((rankedUser) => (
@@ -395,7 +416,15 @@ const Leaderboard: React.FC = () => {
 
                       <div className="col-player">
                         <div className="player-info">
-                          <div className="player-avatar">{rankedUser.avatar}</div>
+                          <div className="player-avatar">
+                            {rankedUser.avatar ? (
+                              rankedUser.avatar
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                              </svg>
+                            )}
+                          </div>
                           <div className="player-details">
                             <div className="player-name">
                               {rankedUser.displayName || rankedUser.username}
@@ -405,9 +434,15 @@ const Leaderboard: React.FC = () => {
                             </div>
                             <div className="player-status">
                               {rankedUser.isOnline ? (
-                                <span className="status online">🟢 En ligne</span>
+                                <span className="status online">
+                                  <span className="status-dot online"></span>
+                                  En ligne
+                                </span>
                               ) : (
-                                <span className="status offline">⚫ Hors ligne</span>
+                                <span className="status offline">
+                                  <span className="status-dot offline"></span>
+                                  Hors ligne
+                                </span>
                               )}
                             </div>
                           </div>
