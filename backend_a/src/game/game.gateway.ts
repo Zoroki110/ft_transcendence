@@ -65,6 +65,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private logger = new Logger('GameGateway');
   public gameRooms = new Map<string, GameRoom>(); // Public pour permettre l'accès depuis TournamentsService
   private playerToRoom = new Map<string, string>();
+  private userToSocket = new Map<number, string>(); // userId -> socketId
 
   constructor(
     private gameService: GameService,
@@ -87,6 +88,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('registerUser')
+  handleRegisterUser(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userId: number },
+  ) {
+    const { userId } = data;
+    this.userToSocket.set(userId, client.id);
+    this.logger.log(`👤 User registered: userId=${userId}, socketId=${client.id}`);
+    return { success: true };
+  }
+
   @SubscribeMessage('joinGame')
   async handleJoinGame(
     @ConnectedSocket() client: Socket,
@@ -97,6 +109,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userName = playerName || `Joueur ${Math.floor(Math.random() * 1000)}`;
 
     this.logger.log(`🎮 JOIN: gameId=${gameId}, isSpectator=${isSpectator}, playerName=${playerName}, userName=${userName}, userId=${userId}`);
+
+    // Enregistrer l'utilisateur si fourni
+    if (userId) {
+      this.userToSocket.set(userId, client.id);
+    }
 
     // Vérifier si le jeu existe ou le créer
     let room = this.gameRooms.get(gameId);
@@ -489,6 +506,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  // Méthode pour notifier qu'un défi a été accepté
+  notifyChallengeAccepted(challengerId: number, gameId: string, opponentUsername: string) {
+    const socketId = this.userToSocket.get(challengerId);
+
+    if (socketId) {
+      this.logger.log(`🔔 Sending challenge accepted notification to challenger (userId: ${challengerId}, socketId: ${socketId})`);
+      this.server.to(socketId).emit('challengeAccepted', {
+        gameId,
+        gameUrl: `/game/${gameId}`,
+        opponentUsername,
+        message: `${opponentUsername} a accepté votre défi ! Redirection vers le match...`,
+      });
+    } else {
+      this.logger.warn(`⚠️ Cannot notify challenger ${challengerId}: not connected to WebSocket`);
+    }
+  }
+
   // Méthode pour notifier que le tournoi a commencé et les brackets sont générés
   notifyTournamentStarted(tournamentId: number, matches: any[]) {
     const tournamentRoom = `tournament_${tournamentId}`;
@@ -645,7 +679,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // Créer une room spécifique pour un match de tournoi
   createTournamentRoom(gameId: string, matchId: number, player1: any, player2: any): GameRoom {
     this.logger.log(`🔍 DEBUG TOURNAMENT ROOM: Creating room ${gameId} with player1=${player1.username} (id=${player1.id}), player2=${player2.username} (id=${player2.id})`);
-    
+
     const room: GameRoom = {
       id: gameId,
       players: {},
@@ -687,7 +721,62 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.gameRooms.set(gameId, room);
     this.logger.log(`🏆 Tournament room created: ${gameId} for match ${matchId}`);
-    
+
+    return room;
+  }
+
+  // Créer une room spécifique pour un défi entre amis
+  createChallengeGameRoom(
+    gameId: string,
+    player1Id: number,
+    player2Id: number,
+    player1Name: string,
+    player2Name: string,
+  ): GameRoom {
+    this.logger.log(`🎮 Creating challenge room: ${gameId}`);
+    this.logger.log(`🎮 Player1: ${player1Name} (ID: ${player1Id}), Player2: ${player2Name} (ID: ${player2Id})`);
+
+    const room: GameRoom = {
+      id: gameId,
+      players: {},
+      playersNames: {
+        player1: player1Name,
+        player2: player2Name,
+      },
+      playersUserIds: {
+        player1: player1Id,
+        player2: player2Id,
+      },
+      spectators: new Set(),
+      rematchRequests: { player1: false, player2: false },
+      rematchCount: 0,
+      gameState: {
+        ball: {
+          x: 400,
+          y: 200,
+          velocityX: 8,
+          velocityY: 6,
+        },
+        paddles: {
+          player1: { y: 150 },
+          player2: { y: 150 },
+        },
+        score: {
+          player1: 0,
+          player2: 0,
+        },
+        players: {
+          player1: { name: player1Name, id: player1Id.toString() },
+          player2: { name: player2Name, id: player2Id.toString() },
+        },
+        gameStatus: 'waiting',
+      },
+      lastUpdate: Date.now(),
+    };
+
+    this.gameRooms.set(gameId, room);
+    this.logger.log(`🎮 Challenge room created: ${gameId}`);
+
     return room;
   }
 

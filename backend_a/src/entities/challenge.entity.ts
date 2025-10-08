@@ -44,6 +44,9 @@ export class Challenge {
   matchId: number; // ID du match créé après acceptation
 
   @Column({ type: 'text', nullable: true })
+  gameId: string; // ID de la room de jeu créée
+
+  @Column({ type: 'text', nullable: true })
   message: string; // Message optionnel avec le défi
 
   @CreateDateColumn()

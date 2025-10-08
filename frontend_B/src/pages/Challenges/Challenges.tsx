@@ -77,16 +77,24 @@ const Challenges: React.FC = () => {
     }
 
     try {
-      await api.post('/challenges', {
+      const response = await api.post('/challenges', {
         challengedId: parseInt(challengeUserId),
         message: challengeMessage || undefined,
       });
-      alert('Challenge sent!');
-      setShowNewChallengeModal(false);
-      setChallengeUserId('');
-      setChallengeMessage('');
-      setActiveTab('sent');
-      loadChallenges();
+
+      // Si le backend retourne un gameId, rediriger vers la room d'attente
+      if (response.data && response.data.gameId) {
+        const gameId = response.data.gameId;
+        alert('Challenge sent! Redirecting to waiting room...');
+        window.location.href = `/game/${gameId}`;
+      } else {
+        alert('Challenge sent!');
+        setShowNewChallengeModal(false);
+        setChallengeUserId('');
+        setChallengeMessage('');
+        setActiveTab('sent');
+        loadChallenges();
+      }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to send challenge');
     }
@@ -94,9 +102,17 @@ const Challenges: React.FC = () => {
 
   const acceptChallenge = async (challengeId: number) => {
     try {
-      await api.patch(`/challenges/${challengeId}/respond`, { accept: true });
-      alert('Challenge accepted! Match will be created.');
-      loadChallenges();
+      const response = await api.patch(`/challenges/${challengeId}/respond`, { accept: true });
+
+      // Si le backend retourne un gameId, rediriger vers le jeu
+      if (response.data && response.data.gameId) {
+        const gameId = response.data.gameId;
+        alert('Challenge accepted! Redirecting to game...');
+        window.location.href = `/game/${gameId}`;
+      } else {
+        alert('Challenge accepted! Match will be created.');
+        loadChallenges();
+      }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to accept challenge');
     }

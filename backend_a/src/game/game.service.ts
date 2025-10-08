@@ -20,6 +20,34 @@ export class GameService {
     this.gameGateway = gameGateway;
   }
 
+  createChallengeRoom(
+    gameId: string,
+    player1Id: number,
+    player2Id: number,
+    player1Name: string,
+    player2Name: string,
+  ) {
+    if (!this.gameGateway) {
+      this.logger.error('GameGateway not set!');
+      throw new Error('GameGateway not initialized');
+    }
+
+    this.logger.log(`🎮 Creating challenge room: ${gameId}`);
+    this.logger.log(`🎮 Player1: ${player1Name} (ID: ${player1Id})`);
+    this.logger.log(`🎮 Player2: ${player2Name} (ID: ${player2Id})`);
+
+    // Créer la room via le gateway
+    const room = this.gameGateway.createChallengeGameRoom(
+      gameId,
+      player1Id,
+      player2Id,
+      player1Name,
+      player2Name,
+    );
+
+    return room;
+  }
+
   async createMatch(createMatchDto: CreateMatchDto) {
     const match = this.matchRepo.create({
       player1: { id: createMatchDto.player1Id },

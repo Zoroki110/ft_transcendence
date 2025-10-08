@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 // import OnlineStatusManager from './components/OnlineStatusManager'; // ← DÉSACTIVÉ temporairement
 import ProtectedRoute from './components/ProtectedRoute';
 import TabSyncManager from './components/TabSyncManager';
+import ChallengeNotificationManager from './components/ChallengeNotificationManager';
 
 // Pages
 import Home from './pages/Home/Home';
@@ -45,6 +46,7 @@ function App() {
               <div className="app">
                 {/* <OnlineStatusManager /> */}
                 <TabSyncManager />
+                <ChallengeNotificationManager />
                 <Navigation />
                 <main className="main-content">
                 <Routes>
