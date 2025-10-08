@@ -207,6 +207,7 @@ const Game: React.FC = () => {
     player2Id: number;
   }) => {
     console.log('🏆 GAME: Match de tournoi terminé:', data);
+    console.log('🔍 DEBUG PLAYER IDS:', { player1Id: data.player1Id, player2Id: data.player2Id });
     
     try {
       // Déterminer le winnerId en fonction du winner ('player1' ou 'player2')

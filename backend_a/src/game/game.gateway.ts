@@ -185,6 +185,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // Démarrer le jeu quand 2 joueurs sont présents ET connectés
+      this.logger.log(`🔍 DEBUG AUTOSTART: gameId=${gameId}, status=${room.gameState.gameStatus}, player1=${!!room.players.player1}, player2=${!!room.players.player2}`);
+      this.logger.log(`🔍 DEBUG PLAYERS: player1=${room.players.player1}, player2=${room.players.player2}`);
+      
       if (room.gameState.gameStatus === 'waiting' && room.players.player1 && room.players.player2) {
         this.logger.log(`🎮 BOTH PLAYERS CONNECTED: Starting game ${gameId}`);
         this.startGame(gameId);
@@ -641,6 +644,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Créer une room spécifique pour un match de tournoi
   createTournamentRoom(gameId: string, matchId: number, player1: any, player2: any): GameRoom {
+    this.logger.log(`🔍 DEBUG TOURNAMENT ROOM: Creating room ${gameId} with player1=${player1.username} (id=${player1.id}), player2=${player2.username} (id=${player2.id})`);
+    
     const room: GameRoom = {
       id: gameId,
       players: {},
@@ -902,12 +907,45 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const realPlayer1Id = match.player1.id;
         const realPlayer2Id = match.player2.id;
         
-        this.logger.log(`🏆 REAL PLAYER IDS: player1=${realPlayer1Id}, player2=${realPlayer2Id}`);
-        this.logger.log(`🏆 ROOM PLAYER IDS: player1=${room.playersUserIds.player1}, player2=${room.playersUserIds.player2}`);
+        // CORRECTION CRUCIALE : Déterminer le vrai gagnant en mappant room vers DB
+        let realWinner: string;
+        let realWinnerId: number;
+        
+        // Qui a le meilleur score dans la room ?
+        const roomPlayer1Score = room.gameState.score.player1;
+        const roomPlayer2Score = room.gameState.score.player2;
+        
+        if (roomPlayer1Score > roomPlayer2Score) {
+          // Le player1 de la ROOM a gagné, mais qui est-ce en DB ?
+          const roomWinnerUserId = room.playersUserIds.player1;
+          if (roomWinnerUserId === realPlayer1Id) {
+            realWinner = 'player1';
+            realWinnerId = realPlayer1Id;
+          } else {
+            realWinner = 'player2';
+            realWinnerId = realPlayer2Id;
+          }
+        } else {
+          // Le player2 de la ROOM a gagné, mais qui est-ce en DB ?
+          const roomWinnerUserId = room.playersUserIds.player2;
+          if (roomWinnerUserId === realPlayer1Id) {
+            realWinner = 'player1';
+            realWinnerId = realPlayer1Id;
+          } else {
+            realWinner = 'player2';
+            realWinnerId = realPlayer2Id;
+          }
+        }
+        
+        this.logger.log(`🏆 REAL PLAYER IDS: DB player1=${realPlayer1Id}, DB player2=${realPlayer2Id}`);
+        this.logger.log(`🏆 ROOM PLAYER IDS: room player1=${room.playersUserIds.player1}, room player2=${room.playersUserIds.player2}`);
+        this.logger.log(`🏆 ROOM SCORES: player1=${roomPlayer1Score}, player2=${roomPlayer2Score}`);
+        this.logger.log(`🏆 WINNER MAPPING: room winner has userId=${roomPlayer1Score > roomPlayer2Score ? room.playersUserIds.player1 : room.playersUserIds.player2}`);
+        this.logger.log(`🏆 REAL WINNER: ${realWinner} (userId=${realWinnerId})`);
         
         // Pour les parties de tournoi : redirection vers le lobby du tournoi
         this.server.to(gameId).emit('tournamentMatchEnded', {
-          winner,
+          winner: realWinner, // Utiliser le vrai winner mappé
           finalScore: room.gameState.score,
           tournamentId,
           matchId,
@@ -916,6 +954,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           player1Id: realPlayer1Id,
           player2Id: realPlayer2Id
         });
+        
+        // L'avancement sera géré par le frontend pour éviter les dépendances circulaires
       } catch (error) {
         this.logger.error(`❌ Error getting real player IDs for match ${matchId}:`, error);
         // Fallback aux IDs de la room
