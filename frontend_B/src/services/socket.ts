@@ -163,6 +163,32 @@ class SocketService {
     }
   }
 
+  // === CHALLENGE EVENTS ===
+
+  // Enregistrer l'utilisateur pour recevoir les notifications
+  registerUser(userId: number) {
+    const socket = this.connectToGame();
+    socket.emit('registerUser', { userId });
+  }
+
+  // Écouter quand un défi est accepté
+  onChallengeAccepted(callback: (data: {
+    gameId: string;
+    gameUrl: string;
+    opponentUsername: string;
+    message: string;
+  }) => void) {
+    const socket = this.connectToGame();
+    socket.on('challengeAccepted', callback);
+  }
+
+  // Nettoyer les event listeners de challenge
+  offChallengeEvents() {
+    if (this.gameSocket) {
+      this.gameSocket.off('challengeAccepted');
+    }
+  }
+
   // Déconnexion
   disconnect() {
     if (this.gameSocket) {
