@@ -3,14 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { gameAPI } from '../../services/api';
-import Debug from '../../components/Debug';
 import './Home.css';
 
 const Home: React.FC = () => {
   const { isLoggedIn } = useUser();
   const navigate = useNavigate();
   const [isCreatingGame, setIsCreatingGame] = useState(false);
-  const [waitingRoomsCount, setWaitingRoomsCount] = useState(0);
 
   const handleCreateQuickGame = async () => {
     if (!isLoggedIn) {
@@ -34,29 +32,18 @@ const Home: React.FC = () => {
     }
   };
 
-  // Charger le nombre de parties en attente
-  useEffect(() => {
-    const fetchWaitingRooms = async () => {
-      try {
-        const response = await gameAPI.getWaitingRoomsCount();
-        setWaitingRoomsCount(response.data.count);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des parties en attente:', error);
-      }
-    };
-
-    if (isLoggedIn) {
-      fetchWaitingRooms();
-      // Rafraîchir toutes les 10 secondes
-      const interval = setInterval(fetchWaitingRooms, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn]);
-  
   return (
     <div className="home-page">
       <div className="home-hero">
-        <div className="container">
+        {/* Animation Pong en arrière-plan */}
+        <div className="pong-animation">
+          <div className="pong-ball"></div>
+          <div className="pong-paddle pong-paddle-left"></div>
+          <div className="pong-paddle pong-paddle-right"></div>
+          <div className="pong-net"></div>
+        </div>
+
+        <div className="container home-hero-content">
           <h1 className="home-hero-title">🏓 Transcendence</h1>
           <p className="home-hero-subtitle">
             Le meilleur jeu de Pong en ligne
@@ -139,7 +126,10 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        <div className="card home-cta">
+      </div>
+
+      <div className="home-cta">
+        <div className="container">
           <h2 className="home-cta-title">Prêt à jouer ? 🎮</h2>
           <p className="home-cta-subtitle">
             Rejoignez des milliers de joueurs et montrez vos compétences
@@ -153,9 +143,6 @@ const Home: React.FC = () => {
             </Link>
           </div>
         </div>
-
-        {/* Composant de debug en développement */}
-        {import.meta.env.DEV && <Debug />}
       </div>
     </div>
   );
