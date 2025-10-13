@@ -312,50 +312,27 @@ const Game: React.FC = () => {
 
   return (
     <div className="game-page">
-      <div className="game-header">
-        <div className="container">
-          <div className="game-header-content">
-            <h1 className="game-title">🏓 Partie Pong</h1>
-            
-            <div className="game-score">
-              <div className="player-score">
-                <div className="player-name">{playerNames.player1}</div>
-                <div className="score-value">{gameData.score.player1}</div>
-              </div>
-              <div className="score-vs">VS</div>
-              <div className="player-score">
-                <div className="player-name">{playerNames.player2}</div>
-                <div className="score-value">{gameData.score.player2}</div>
-              </div>
-            </div>
-
-            <div className="game-header-actions">
-              <button className="btn btn-secondary">⚙️</button>
-              <button className="btn btn-danger" onClick={handleQuitGame}>🚪 Quitter</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container">
+      <div className="game-container">
         <div className="game-layout">
           
-          <div className="card game-area">
+          <div className="game-main">
+            <div className="game-header-compact">
+              <button className="btn-icon btn-quit" onClick={handleQuitGame} title="Quitter la partie">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+
             {isSpectator && (
-              <div className="spectator-banner" style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                padding: '12px 20px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                borderRadius: '8px 8px 0 0',
-                marginBottom: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                👁️ <span>Mode Spectateur - Tournoi</span> 👁️
+              <div className="spectator-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Spectateur</span>
               </div>
             )}
             <div id="game-canvas-container" className="game-canvas">
@@ -398,8 +375,18 @@ const Game: React.FC = () => {
                     className="btn-add-friend"
                     onClick={() => handleAddFriend(playerNames.player1)}
                     disabled={friendRequestSent.has(playerNames.player1)}
+                    title="Ajouter en ami"
                   >
-                    {friendRequestSent.has(playerNames.player1) ? '✓ Envoyé' : '👥 Ami'}
+                    {friendRequestSent.has(playerNames.player1) ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    )}
                   </button>
                 )}
               </div>
@@ -410,8 +397,18 @@ const Game: React.FC = () => {
                     className="btn-add-friend"
                     onClick={() => handleAddFriend(playerNames.player2)}
                     disabled={friendRequestSent.has(playerNames.player2)}
+                    title="Ajouter en ami"
                   >
-                    {friendRequestSent.has(playerNames.player2) ? '✓ Envoyé' : '👥 Ami'}
+                    {friendRequestSent.has(playerNames.player2) ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    )}
                   </button>
                 )}
               </div>
@@ -483,7 +480,7 @@ const Game: React.FC = () => {
             <div className="game-end-menu spectator-message">
               <div className="game-end-header">
                 <h2 className="game-end-title">
-                  🏆 Match de Tournoi Terminé
+                  Match de Tournoi Terminé
                 </h2>
                 <div className="game-end-winner">
                   Gagnant : <span className="winner-name">{gameResult.winner === 'player1' ? playerNames.player1 : playerNames.player2}</span>
@@ -497,13 +494,13 @@ const Game: React.FC = () => {
                   className="btn btn-primary btn-large game-end-btn"
                   onClick={() => navigate('/tournaments')}
                 >
-                  🏆 Retour aux Tournois
+                  Retour aux Tournois
                 </button>
                 <button
                   className="btn btn-secondary btn-large game-end-btn"
                   onClick={() => navigate('/')}
                 >
-                  🏠 Accueil
+                  Accueil
                 </button>
               </div>
             </div>
@@ -531,7 +528,7 @@ const Game: React.FC = () => {
                   className="btn btn-primary btn-large game-end-btn"
                   onClick={handleNewGame}
                 >
-                  🎮 Nouvelle partie
+                  Nouvelle partie
                 </button>
                 {/* Le rematch n'est pas disponible pour les matchs de tournoi ni pour les parties terminées par forfait */}
                 {!isTournamentMatch && !gameResult?.endedByForfeit && (
@@ -540,13 +537,13 @@ const Game: React.FC = () => {
                     onClick={handleRematch}
                     disabled={waitingForRematch}
                   >
-                    {waitingForRematch ? '⏳ En attente...' : '🔄 Rejouer'}
+                    {waitingForRematch ? 'En attente...' : 'Rejouer'}
                   </button>
                 )}
                 {/* Message si la partie s'est terminée par forfait */}
                 {gameResult?.endedByForfeit && (
                   <div className="forfeit-message">
-                    <p>🏳️ Partie terminée par abandon</p>
+                    <p>Partie terminée par abandon</p>
                     <p className="forfeit-note">Le rematch n'est pas disponible</p>
                   </div>
                 )}
@@ -554,7 +551,7 @@ const Game: React.FC = () => {
                   className="btn btn-danger btn-large game-end-btn"
                   onClick={handleQuitToHome}
                 >
-                  🚪 Quitter
+                  Quitter
                 </button>
               </div>
             </div>
@@ -567,7 +564,7 @@ const Game: React.FC = () => {
             <div className="game-end-menu rematch-request">
               <div className="game-end-header">
                 <h2 className="game-end-title">
-                  🔔 Demande de rematch
+                  Demande de rematch
                 </h2>
                 <div className="rematch-message">
                   <strong>{rematchRequest.fromName}</strong> souhaite faire un rematch.
@@ -581,13 +578,13 @@ const Game: React.FC = () => {
                   className="btn btn-primary btn-large game-end-btn"
                   onClick={handleAcceptRematch}
                 >
-                  ✅ Accepter
+                  Accepter
                 </button>
                 <button
                   className="btn btn-danger btn-large game-end-btn"
                   onClick={handleDeclineRematch}
                 >
-                  ❌ Refuser
+                  Refuser
                 </button>
               </div>
             </div>
