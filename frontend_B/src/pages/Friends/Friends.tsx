@@ -517,14 +517,6 @@ const Friends: React.FC = () => {
                     </div>
                     <div className="user-info">
                       <h3>{friend.displayName || friend.username}</h3>
-                      <div className="user-stats">
-                        <svg className="stat-icon" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z"/>
-                        </svg>
-                        <span>{friend.gamesWon || 0} victoires</span>
-                        <span className="stat-divider">•</span>
-                        <span>{friend.gamesLost || 0} défaites</span>
-                      </div>
                     </div>
                     <div className="button-group">
                       <button className="btn btn-primary" onClick={() => navigate(`/profile/${friend.id}`)}>
