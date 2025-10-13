@@ -237,8 +237,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!isPlayer1 && !isPlayer2) return;
 
-    const paddleSpeed = 15; // Augmenté pour suivre la balle plus rapide
-    const paddleHeight = 100;
+    const paddleSpeed = 18; // Augmenté pour suivre la balle plus rapide
+    const paddleHeight = 120; // Augmenté pour correspondre au frontend
     const canvasHeight = 400;
 
     if (isPlayer1) {
@@ -595,8 +595,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ball: {
         x: 400,
         y: 200,
-        velocityX: 8,
-        velocityY: 6,
+        velocityX: 12,
+        velocityY: 9,
       },
       paddles: {
         player1: { y: 150 },
@@ -655,8 +655,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ball: {
           x: 400, // Centre du canvas (800/2)
           y: 200, // Centre du canvas (400/2)
-          velocityX: 8, // Vitesse rapide pour un jeu dynamique
-          velocityY: 6,
+          velocityX: 12, // Vitesse augmentée pour un jeu plus rapide et dynamique
+          velocityY: 9,
         },
         paddles: {
           player1: { y: 150 }, // Centre - paddleHeight/2
@@ -699,8 +699,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ball: {
           x: 400,
           y: 200,
-          velocityX: 8,
-          velocityY: 6,
+          velocityX: 12,
+          velocityY: 9,
         },
         paddles: {
           player1: { y: 150 },
@@ -754,8 +754,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ball: {
           x: 400,
           y: 200,
-          velocityX: 8,
-          velocityY: 6,
+          velocityX: 12,
+          velocityY: 9,
         },
         paddles: {
           player1: { y: 150 },
@@ -865,9 +865,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { ball, paddles, score } = room.gameState;
     const canvasWidth = 800;
     const canvasHeight = 400;
-    const paddleWidth = 10;
-    const paddleHeight = 100;
-    const ballSize = 10;
+    const paddleWidth = 16;  // Augmenté pour correspondre au frontend
+    const paddleHeight = 120; // Augmenté pour correspondre au frontend
+    const ballSize = 16;      // Augmenté pour correspondre au frontend
 
     // Mettre à jour la position de la balle
     ball.x += ball.velocityX;
@@ -914,8 +914,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private resetBall(ball: any, canvasWidth: number, canvasHeight: number) {
     ball.x = canvasWidth / 2;
     ball.y = canvasHeight / 2;
-    ball.velocityX = -ball.velocityX; // Changer de direction
-    ball.velocityY = Math.random() > 0.5 ? 6 : -6; // Vitesse rapide pour un jeu dynamique
+    // Augmenter la vitesse après chaque point pour un jeu plus dynamique
+    const speedMultiplier = Math.abs(ball.velocityX) < 15 ? 1.1 : 1; // Accélérer jusqu'à une limite
+    ball.velocityX = -(ball.velocityX * speedMultiplier); // Changer de direction et accélérer
+    ball.velocityY = Math.random() > 0.5 ? 9 : -9; // Vitesse augmentée pour un jeu plus rapide
   }
 
   private async endGame(gameId: string) {

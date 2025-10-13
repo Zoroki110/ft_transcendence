@@ -86,12 +86,12 @@ const PongGame: React.FC<PongGameProps> = ({
   const [players, setPlayers] = useState<any>({});
   const [spectatorCount, setSpectatorCount] = useState(0);
 
-  // Constantes du jeu
+  // Constantes du jeu - Tailles augmentées pour meilleure visibilité et gameplay plus rapide
   const CANVAS_WIDTH = 800;
   const CANVAS_HEIGHT = 400;
-  const PADDLE_WIDTH = 10;
-  const PADDLE_HEIGHT = 100;
-  const BALL_SIZE = 10;
+  const PADDLE_WIDTH = 16;
+  const PADDLE_HEIGHT = 120;
+  const BALL_SIZE = 16;
 
   // Gestion des touches
   const keysPressed = useRef<Set<string>>(new Set());
@@ -142,7 +142,7 @@ const PongGame: React.FC<PongGameProps> = ({
     }
   }, [playerRole]);
 
-  // Dessiner le jeu avec style rétro
+  // Dessiner le jeu avec style moderne et épuré
   const drawGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -150,162 +150,179 @@ const PongGame: React.FC<PongGameProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Effacer le canvas avec un noir pur rétro
-    ctx.fillStyle = '#000000';
+    // Fond dégradé moderne et élégant
+    const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+    gradient.addColorStop(0, '#0f172a');
+    gradient.addColorStop(1, '#1e293b');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Dessiner un effet de scanlines rétro
-    ctx.fillStyle = 'rgba(138, 43, 226, 0.03)';
-    for (let i = 0; i < CANVAS_HEIGHT; i += 4) {
-      ctx.fillRect(0, i, CANVAS_WIDTH, 2);
-    }
-
-    // Dessiner la ligne centrale avec style rétro violet
-    ctx.setLineDash([10, 10]);
-    ctx.strokeStyle = '#8A2BE2';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = '#8A2BE2';
-    ctx.shadowBlur = 10;
+    // Ligne centrale minimaliste et élégante
+    ctx.setLineDash([8, 8]);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(CANVAS_WIDTH / 2, 0);
     ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Dessiner les paddles avec style moderne et épuré
+    const paddleGradient1 = ctx.createLinearGradient(0, 0, PADDLE_WIDTH, 0);
+    paddleGradient1.addColorStop(0, '#3b82f6');
+    paddleGradient1.addColorStop(1, '#60a5fa');
+
+    // Paddle joueur 1 (gauche) - Coins arrondis
+    ctx.fillStyle = paddleGradient1;
+    ctx.shadowColor = '#3b82f6';
+    ctx.shadowBlur = 15;
+    roundRect(ctx, 8, gameState.paddles.player1.y, PADDLE_WIDTH, PADDLE_HEIGHT, 6);
+    ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Dessiner les paddles avec effet néon violet
-    ctx.fillStyle = '#9932CC';
-    ctx.shadowColor = '#9932CC';
+    const paddleGradient2 = ctx.createLinearGradient(CANVAS_WIDTH - PADDLE_WIDTH, 0, CANVAS_WIDTH, 0);
+    paddleGradient2.addColorStop(0, '#ec4899');
+    paddleGradient2.addColorStop(1, '#f472b6');
+
+    // Paddle joueur 2 (droite) - Coins arrondis
+    ctx.fillStyle = paddleGradient2;
+    ctx.shadowColor = '#ec4899';
     ctx.shadowBlur = 15;
+    roundRect(ctx, CANVAS_WIDTH - PADDLE_WIDTH - 8, gameState.paddles.player2.y, PADDLE_WIDTH, PADDLE_HEIGHT, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
-    // Paddle joueur 1 (gauche) avec effet rétro
-    ctx.fillRect(0, gameState.paddles.player1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-    // Bordure lumineuse
-    ctx.strokeStyle = '#DA70D6';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, gameState.paddles.player1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    // Dessiner la balle avec effet de glow moderne
+    const ballGradient = ctx.createRadialGradient(
+      gameState.ball.x + BALL_SIZE/2,
+      gameState.ball.y + BALL_SIZE/2,
+      0,
+      gameState.ball.x + BALL_SIZE/2,
+      gameState.ball.y + BALL_SIZE/2,
+      BALL_SIZE
+    );
+    ballGradient.addColorStop(0, '#ffffff');
+    ballGradient.addColorStop(0.4, '#22d3ee');
+    ballGradient.addColorStop(1, '#06b6d4');
 
-    // Paddle joueur 2 (droite) avec effet rétro
-    ctx.fillRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.paddles.player2.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-    // Bordure lumineuse
-    ctx.strokeRect(CANVAS_WIDTH - PADDLE_WIDTH, gameState.paddles.player2.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-
-    // Dessiner la balle ronde avec effet néon violet éclatant
-    ctx.fillStyle = '#FF00FF';
-    ctx.shadowColor = '#FF00FF';
-    ctx.shadowBlur = 20;
+    ctx.fillStyle = ballGradient;
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur = 30;
     ctx.beginPath();
     ctx.arc(gameState.ball.x + BALL_SIZE/2, gameState.ball.y + BALL_SIZE/2, BALL_SIZE/2, 0, Math.PI * 2);
     ctx.fill();
-    // Bordure lumineuse pour la balle ronde
-    ctx.strokeStyle = '#FF00FF';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Reset shadow
     ctx.shadowBlur = 0;
 
-    // Dessiner les scores avec police rétro violet
-    ctx.fillStyle = '#9932CC';
-    ctx.font = 'bold 64px "Courier New", monospace';
+    // Dessiner les scores avec typographie moderne
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#9932CC';
-    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 10;
 
     // Score joueur 1
     ctx.fillText(
       gameState.score.player1.toString(),
       CANVAS_WIDTH / 4,
-      80
+      90
     );
 
     // Score joueur 2
     ctx.fillText(
       gameState.score.player2.toString(),
       (3 * CANVAS_WIDTH) / 4,
-      80
+      90
     );
 
-    // Afficher les noms des joueurs avec style rétro violet
-    ctx.fillStyle = '#DA70D6';
-    ctx.font = 'bold 18px "Courier New", monospace';
+    // Afficher les noms des joueurs avec style épuré
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#DA70D6';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 5;
 
     // Nom joueur 1 (gauche)
     ctx.fillText(
-      gameState.players?.player1?.name || 'PLAYER_1',
+      gameState.players?.player1?.name || 'PLAYER 1',
       CANVAS_WIDTH / 4,
-      120
+      130
     );
 
     // Nom joueur 2 (droite)
     ctx.fillText(
-      gameState.players?.player2?.name || 'PLAYER_2',
+      gameState.players?.player2?.name || 'PLAYER 2',
       (3 * CANVAS_WIDTH) / 4,
-      120
+      130
     );
 
-    // Reset shadow
     ctx.shadowBlur = 0;
 
-    // Afficher le statut du jeu avec style rétro violet
+    // Afficher le statut du jeu avec style moderne
     if (gameState.gameStatus === 'waiting') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      ctx.fillStyle = '#9932CC';
-      ctx.font = 'bold 28px "Courier New", monospace';
+      ctx.fillStyle = '#60a5fa';
+      ctx.font = '600 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#9932CC';
-      ctx.shadowBlur = 15;
-      ctx.fillText('>>> WAITING FOR PLAYERS <<<', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowColor = '#3b82f6';
+      ctx.shadowBlur = 20;
+      ctx.fillText('En attente des joueurs...', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
       ctx.shadowBlur = 0;
     } else if (gameState.gameStatus === 'paused') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      ctx.fillStyle = '#DA70D6';
-      ctx.font = 'bold 32px "Courier New", monospace';
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '600 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#DA70D6';
-      ctx.shadowBlur = 15;
-      ctx.fillText('*** PAUSED ***', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 20;
+      ctx.fillText('PAUSE', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
       ctx.shadowBlur = 0;
     } else if (gameState.gameStatus === 'finished') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      const winner = gameState.score.player1 > gameState.score.player2 ? 'PLAYER_1' : 'PLAYER_2';
-      ctx.fillStyle = '#FF00FF';
-      ctx.font = 'bold 36px "Courier New", monospace';
+      const winner = gameState.score.player1 > gameState.score.player2 ? 'PLAYER 1' : 'PLAYER 2';
+      ctx.fillStyle = '#10b981';
+      ctx.font = '700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#FF00FF';
-      ctx.shadowBlur = 20;
-      ctx.fillText(`${winner} WINS!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
-      ctx.fillStyle = '#DA70D6';
-      ctx.font = 'bold 18px "Courier New", monospace';
-      ctx.shadowColor = '#DA70D6';
-      ctx.shadowBlur = 10;
-      ctx.fillText('>>> GAME OVER <<<', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+      ctx.shadowColor = '#059669';
+      ctx.shadowBlur = 25;
+      ctx.fillText(`${winner} GAGNE!`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
+      ctx.fillText('Partie terminée', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
     }
 
-    // Montrer les contrôles pour les joueurs avec style rétro violet
+    // Montrer les contrôles pour les joueurs avec style épuré
     if (playerRole !== 'spectator' && gameState.gameStatus === 'playing') {
-      ctx.fillStyle = '#DA70D6';
-      ctx.font = '14px "Courier New", monospace';
-      ctx.shadowColor = '#DA70D6';
-      ctx.shadowBlur = 5;
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.font = '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'left';
       if (playerRole === 'player1') {
-        ctx.fillText('[↑/↓] TO MOVE', 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('↑↓ Déplacer', 12, CANVAS_HEIGHT - 12);
       } else {
         ctx.textAlign = 'right';
-        ctx.fillText('[↑/↓] TO MOVE', CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
+        ctx.fillText('↑↓ Déplacer', CANVAS_WIDTH - 12, CANVAS_HEIGHT - 12);
       }
-      ctx.shadowBlur = 0;
+    }
+
+    // Fonction helper pour dessiner des rectangles arrondis
+    function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
     }
   }, [gameState, playerRole]);
 
