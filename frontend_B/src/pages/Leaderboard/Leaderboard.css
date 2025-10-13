@@ -151,9 +151,18 @@
   cursor: not-allowed;
 }
 
-/* Podium */
+/* Podium 3D */
 .leaderboard-podium {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.podium-container {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.12) 100%);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .podium-header {
@@ -161,140 +170,212 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  padding: 1.25rem;
-  border-bottom: 2px solid var(--gray-100);
+  margin-bottom: 2.5rem;
 }
 
 .podium-header-icon {
-  width: 24px;
-  height: 24px;
-  color: var(--primary);
+  width: 32px;
+  height: 32px;
+  color: #fbbf24;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
 }
 
 .podium-title {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--gray-800);
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.podium-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  padding: 1.5rem;
+/* Podium Stages - Design 3D */
+.podium-stages {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1.5rem;
+  perspective: 1000px;
 }
 
-.podium-position {
+.podium-stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 1rem;
-  border-radius: 12px;
-  background: white;
-  border: 2px solid var(--gray-200);
-  transition: all 0.3s ease;
+  flex: 1;
+  max-width: 200px;
+  animation: slideUp 0.6s ease-out backwards;
 }
 
-.podium-position:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+.stage-1 {
+  animation-delay: 0.2s;
 }
 
-.position-1 {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-color: #fbbf24;
-  order: 2;
+.stage-2 {
+  animation-delay: 0.1s;
 }
 
-.position-2 {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border-color: #9ca3af;
-  order: 1;
+.stage-3 {
+  animation-delay: 0.3s;
 }
 
-.position-3 {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  border-color: #f97316;
-  order: 3;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.podium-rank-badge {
+/* Player au-dessus du bloc */
+.stage-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
-.medal-svg {
+.stage-medal {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.75rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.stage-1 .stage-medal svg {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
+}
+
+.stage-2 .stage-medal svg {
+  color: #c0c0c0;
+  filter: drop-shadow(0 0 15px rgba(192, 192, 192, 0.6));
+}
+
+.stage-3 .stage-medal svg {
+  color: #cd7f32;
+  filter: drop-shadow(0 0 15px rgba(205, 127, 50, 0.6));
+}
+
+.stage-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.stage-1 .stage-avatar {
+  width: 96px;
+  height: 96px;
+  border: 4px solid #fbbf24;
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+}
+
+.stage-avatar svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.stage-1 .stage-avatar svg {
   width: 48px;
   height: 48px;
 }
 
-.medal-svg.gold {
-  color: #fbbf24;
-  filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4));
+.stage-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-align: center;
+  margin-bottom: 0.375rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.medal-svg.silver {
-  color: #9ca3af;
-  filter: drop-shadow(0 2px 4px rgba(156, 163, 175, 0.4));
+.stage-1 .stage-name {
+  font-size: 1.125rem;
 }
 
-.medal-svg.bronze {
-  color: #f97316;
-  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.4));
-}
-
-.podium-avatar {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  border-radius: 50%;
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  margin-bottom: 0.75rem;
-  font-size: 2rem;
-}
-
-.podium-avatar svg {
-  width: 36px;
-  height: 36px;
-  color: var(--gray-400);
-}
-
-.podium-info {
+.stage-stat {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94a3b8;
   text-align: center;
 }
 
-.podium-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--gray-800);
-  margin-bottom: 0.5rem;
+/* Blocs du podium avec hauteurs différentes */
+.stage-block {
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 0.5rem;
+  padding-top: 1.5rem;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
-.online-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: var(--success);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+.podium-stage:hover .stage-block {
+  transform: translateY(-5px);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+.stage-rank {
+  font-size: 3rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  opacity: 0.9;
 }
 
-.podium-stat {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-  font-weight: 600;
+/* 1ère place - Bleu brillant - Le plus haut */
+.stage-block-1 {
+  height: 200px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: 2px solid #60a5fa;
+  box-shadow:
+    0 -4px 20px rgba(59, 130, 246, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* 2ème place - Violet - Moyen */
+.stage-block-2 {
+  height: 160px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: 2px solid #a78bfa;
+  box-shadow:
+    0 -4px 20px rgba(139, 92, 246, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+.stage-block-2 .stage-rank {
+  color: white;
+}
+
+/* 3ème place - Cyan - Le plus bas */
+.stage-block-3 {
+  height: 130px;
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  border: 2px solid #22d3ee;
+  box-shadow:
+    0 -4px 20px rgba(6, 182, 212, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* Liste du leaderboard */

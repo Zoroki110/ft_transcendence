@@ -316,61 +316,95 @@ const Leaderboard: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Podium pour le top 3 */}
+            {/* Podium 3D pour le top 3 */}
             {rankedUsers.length >= 3 && filterBy !== 'active' && (
               <div className="leaderboard-podium">
-                <div className="card">
+                <div className="podium-container">
                   <div className="podium-header">
-                    <svg className="podium-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    <svg className="podium-header-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
                     </svg>
-                    <h3 className="podium-title">Podium</h3>
+                    <h2 className="podium-title">Top 3</h2>
                   </div>
-                  <div className="podium-grid">
-                    {rankedUsers.slice(0, 3).map((rankedUser, index) => (
-                      <div key={rankedUser.id} className={`podium-position position-${index + 1}`}>
-                        <div className="podium-rank-badge">
-                          {index === 0 && (
-                            <svg className="medal-svg gold" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
-                            </svg>
-                          )}
-                          {index === 1 && (
-                            <svg className="medal-svg silver" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
-                            </svg>
-                          )}
-                          {index === 2 && (
-                            <svg className="medal-svg bronze" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
-                            </svg>
-                          )}
+
+                  <div className="podium-stages">
+                    {/* 2ème place - Argent */}
+                    <div className="podium-stage stage-2">
+                      <div className="stage-player">
+                        <div className="stage-medal">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                          </svg>
                         </div>
-                        <div className="podium-avatar">
-                          {rankedUser.avatar || (
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                            </svg>
-                          )}
+                        <div className="stage-avatar">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
                         </div>
-                        <div className="podium-info">
-                          <div className="podium-name">
-                            {rankedUser.displayName || rankedUser.username}
-                            {rankedUser.isOnline && (
-                              <span className="online-indicator">
-                                <span className="online-dot"></span>
-                              </span>
-                            )}
-                          </div>
-                          <div className="podium-stat">
-                            {sortBy === 'winRate' && `${rankedUser.winRate.toFixed(1)}%`}
-                            {sortBy === 'gamesWon' && `${rankedUser.gamesWon} victoires`}
-                            {sortBy === 'tournamentsWon' && `${rankedUser.tournamentsWon} tournois`}
-                            {sortBy === 'totalScore' && `${rankedUser.totalScore} pts`}
-                          </div>
+                        <div className="stage-name">{rankedUsers[1].displayName || rankedUsers[1].username}</div>
+                        <div className="stage-stat">
+                          {sortBy === 'winRate' && `${rankedUsers[1].winRate.toFixed(1)}%`}
+                          {sortBy === 'gamesWon' && `${rankedUsers[1].gamesWon} V`}
+                          {sortBy === 'tournamentsWon' && `${rankedUsers[1].tournamentsWon} T`}
+                          {sortBy === 'totalScore' && `${rankedUsers[1].totalScore} pts`}
                         </div>
                       </div>
-                    ))}
+                      <div className="stage-block stage-block-2">
+                        <div className="stage-rank">2</div>
+                      </div>
+                    </div>
+
+                    {/* 1ère place - Or */}
+                    <div className="podium-stage stage-1">
+                      <div className="stage-player">
+                        <div className="stage-medal">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                          </svg>
+                        </div>
+                        <div className="stage-avatar">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                        </div>
+                        <div className="stage-name">{rankedUsers[0].displayName || rankedUsers[0].username}</div>
+                        <div className="stage-stat">
+                          {sortBy === 'winRate' && `${rankedUsers[0].winRate.toFixed(1)}%`}
+                          {sortBy === 'gamesWon' && `${rankedUsers[0].gamesWon} V`}
+                          {sortBy === 'tournamentsWon' && `${rankedUsers[0].tournamentsWon} T`}
+                          {sortBy === 'totalScore' && `${rankedUsers[0].totalScore} pts`}
+                        </div>
+                      </div>
+                      <div className="stage-block stage-block-1">
+                        <div className="stage-rank">1</div>
+                      </div>
+                    </div>
+
+                    {/* 3ème place - Bronze */}
+                    <div className="podium-stage stage-3">
+                      <div className="stage-player">
+                        <div className="stage-medal">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L15 8L22 9L17 14L18 21L12 18L6 21L7 14L2 9L9 8L12 2Z" />
+                          </svg>
+                        </div>
+                        <div className="stage-avatar">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                        </div>
+                        <div className="stage-name">{rankedUsers[2].displayName || rankedUsers[2].username}</div>
+                        <div className="stage-stat">
+                          {sortBy === 'winRate' && `${rankedUsers[2].winRate.toFixed(1)}%`}
+                          {sortBy === 'gamesWon' && `${rankedUsers[2].gamesWon} V`}
+                          {sortBy === 'tournamentsWon' && `${rankedUsers[2].tournamentsWon} T`}
+                          {sortBy === 'totalScore' && `${rankedUsers[2].totalScore} pts`}
+                        </div>
+                      </div>
+                      <div className="stage-block stage-block-3">
+                        <div className="stage-rank">3</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
