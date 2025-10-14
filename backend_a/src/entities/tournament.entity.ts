@@ -63,7 +63,7 @@ export class Tournament {
   @Column({ name: 'registration_start', type: 'timestamp', nullable: true })
   registrationStart: Date;
 
-  @Column({ name: 'regitration_end', type: 'timestamp', nullable: true })
+  @Column({ name: 'registration_end', type: 'timestamp', nullable: true })
   registrationEnd: Date;
 
   @Column({ name: 'start_date', type: 'timestamp', nullable: true })
@@ -82,13 +82,13 @@ export class Tournament {
   prizePool: number;
 
   @Column({
-    name: 'entry_free',
+    name: 'entry_fee',
     type: 'decimal',
     precision: 10,
     scale: 2,
     default: 0,
   })
-  entryFree: number;
+  entryFee: number;
 
   @Column({ name: 'is_public', default: true })
   isPublic: boolean;
