@@ -189,6 +189,41 @@ class SocketService {
     }
   }
 
+  // Écouter quand un tournoi se termine
+  onTournamentCompleted(callback: (data: {
+    tournamentId: number;
+    tournamentName: string;
+    champion: {
+      id: number;
+      username: string;
+      avatar?: string;
+    };
+    celebration: boolean;
+  }) => void) {
+    const socket = this.connectToGame();
+    socket.on('tournamentCompleted', callback);
+  }
+
+  // Rejoindre la room d'un tournoi pour recevoir les notifications
+  joinTournamentRoom(tournamentId: number) {
+    const socket = this.connectToGame();
+    socket.emit('joinTournament', { tournamentId });
+  }
+
+  // Quitter la room d'un tournoi
+  leaveTournamentRoom(tournamentId: number) {
+    if (this.gameSocket) {
+      this.gameSocket.emit('leaveTournament', { tournamentId });
+    }
+  }
+
+  // Nettoyer les event listeners de tournoi
+  offTournamentEvents() {
+    if (this.gameSocket) {
+      this.gameSocket.off('tournamentCompleted');
+    }
+  }
+
   // Déconnexion
   disconnect() {
     if (this.gameSocket) {

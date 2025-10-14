@@ -126,6 +126,104 @@ export class TournamentsService {
     return { tournaments, total };
   }
 
+  async findActive(
+    query: TournamentQueryDto,
+    userId?: number,
+  ): Promise<{ tournaments: Tournament[]; total: number }> {
+    // Tournois actifs = draft, open, full, in_progress
+    const activeQuery = { 
+      ...query, 
+      status: undefined // On ne veut pas utiliser le status du query
+    };
+    
+    const { type, isPublic, limit = 10, page = 1 } = activeQuery;
+
+    const queryBuilder = this.tournamentRepository
+      .createQueryBuilder('tournament')
+      .leftJoinAndSelect('tournament.creator', 'creator')
+      .leftJoinAndSelect('tournament.participants', 'participants')
+      .leftJoinAndSelect('tournament.winner', 'winner')
+      .andWhere('tournament.status IN (:...activeStatuses)', { 
+        activeStatuses: [
+          TournamentStatus.DRAFT, 
+          TournamentStatus.OPEN, 
+          TournamentStatus.FULL, 
+          TournamentStatus.IN_PROGRESS
+        ] 
+      });
+
+    if (type) {
+      queryBuilder.andWhere('tournament.type = :type', { type });
+    }
+    if (isPublic !== undefined) {
+      queryBuilder.andWhere('tournament.isPublic = :isPublic', { isPublic });
+    } else {
+      if (userId) {
+        queryBuilder.andWhere(
+          '(tournament.isPublic = true OR tournament.creatorId = :userId)',
+          { userId },
+        );
+      } else {
+        queryBuilder.andWhere('tournament.isPublic = true');
+      }
+    }
+
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+    queryBuilder.orderBy('tournament.createdAt', 'DESC');
+
+    const [tournaments, total] = await queryBuilder.getManyAndCount();
+    return { tournaments, total };
+  }
+
+  async findCompleted(
+    query: TournamentQueryDto,
+    userId?: number,
+  ): Promise<{ tournaments: Tournament[]; total: number }> {
+    // Tournois terminés = completed, cancelled
+    const completedQuery = { 
+      ...query, 
+      status: undefined 
+    };
+    
+    const { type, isPublic, limit = 10, page = 1 } = completedQuery;
+
+    const queryBuilder = this.tournamentRepository
+      .createQueryBuilder('tournament')
+      .leftJoinAndSelect('tournament.creator', 'creator')
+      .leftJoinAndSelect('tournament.participants', 'participants')
+      .leftJoinAndSelect('tournament.winner', 'winner')
+      .andWhere('tournament.status IN (:...completedStatuses)', { 
+        completedStatuses: [
+          TournamentStatus.COMPLETED, 
+          TournamentStatus.CANCELLED
+        ] 
+      });
+
+    if (type) {
+      queryBuilder.andWhere('tournament.type = :type', { type });
+    }
+    if (isPublic !== undefined) {
+      queryBuilder.andWhere('tournament.isPublic = :isPublic', { isPublic });
+    } else {
+      if (userId) {
+        queryBuilder.andWhere(
+          '(tournament.isPublic = true OR tournament.creatorId = :userId)',
+          { userId },
+        );
+      } else {
+        queryBuilder.andWhere('tournament.isPublic = true');
+      }
+    }
+
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+    queryBuilder.orderBy('tournament.endDate', 'DESC'); // Trier par date de fin pour les terminés
+
+    const [tournaments, total] = await queryBuilder.getManyAndCount();
+    return { tournaments, total };
+  }
+
   async findOne(id: number, userId?: number): Promise<Tournament> {
     const tournament = await this.tournamentRepository.findOne({
       where: { id },
@@ -596,7 +694,7 @@ export class TournamentsService {
 
     // Vérifier que le match n'est pas terminé
     if (match.status === 'finished') {
-      throw new BadRequestException('Ce match est déjà terminé');
+      throw new BadRequestException('Ce match est déjà terminé et ne peut plus être rejouée');
     }
 
     // Mettre le match en statut "active" seulement s'il ne l'est pas déjà
@@ -771,12 +869,42 @@ export class TournamentsService {
 
         await this.tournamentRepository.save(tournament);
 
+        // 🎉 DÉCLENCHER L'ANIMATION DE VICTOIRE
+        this.gameGateway.server.to(`tournament_${tournament.id}`).emit('tournamentCompleted', {
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+          champion: {
+            id: winners[0].id,
+            username: winners[0].username,
+            avatar: winners[0].avatar,
+          },
+          completedAt: tournament.endDate,
+          celebration: true, // Déclenche l'animation de spray
+        });
+
+        console.log(`🎉 TOURNAMENT COMPLETED: ${tournament.name} - Champion: ${winners[0].username}`);
+
         return {
           isChampion: true,
           champion: {
             id: winners[0].id,
             username: winners[0].username,
           },
+        };
+      }
+
+      // Vérifier si des matches pour le round suivant existent déjà
+      const existingNextRoundMatches = await this.matchRepository.find({
+        where: { tournament: { id: tournament.id }, round: nextRound },
+      });
+
+      if (existingNextRoundMatches.length > 0) {
+        console.log(`⚠️ ROUND ${nextRound} MATCHES ALREADY EXIST: ${existingNextRoundMatches.length} matches found - skipping creation`);
+        return {
+          isChampion: false,
+          nextRoundAlreadyExists: true,
+          nextRound: nextRound,
+          existingMatches: existingNextRoundMatches.length,
         };
       }
 
@@ -810,18 +938,6 @@ export class TournamentsService {
           });
 
           console.log(`✅ CREATED NEW MATCH ${savedMatch.id}: ${winners[i].username} vs ${winners[i + 1].username} (Round ${nextRound}) - gameId: ${gameId}`);
-          
-          // Verify the match was saved correctly
-          const verification = await this.matchRepository.findOne({
-            where: { id: savedMatch.id },
-            relations: ['player1', 'player2', 'tournament']
-          });
-          
-          if (verification) {
-            console.log(`✅ VERIFICATION: Match ${savedMatch.id} saved correctly with players ${verification.player1.username} vs ${verification.player2.username}`);
-          } else {
-            console.error(`❌ VERIFICATION FAILED: Match ${savedMatch.id} not found after saving`);
-          }
           
           newMatchesCreated++;
         }
@@ -974,6 +1090,112 @@ export class TournamentsService {
   }
 
   // ===== MÉTHODES UTILITAIRES =====
+
+  async cleanDuplicateMatches(tournamentId: number, userId: number): Promise<any> {
+    console.log(`🧹 CLEANING DUPLICATE MATCHES for tournament ${tournamentId} by user ${userId}`);
+    
+    const tournament = await this.findOne(tournamentId, userId);
+
+    if (tournament.creatorId !== userId) {
+      throw new ForbiddenException('Seul le créateur peut nettoyer les doublons');
+    }
+
+    // Trouver tous les matches du tournoi
+    const allMatches = await this.matchRepository.find({
+      where: { tournament: { id: tournamentId } },
+      relations: ['player1', 'player2', 'tournament'],
+      order: { round: 'ASC', bracketPosition: 'ASC', id: 'ASC' }
+    });
+
+    console.log(`🔍 FOUND ${allMatches.length} total matches`);
+
+    const duplicatesRemoved: any[] = [];
+    const seenMatches = new Map();
+
+    for (const match of allMatches) {
+      // Créer une clé unique basée sur round, bracketPosition et joueurs
+      const key = `${match.round}-${match.bracketPosition}-${match.player1?.id}-${match.player2?.id}`;
+      
+      if (seenMatches.has(key)) {
+        // C'est un doublon, supprimer le match avec l'ID plus élevé (le plus récent)
+        const existingMatch = seenMatches.get(key);
+        const matchToDelete = match.id > existingMatch.id ? match : existingMatch;
+        const matchToKeep = match.id > existingMatch.id ? existingMatch : match;
+
+        console.log(`🗑️ DUPLICATE FOUND: Removing match ${matchToDelete.id} (keeping ${matchToKeep.id})`);
+        console.log(`   Match details: Round ${match.round}, Position ${match.bracketPosition}, ${match.player1?.username} vs ${match.player2?.username}`);
+        
+        await this.matchRepository.delete(matchToDelete.id);
+        duplicatesRemoved.push({
+          deletedMatchId: matchToDelete.id,
+          keptMatchId: matchToKeep.id,
+          round: match.round,
+          bracketPosition: match.bracketPosition,
+          players: `${match.player1?.username} vs ${match.player2?.username}`
+        });
+
+        // Mettre à jour la map avec le match conservé
+        seenMatches.set(key, matchToKeep);
+      } else {
+        seenMatches.set(key, match);
+      }
+    }
+
+    console.log(`✅ CLEANUP COMPLETED: Removed ${duplicatesRemoved.length} duplicate matches`);
+
+    return {
+      tournamentId,
+      duplicatesRemoved: duplicatesRemoved.length,
+      details: duplicatesRemoved,
+      message: `${duplicatesRemoved.length} matches en double supprimés avec succès`
+    };
+  }
+
+  async clearAllTournaments(userId: number): Promise<any> {
+    console.log(`🧹 CLEARING ALL TOURNAMENTS requested by user ${userId}`);
+    
+    // Pour simplifier, on permet à tous les utilisateurs connectés de faire cela
+    // En production, vous voudriez probablement vérifier les permissions admin
+    
+    try {
+      // Compter les tournois avant suppression
+      const tournamentsCount = await this.tournamentRepository.count();
+      const matchesCount = await this.matchRepository.count();
+      
+      console.log(`🔍 FOUND: ${tournamentsCount} tournaments and ${matchesCount} matches to delete`);
+
+      // Supprimer tous les matches en premier (contraintes FK)
+      await this.matchRepository.query('DELETE FROM match');
+      console.log(`🗑️ DELETED: All matches cleared`);
+
+      // Supprimer les relations participants (table de jointure)
+      await this.tournamentRepository.query('DELETE FROM tournament_participants');
+      console.log(`🗑️ DELETED: All tournament participants relationships cleared`);
+
+      // Supprimer tous les tournois
+      await this.tournamentRepository.query('DELETE FROM tournament');
+      console.log(`🗑️ DELETED: All tournaments cleared`);
+
+      // Remettre les séquences à zéro pour avoir des IDs propres
+      await this.tournamentRepository.query('ALTER SEQUENCE tournament_id_seq RESTART WITH 1');
+      await this.matchRepository.query('ALTER SEQUENCE match_id_seq RESTART WITH 1');
+      console.log(`🔄 RESET: ID sequences reset to 1`);
+
+      console.log(`✅ CLEANUP COMPLETED: Database completely cleaned`);
+
+      return {
+        success: true,
+        tournamentsDeleted: tournamentsCount,
+        matchesDeleted: matchesCount,
+        message: `Base de données nettoyée avec succès - ${tournamentsCount} tournois et ${matchesCount} matches supprimés`,
+        resetInfo: 'Les séquences d\'ID ont été remises à 1'
+      };
+
+    } catch (error) {
+      console.error(`❌ CLEANUP ERROR:`, error);
+      throw new BadRequestException(`Erreur lors du nettoyage: ${error.message}`);
+    }
+  }
 
   async checkTournamentProgression(matchId: number): Promise<void> {
     console.log(`🔍 CHECKING TOURNAMENT PROGRESSION for match ${matchId}`);

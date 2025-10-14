@@ -1,0 +1,226 @@
+/* Styles pour les onglets de tournois */
+
+.tournament-tabs-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.tab-navigation {
+  display: flex;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.tab-button:hover {
+  background: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.tab-button.active {
+  background: #007bff;
+  color: white;
+  border-bottom: 3px solid #0056b3;
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+}
+
+.badge {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+}
+
+.tab-button.active .badge {
+  background: rgba(255, 255, 255, 0.9);
+  color: #007bff;
+}
+
+.tab-content {
+  min-height: 400px;
+}
+
+.tournaments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.tournament-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #e0e0e0;
+}
+
+.tournament-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.tournament-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tournament-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.status-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-draft { background: #ffeaa7; color: #d63031; }
+.status-open { background: #74b9ff; color: white; }
+.status-full { background: #fd79a8; color: white; }
+.status-in_progress { background: #fdcb6e; color: #2d3436; }
+.status-completed { background: #00b894; color: white; }
+.status-cancelled { background: #636e72; color: white; }
+
+.tournament-info {
+  margin-bottom: 1.5rem;
+}
+
+.tournament-info p {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.winner-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  border-radius: 8px;
+  border-left: 4px solid #f39c12;
+}
+
+.trophy-icon {
+  font-size: 1.5rem;
+}
+
+.winner-name {
+  font-weight: bold;
+  color: #2d3436;
+  font-size: 1.1rem;
+}
+
+.end-date {
+  font-size: 0.9rem;
+  color: #888;
+  font-style: italic;
+}
+
+.tournament-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease;
+  flex: 1;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.empty-state h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tournament-tabs-container {
+    padding: 1rem;
+  }
+  
+  .tournaments-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .tab-button {
+    font-size: 0.9rem;
+    padding: 0.8rem 1rem;
+  }
+  
+  .tab-icon {
+    font-size: 1rem;
+  }
+}

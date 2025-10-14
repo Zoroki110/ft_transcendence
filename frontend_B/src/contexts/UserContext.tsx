@@ -5,6 +5,7 @@ import { userAPI, authAPI } from '../services/api';
 import { User, UpdateUserDto, UserStats, DashboardData } from '../types';
 import { normalizeUserData, isValidUserData } from '../utils/userUtils';
 import { storageService } from '../utils/storage';
+import { socketService } from '../services/socket';
 
 interface UserContextType {
   user: User | null;
@@ -322,6 +323,31 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
     initializeUser();
   }, [user, loading, loadProfile, logout]); // Avec les bonnes dépendances
+
+  // Écouter les événements de tournoi terminé pour rafraîchir le profil
+  useEffect(() => {
+    if (isLoggedIn && user) {
+      console.log('🏆 Setting up tournament completion listener for user:', user.username);
+      
+      const handleTournamentCompleted = async (data: any) => {
+        console.log('🏆 Tournament completed event received:', data);
+        
+        // Si l'utilisateur actuel est le champion, rafraîchir son profil
+        if (data.champion && data.champion.id === user.id) {
+          console.log('🎉 Current user won the tournament! Refreshing profile...');
+          await loadProfile();
+        }
+      };
+
+      socketService.onTournamentCompleted(handleTournamentCompleted);
+
+      // Cleanup lors du démontage ou changement d'utilisateur
+      return () => {
+        console.log('🏆 Cleaning up tournament completion listener');
+        socketService.offTournamentEvents();
+      };
+    }
+  }, [isLoggedIn, user, loadProfile]);
 
   const contextValue: UserContextType = {
     user,
