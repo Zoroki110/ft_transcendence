@@ -224,6 +224,37 @@ export class TournamentsService {
     return { tournaments, total };
   }
 
+  async findMyTournaments(
+    query: TournamentQueryDto,
+    userId: number,
+  ): Promise<{ tournaments: Tournament[]; total: number }> {
+    const { status, type, limit = 10, page = 1 } = query;
+
+    const queryBuilder = this.tournamentRepository
+      .createQueryBuilder('tournament')
+      .leftJoinAndSelect('tournament.creator', 'creator')
+      .leftJoinAndSelect('tournament.participants', 'participants')
+      .leftJoinAndSelect('tournament.winner', 'winner')
+      .where(
+        '(tournament.creatorId = :userId OR participants.id = :userId)',
+        { userId }
+      );
+
+    if (status) {
+      queryBuilder.andWhere('tournament.status = :status', { status });
+    }
+    if (type) {
+      queryBuilder.andWhere('tournament.type = :type', { type });
+    }
+
+    const offset = (page - 1) * limit;
+    queryBuilder.skip(offset).take(limit);
+    queryBuilder.orderBy('tournament.createdAt', 'DESC'); // Les plus récents d'abord
+
+    const [tournaments, total] = await queryBuilder.getManyAndCount();
+    return { tournaments, total };
+  }
+
   async findOne(id: number, userId?: number): Promise<Tournament> {
     const tournament = await this.tournamentRepository.findOne({
       where: { id },
@@ -796,11 +827,27 @@ export class TournamentsService {
     const winner =
       winnerId === match.player1.id ? match.player1 : match.player2;
 
-    // Créer le match suivant ou déclarer le champion
-    const result = await this.createNextRoundMatch(tournament, match, winner);
+    // Créer le match suivant ou déclarer le champion en utilisant la logique sécurisée
+    await this.checkTournamentProgression(match.id);
+
+    // Vérifier si le tournoi est maintenant terminé
+    const updatedTournament = await this.tournamentRepository.findOne({
+      where: { id: tournament.id },
+      relations: ['winner'],
+    });
+
+    const isChampion = updatedTournament?.status === TournamentStatus.COMPLETED;
+
+    // Vérifier si le round suivant a été créé
+    const nextRound = match.round + 1;
+    const nextRoundMatches = await this.matchRepository.find({
+      where: { tournament: { id: tournament.id }, round: nextRound },
+    });
+
+    const nextRoundCreated = nextRoundMatches.length > 0;
 
     return {
-      message: result.isChampion
+      message: isChampion
         ? 'Tournoi terminé !'
         : 'Match terminé avec succès',
       match: {
@@ -809,7 +856,21 @@ export class TournamentsService {
         finalScore: `${player1Score} - ${player2Score}`,
         status: 'finished',
       },
-      ...result,
+      isChampion,
+      ...(isChampion && updatedTournament?.winner && { 
+        champion: {
+          id: updatedTournament.winner.id,
+          username: updatedTournament.winner.username,
+        }
+      }),
+      ...(nextRoundCreated && {
+        nextRoundCreated: true,
+        nextRound: nextRound,
+        matchesCreated: nextRoundMatches.length,
+      }),
+      ...(!nextRoundCreated && !isChampion && {
+        waitingForOtherMatches: true,
+      }),
     };
   }
 
@@ -835,6 +896,22 @@ export class TournamentsService {
     // Si tous les matches du round actuel sont terminés
     if (completedCurrentRoundMatches.length === currentRoundMatches.length) {
       console.log(`✅ ALL ROUND ${currentRound} MATCHES COMPLETED - ADVANCING TO NEXT ROUND`);
+      
+      // PREMIÈRE VÉRIFICATION : Éviter les race conditions en vérifiant immédiatement si le round suivant existe
+      const existingNextRoundMatches = await this.matchRepository.find({
+        where: { tournament: { id: tournament.id }, round: nextRound },
+      });
+
+      if (existingNextRoundMatches.length > 0) {
+        console.log(`⚠️ RACE CONDITION AVOIDED: Round ${nextRound} already has ${existingNextRoundMatches.length} matches - skipping creation`);
+        return {
+          isChampion: false,
+          nextRoundAlreadyExists: true,
+          nextRound: nextRound,
+          existingMatches: existingNextRoundMatches.length,
+        };
+      }
+      
       const winners = await Promise.all(
         completedCurrentRoundMatches.map(async (match) => {
           const fullMatch = await this.matchRepository.findOne({
@@ -893,55 +970,53 @@ export class TournamentsService {
         };
       }
 
-      // Vérifier si des matches pour le round suivant existent déjà
-      const existingNextRoundMatches = await this.matchRepository.find({
-        where: { tournament: { id: tournament.id }, round: nextRound },
-      });
-
-      if (existingNextRoundMatches.length > 0) {
-        console.log(`⚠️ ROUND ${nextRound} MATCHES ALREADY EXIST: ${existingNextRoundMatches.length} matches found - skipping creation`);
-        return {
-          isChampion: false,
-          nextRoundAlreadyExists: true,
-          nextRound: nextRound,
-          existingMatches: existingNextRoundMatches.length,
-        };
-      }
-
       // Créer les nouveaux matches pour le round suivant avec les gagnants
       console.log(`🏆 WINNERS: ${winners.length} winners to place: ${winners.map(w => w.username).join(', ')}`);
       console.log(`🎯 NEXT-ROUND: Creating ${Math.floor(winners.length / 2)} new matches for round ${nextRound}`);
 
+      // Utiliser une transaction pour éviter les race conditions
       let newMatchesCreated = 0;
-      for (let i = 0; i < winners.length; i += 2) {
-        if (i + 1 < winners.length) {
-          console.log(`🔧 CREATING MATCH: ${winners[i].username} vs ${winners[i + 1].username} for Round ${nextRound}`);
-          
-          // Créer un nouveau match avec les deux gagnants
-          const newMatch = this.matchRepository.create({
-            player1: winners[i],
-            player2: winners[i + 1],
-            tournament: tournament,
-            round: nextRound,
-            bracketPosition: Math.floor(i / 2),
-            status: 'pending',
-            player1Score: 0,
-            player2Score: 0,
-          });
+      await this.matchRepository.manager.transaction(async (transactionalEntityManager) => {
+        // Double vérification dans la transaction
+        const existingMatchesInTransaction = await transactionalEntityManager.find(Match, {
+          where: { tournament: { id: tournament.id }, round: nextRound },
+        });
 
-          const savedMatch = await this.matchRepository.save(newMatch);
-
-          // Générer le gameId pour ce match
-          const gameId = `game_tournament_${tournament.id}_match_${savedMatch.id}`;
-          await this.matchRepository.update(savedMatch.id, {
-            gameId: gameId
-          });
-
-          console.log(`✅ CREATED NEW MATCH ${savedMatch.id}: ${winners[i].username} vs ${winners[i + 1].username} (Round ${nextRound}) - gameId: ${gameId}`);
-          
-          newMatchesCreated++;
+        if (existingMatchesInTransaction.length > 0) {
+          console.log(`⚠️ TRANSACTION: Round ${nextRound} already has matches - aborting creation`);
+          return;
         }
-      }
+
+        for (let i = 0; i < winners.length; i += 2) {
+          if (i + 1 < winners.length) {
+            console.log(`🔧 CREATING MATCH: ${winners[i].username} vs ${winners[i + 1].username} for Round ${nextRound}`);
+            
+            // Créer un nouveau match avec les deux gagnants
+            const newMatch = transactionalEntityManager.create(Match, {
+              player1: winners[i],
+              player2: winners[i + 1],
+              tournament: tournament,
+              round: nextRound,
+              bracketPosition: Math.floor(i / 2),
+              status: 'pending',
+              player1Score: 0,
+              player2Score: 0,
+            });
+
+            const savedMatch = await transactionalEntityManager.save(newMatch);
+
+            // Générer le gameId pour ce match
+            const gameId = `game_tournament_${tournament.id}_match_${savedMatch.id}`;
+            await transactionalEntityManager.update(Match, savedMatch.id, {
+              gameId: gameId
+            });
+
+            console.log(`✅ CREATED NEW MATCH ${savedMatch.id}: ${winners[i].username} vs ${winners[i + 1].username} (Round ${nextRound}) - gameId: ${gameId}`);
+            
+            newMatchesCreated++;
+          }
+        }
+      });
 
       if (newMatchesCreated > 0) {
         return {
@@ -1222,11 +1297,34 @@ export class TournamentsService {
     
     console.log(`🏆 WINNER: ${winner.username} (${match.player1.username}: ${match.player1Score} vs ${match.player2.username}: ${match.player2Score})`);
     
-    try {
-      await this.createNextRoundMatch(match.tournament, match, winner);
-      console.log(`✅ TOURNAMENT PROGRESSION COMPLETED for tournament ${match.tournament.id}`);
-    } catch (error) {
-      console.error(`❌ TOURNAMENT PROGRESSION FAILED:`, error);
+    // Vérifier si ce match finit le round avant de progresser
+    const currentRound = match.round;
+    const allRoundMatches = await this.matchRepository.find({
+      where: { tournament: { id: match.tournament.id }, round: currentRound },
+    });
+
+    const finishedRoundMatches = allRoundMatches.filter(m => m.status === 'finished');
+    
+    console.log(`🔍 ROUND ${currentRound} STATUS: ${finishedRoundMatches.length}/${allRoundMatches.length} matches completed`);
+    
+    // Ne progresser QUE si c'est exactement le dernier match de ce round qui vient de se terminer
+    if (finishedRoundMatches.length === allRoundMatches.length) {
+      // Vérifier que c'est bien CE match qui a complété le round (éviter les appels multiples)
+      const justFinishedMatch = finishedRoundMatches.find(m => m.id === matchId);
+      if (justFinishedMatch) {
+        console.log(`🎯 LAST MATCH OF ROUND ${currentRound} COMPLETED - PROGRESSING TO NEXT ROUND`);
+        
+        try {
+          await this.createNextRoundMatch(match.tournament, match, winner);
+          console.log(`✅ TOURNAMENT PROGRESSION COMPLETED for tournament ${match.tournament.id}`);
+        } catch (error) {
+          console.error(`❌ TOURNAMENT PROGRESSION FAILED:`, error);
+        }
+      } else {
+        console.log(`⚠️ Round ${currentRound} is complete but this match (${matchId}) was not the completing one - skipping progression`);
+      }
+    } else {
+      console.log(`⏳ WAITING: Round ${currentRound} still has ${allRoundMatches.length - finishedRoundMatches.length} matches remaining`);
     }
   }
 
