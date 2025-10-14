@@ -8,6 +8,7 @@ import { User } from '../entities/user.entity';
 import { Match } from '../entities/match.entity';
 import { GameModule } from '../game/game.module';
 import { GameGateway } from '../game/game.gateway';
+import { GameService } from '../game/game.service';
 
 @Module({
   imports: [

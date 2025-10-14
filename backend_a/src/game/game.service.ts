@@ -9,6 +9,7 @@ import { FinishMatchDto } from './dto/finish-match.dto';
 export class GameService {
   private readonly logger = new Logger('GameService');
   private gameGateway: any; // Injection manuelle via setter
+  private tournamentsService: any; // Injection manuelle via setter
 
   constructor(
     @InjectRepository(Match)
@@ -18,6 +19,11 @@ export class GameService {
   // Setter pour éviter la dépendance circulaire
   setGameGateway(gameGateway: any) {
     this.gameGateway = gameGateway;
+  }
+
+  // Setter pour la dépendance circulaire avec TournamentsService
+  setTournamentsService(tournamentsService: any) {
+    this.tournamentsService = tournamentsService;
   }
 
   createChallengeRoom(
@@ -106,10 +112,17 @@ export class GameService {
 
     const savedMatch = await this.matchRepo.save(match);
 
-    // Log pour le debug mais pas d'avancement automatique pour éviter les dépendances circulaires
-    if (match.tournament) {
+    // Check tournament progression after finishing a tournament match
+    if (match.tournament && this.tournamentsService) {
       this.logger.log(`🏁 TOURNAMENT MATCH FINISHED: Match ${id} from tournament ${match.tournament.id}`);
       this.logger.log(`📊 SCORES: Player1=${finishMatchDto.player1Score}, Player2=${finishMatchDto.player2Score}`);
+      
+      // Trigger tournament progression check
+      try {
+        await this.tournamentsService.checkTournamentProgression(id);
+      } catch (error) {
+        this.logger.error(`❌ TOURNAMENT PROGRESSION ERROR:`, error);
+      }
     }
 
     return savedMatch;
