@@ -435,6 +435,37 @@ const TournamentDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Section du gagnant pour les tournois terminés */}
+        {tournament.status === 'completed' && tournament.winner && (
+          <div className="card tournament-winner-section">
+            <div className="winner-celebration">
+              <div className="winner-header">
+                <h2 className="detail-section-title">🏆 Champion du Tournoi</h2>
+                <div className="celebration-animation">🎉</div>
+              </div>
+              
+              <div className="winner-display">
+                <div className="winner-trophy">
+                  <span className="trophy-icon">🏆</span>
+                </div>
+                <div className="winner-info">
+                  <h3 className="winner-name">{tournament.winner.username}</h3>
+                  <p className="winner-title">Vainqueur du tournoi</p>
+                  {tournament.endDate && (
+                    <p className="tournament-completion-date">
+                      🗓️ Tournoi terminé le {new Date(tournament.endDate).toLocaleDateString('fr-FR')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="winner-celebration-message">
+                <p>🎊 Félicitations au champion ! 🎊</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {(tournament.status === 'in_progress' || tournament.status === 'completed') && (
           <div className="card tournament-brackets-preview">
             <div className="brackets-preview-header">

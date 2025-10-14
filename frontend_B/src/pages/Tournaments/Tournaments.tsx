@@ -11,7 +11,7 @@ import './Tournaments.css';
 const Tournaments: React.FC = () => {
   const { user, isLoggedIn } = useUser();
   const [filters, setFilters] = useState({
-    status: 'all',
+    status: 'open',
     type: 'all',
     search: ''
   });
@@ -23,7 +23,7 @@ const Tournaments: React.FC = () => {
     error,
     updateQuery,
     refetch
-  } = useTournaments();
+  } = useTournaments({ status: 'open' });
 
   const {
     state: actionState,

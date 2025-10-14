@@ -117,6 +117,13 @@ export class GameService {
       this.logger.log(`🏁 TOURNAMENT MATCH FINISHED: Match ${id} from tournament ${match.tournament.id}`);
       this.logger.log(`📊 SCORES: Player1=${finishMatchDto.player1Score}, Player2=${finishMatchDto.player2Score}`);
       
+      // Fermer la room de tournoi puisque le match est terminé
+      const gameId = `game_tournament_${match.tournament.id}_match_${id}`;
+      if (this.gameGateway && this.gameGateway.closeTournamentRoom) {
+        this.gameGateway.closeTournamentRoom(gameId);
+        this.logger.log(`🔒 Closed tournament room: ${gameId}`);
+      }
+      
       // Trigger tournament progression check
       try {
         await this.tournamentsService.checkTournamentProgression(id);

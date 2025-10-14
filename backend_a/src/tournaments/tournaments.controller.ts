@@ -83,6 +83,64 @@ export class TournamentsController {
     return this.tournamentsService.findAll(query, userId);
   }
 
+  @Get('active')
+  @ApiOperation({
+    summary: 'Lister les tournois actifs (draft, open, full, in_progress)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tournois actifs récupérée avec succès',
+  })
+  @ApiQuery({ name: 'type', required: false, description: 'Filtrer par type' })
+  @ApiQuery({
+    name: 'isPublic',
+    required: false,
+    description: 'Tournois publics seulement',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Nombre de résultats par page (défaut: 10)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Numéro de page (défaut: 1)',
+  })
+  findActive(@Query() query: TournamentQueryDto, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.findActive(query, userId);
+  }
+
+  @Get('completed')
+  @ApiOperation({
+    summary: 'Lister les tournois terminés (completed, cancelled)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des tournois terminés récupérée avec succès',
+  })
+  @ApiQuery({ name: 'type', required: false, description: 'Filtrer par type' })
+  @ApiQuery({
+    name: 'isPublic',
+    required: false,
+    description: 'Tournois publics seulement',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Nombre de résultats par page (défaut: 10)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Numéro de page (défaut: 1)',
+  })
+  findCompleted(@Query() query: TournamentQueryDto, @Req() req) {
+    const userId = req.user?.sub || null;
+    return this.tournamentsService.findCompleted(query, userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un tournoi par son ID' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
@@ -415,5 +473,25 @@ export class TournamentsController {
         t.participants.some((p) => p.id === req.user.sub),
       ),
     };
+  }
+
+  @Post(':id/clean-duplicates')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Nettoyer les matches en double (debug uniquement)' })
+  @ApiParam({ name: 'id', description: 'ID du tournoi' })
+  @ApiResponse({ status: 200, description: 'Doublons supprimés avec succès' })
+  async cleanDuplicateMatches(@Param('id', ParseIntPipe) id: number, @Req() req) {
+    return this.tournamentsService.cleanDuplicateMatches(id, req.user.sub);
+  }
+
+  @Delete('admin/clear-all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Supprimer TOUS les tournois (admin only)' })
+  @ApiResponse({ status: 200, description: 'Tous les tournois supprimés avec succès' })
+  @ApiResponse({ status: 403, description: 'Accès refusé - admin requis' })
+  async clearAllTournaments(@Req() req) {
+    return this.tournamentsService.clearAllTournaments(req.user.sub);
   }
 }

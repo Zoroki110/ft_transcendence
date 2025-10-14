@@ -725,6 +725,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return room;
   }
 
+  // Fermer/supprimer une room de tournoi terminée
+  closeTournamentRoom(gameId: string): boolean {
+    const room = this.gameRooms.get(gameId);
+    if (room && room.matchId) {
+      // Notifier tous les joueurs connectés que la room va fermer
+      this.server.to(gameId).emit('roomClosed', {
+        message: 'Ce match est terminé. La room va être fermée.',
+        reason: 'match_finished'
+      });
+      
+      // Supprimer la room
+      const deleted = this.gameRooms.delete(gameId);
+      this.logger.log(`🔒 Tournament room closed: ${gameId} for match ${room.matchId}`);
+      return deleted;
+    }
+    return false;
+  }
+
   // Créer une room spécifique pour un défi entre amis
   createChallengeGameRoom(
     gameId: string,
