@@ -1,22 +1,24 @@
 // frontend_B/src/pages/Tournaments/Tournaments.tsx - CORRIGÉ AVEC HOOK
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournaments } from '../../hooks/useTournaments';
 import { useUser } from '../../contexts/UserContext';
 import { getTournamentPermissions } from '../../utils/tournamentPermissions';
 import { useTournamentActions } from '../../hooks/useTournamentActions';
+import { tournamentAPI } from '../../services/api';
 import { Tournament } from '../../types';
 import './Tournaments.css';
 
 const Tournaments: React.FC = () => {
   const { user, isLoggedIn } = useUser();
+  const [activeTab, setActiveTab] = useState<'public' | 'my'>('my'); // Par défaut "Mes tournois"
   const [filters, setFilters] = useState({
     status: 'open',
     type: 'all',
     search: ''
   });
 
-  // Utiliser le hook corrigé et les actions
+  // Hook pour les tournois publics (lobbys ouverts)
   const {
     tournaments,
     loading: isLoading,
@@ -25,11 +27,42 @@ const Tournaments: React.FC = () => {
     refetch
   } = useTournaments({ status: 'open' });
 
+  // État pour mes tournois
+  const [myTournaments, setMyTournaments] = useState([]);
+  const [myTournamentsLoading, setMyTournamentsLoading] = useState(false);
+  const [myTournamentsError, setMyTournamentsError] = useState(null);
+
   const {
     state: actionState,
     joinTournament: hookJoinTournament,
     leaveTournament: hookLeaveTournament
   } = useTournamentActions();
+
+  // Fonction pour charger mes tournois
+  const loadMyTournaments = async () => {
+    if (!isLoggedIn) {
+      setMyTournaments([]);
+      return;
+    }
+
+    try {
+      setMyTournamentsLoading(true);
+      setMyTournamentsError(null);
+      const response = await tournamentAPI.getMyTournaments();
+      setMyTournaments(response.data.tournaments);
+    } catch (err: any) {
+      setMyTournamentsError(err.response?.data?.message || 'Erreur de chargement');
+    } finally {
+      setMyTournamentsLoading(false);
+    }
+  };
+
+  // Charger mes tournois quand l'onglet change ou quand l'utilisateur se connecte
+  useEffect(() => {
+    if (activeTab === 'my' && isLoggedIn) {
+      loadMyTournaments();
+    }
+  }, [activeTab, isLoggedIn]);
 
   // Mettre à jour les filtres API quand les filtres locaux changent
   const handleStatusChange = (status: string) => {
@@ -97,7 +130,11 @@ const Tournaments: React.FC = () => {
     if (result) {
       // Recharger la liste des tournois pour synchroniser
       await refetch();
-      console.log('✅ TOURNAMENTS: Quick join success, list refreshed');
+      // Recharger aussi mes tournois si on est sur cet onglet
+      if (activeTab === 'my') {
+        await loadMyTournaments();
+      }
+      console.log('✅ TOURNAMENTS: Quick join success, lists refreshed');
     }
   };
 
@@ -115,7 +152,11 @@ const Tournaments: React.FC = () => {
     if (result) {
       // Recharger la liste des tournois pour synchroniser
       await refetch();
-      console.log('✅ TOURNAMENTS: Quick leave success, list refreshed');
+      // Recharger aussi mes tournois si on est sur cet onglet
+      if (activeTab === 'my') {
+        await loadMyTournaments();
+      }
+      console.log('✅ TOURNAMENTS: Quick leave success, lists refreshed');
     }
   };
 

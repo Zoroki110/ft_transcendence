@@ -141,6 +141,33 @@ export class TournamentsController {
     return this.tournamentsService.findCompleted(query, userId);
   }
 
+  @Get('my-tournaments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Lister les tournois de l\'utilisateur connecté (créés ou auxquels il participe)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tournois de l\'utilisateur récupérés avec succès',
+  })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiQuery({ name: 'status', required: false, description: 'Filtrer par status' })
+  @ApiQuery({ name: 'type', required: false, description: 'Filtrer par type' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Nombre de résultats par page (défaut: 10)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Numéro de page (défaut: 1)',
+  })
+  findMyTournaments(@Query() query: TournamentQueryDto, @Req() req) {
+    return this.tournamentsService.findMyTournaments(query, req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un tournoi par son ID' })
   @ApiParam({ name: 'id', description: 'ID du tournoi' })
