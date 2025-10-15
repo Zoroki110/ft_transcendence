@@ -1,5 +1,19 @@
 /* frontend_B/src/pages/TournamentDetail/TournamentDetail.css */
 
+/* Animation pour le spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 .tournament-loading,
 .tournament-error {
   display: flex;
@@ -8,12 +22,15 @@
   justify-content: center;
   min-height: 400px;
   text-align: center;
+  gap: 1rem;
 }
 
 .loading-icon,
 .error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .error-message {
@@ -30,8 +47,14 @@
 .tournament-status-badge {
   padding: 0.5rem 1rem;
   border-radius: 20px;
-  font-size: 1rem;
-  font-weight: bold;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .tournament-message {
@@ -93,10 +116,13 @@
 .creator-badge {
   background: var(--primary);
   color: white;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: bold;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .tournament-type {

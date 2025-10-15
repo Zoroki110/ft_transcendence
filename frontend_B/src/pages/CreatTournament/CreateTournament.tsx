@@ -81,7 +81,7 @@ const CreateTournament: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -90,10 +90,20 @@ const CreateTournament: React.FC = () => {
 
     try {
       const response = await tournamentAPI.createTournament(formData);
-      navigate(`/tournaments/${response.data.id}`);
+      const createdTournament = response.data;
+
+      // 🎯 INSTANT BRACKETS: Si pas de date prévue, rediriger vers les brackets
+      const hasNoScheduledDate = !formData.startDate;
+
+      if (hasNoScheduledDate && createdTournament.bracketGenerated) {
+        console.log('🎯 REDIRECTING: Tournament has no scheduled date, redirecting to brackets');
+        navigate(`/tournaments/${createdTournament.id}/brackets`);
+      } else {
+        navigate(`/tournaments/${createdTournament.id}`);
+      }
     } catch (err: any) {
-      setErrors({ 
-        submit: err.response?.data?.message || 'Erreur lors de la création du tournoi' 
+      setErrors({
+        submit: err.response?.data?.message || 'Erreur lors de la création du tournoi'
       });
       setIsSubmitting(false);
     }

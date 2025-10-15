@@ -72,16 +72,24 @@ export class TournamentsService {
 
     console.log('✅ CREATOR AUTO-ENROLLED via TypeORM relations');
 
+    // 🎯 BRACKETS IMMÉDIATS: Si pas de date prévue, générer les brackets immédiatement
+    const hasNoScheduledDate = !createTournamentDto.startDate;
+
+    if (hasNoScheduledDate) {
+      console.log('🎯 INSTANT BRACKETS: No scheduled date, generating brackets immediately with TBD slots');
+      await this.generateBracketsWithTBD(savedTournament.id);
+    }
+
     // Recharger avec les participants
     const result = await this.tournamentRepository.findOne({
       where: { id: savedTournament.id },
       relations: ['creator', 'participants'],
     });
-    
+
     if (!result) {
       throw new NotFoundException('Tournoi introuvable après création');
     }
-    
+
     return result;
   }
 
@@ -334,7 +342,7 @@ export class TournamentsService {
     console.log('🔍 JOIN TOURNAMENT:', { tournamentId, userId });
 
     const tournament = await this.findOne(tournamentId);
-    
+
     if (tournament.status !== TournamentStatus.DRAFT && tournament.status !== TournamentStatus.OPEN) {
       throw new BadRequestException('Impossible de rejoindre ce tournoi');
     }
@@ -368,13 +376,28 @@ export class TournamentsService {
     }
 
     await this.tournamentRepository.save(tournament);
-    
+
     console.log('✅ JOIN SUCCESS:', {
       tournamentId,
       userId,
       participantCount: tournament.participants.length,
       status: tournament.status
     });
+
+    // 🎯 INSTANT BRACKETS: Si les brackets sont déjà générés avec TBD, assigner ce joueur à un slot
+    if (tournament.bracketGenerated && !tournament.startDate) {
+      console.log('🎯 ASSIGNING PLAYER TO TBD SLOT:', { userId, username: user.username });
+      await this.assignPlayerToTBDSlot(tournamentId, user);
+
+      // Vérifier si le tournoi est maintenant complet → démarrer automatiquement
+      if (tournament.participants.length >= tournament.maxParticipants) {
+        console.log('🚀 AUTO-START: All slots filled, starting tournament automatically!');
+        await this.tournamentRepository.update(tournamentId, {
+          status: TournamentStatus.IN_PROGRESS,
+          startDate: new Date(),
+        });
+      }
+    }
 
     return await this.findOne(tournamentId);
   }
@@ -427,6 +450,84 @@ export class TournamentsService {
   }
 
   // ===== GESTION DES BRACKETS =====
+
+  /**
+   * Génère les brackets avec des slots TBD pour les tournois sans date
+   * Les joueurs remplissent les slots au fur et à mesure qu'ils rejoignent
+   */
+  private async generateBracketsWithTBD(tournamentId: number): Promise<void> {
+    console.log('🎯 GENERATING BRACKETS WITH TBD SLOTS:', { tournamentId });
+
+    const tournament = await this.tournamentRepository.findOne({
+      where: { id: tournamentId },
+      relations: ['participants'],
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Tournoi introuvable');
+    }
+
+    // Créer des matches avec des slots null (TBD)
+    const maxParticipants = tournament.maxParticipants;
+    const matchesInFirstRound = Math.floor(maxParticipants / 2);
+
+    console.log(`🎯 Creating ${matchesInFirstRound} matches with TBD slots for ${maxParticipants} max participants`);
+
+    // Assigner le créateur au premier slot
+    for (let i = 0; i < matchesInFirstRound; i++) {
+      const matchData: Partial<Match> = {
+        player1: i === 0 ? tournament.participants[0] : null, // Créateur dans le premier match
+        player2: null, // TBD
+        tournament: tournament,
+        round: 1,
+        bracketPosition: i,
+        status: 'pending',
+        player1Score: 0,
+        player2Score: 0,
+      };
+
+      const match = this.matchRepository.create(matchData);
+      await this.matchRepository.save(match);
+    }
+
+    // Marquer les brackets comme générés
+    await this.tournamentRepository.update(tournamentId, {
+      bracketGenerated: true,
+    });
+
+    console.log(`✅ BRACKETS WITH TBD: ${matchesInFirstRound} matches created with TBD slots`);
+  }
+
+  /**
+   * Assigne un joueur au prochain slot TBD disponible dans les brackets
+   */
+  private async assignPlayerToTBDSlot(tournamentId: number, user: User): Promise<void> {
+    console.log('🎯 ASSIGNING PLAYER TO TBD SLOT:', { tournamentId, userId: user.id, username: user.username });
+
+    // Récupérer tous les matches du premier round
+    const matches = await this.matchRepository.find({
+      where: { tournament: { id: tournamentId }, round: 1 },
+      relations: ['player1', 'player2'],
+      order: { bracketPosition: 'ASC' },
+    });
+
+    // Trouver le premier slot TBD disponible
+    for (const match of matches) {
+      if (!match.player1) {
+        // Slot player1 libre
+        await this.matchRepository.update(match.id, { player1: user });
+        console.log(`✅ ASSIGNED: ${user.username} to match ${match.id} as player1`);
+        return;
+      } else if (!match.player2) {
+        // Slot player2 libre
+        await this.matchRepository.update(match.id, { player2: user });
+        console.log(`✅ ASSIGNED: ${user.username} to match ${match.id} as player2`);
+        return;
+      }
+    }
+
+    console.log('⚠️ WARNING: No TBD slot available for player', user.username);
+  }
 
   private calculateTotalRounds(participantCount: number): number {
     // Pour un tournoi à élimination simple : log2(participants)
@@ -718,6 +819,11 @@ export class TournamentsService {
       throw new NotFoundException('Match introuvable');
     }
 
+    // Vérifier que les deux joueurs sont assignés (pas de TBD)
+    if (!match.player1 || !match.player2) {
+      throw new BadRequestException('Ce match n\'a pas encore tous ses participants');
+    }
+
     // Vérifier que l'utilisateur est l'un des participants
     if (match.player1.id !== userId && match.player2.id !== userId) {
       throw new ForbiddenException('Vous n\'êtes pas participant à ce match');
@@ -780,7 +886,7 @@ export class TournamentsService {
     userId: number,
   ): Promise<any> {
     console.log(`🏆 ADVANCE WINNER: tournamentId=${tournamentId}, matchId=${matchId}, winnerId=${winnerId}, scores=${player1Score}-${player2Score}, userId=${userId}`);
-    
+
     const tournament = await this.findOne(tournamentId, userId);
 
     // Vérifier si l'utilisateur peut faire avancer le tournoi
@@ -792,6 +898,11 @@ export class TournamentsService {
 
     if (!match) {
       throw new NotFoundException('Match introuvable');
+    }
+
+    // Vérifier que les deux joueurs sont assignés
+    if (!match.player1 || !match.player2) {
+      throw new BadRequestException('Ce match n\'a pas encore tous ses participants');
     }
 
     const isCreator = tournament.creatorId === userId;
@@ -921,12 +1032,17 @@ export class TournamentsService {
           if (!fullMatch) {
             throw new Error(`Match with id ${match.id} not found`);
           }
-          
+
+          // Vérifier que les deux joueurs sont assignés
+          if (!fullMatch.player1 || !fullMatch.player2) {
+            throw new Error(`Match ${fullMatch.id} has null players - cannot determine winner`);
+          }
+
           // Determine winner based on scores
           const winner = fullMatch.player1Score > fullMatch.player2Score
             ? fullMatch.player1
             : fullMatch.player2;
-            
+
           console.log(`🏆 MATCH ${fullMatch.id} WINNER: ${winner.username} (${fullMatch.player1.username}: ${fullMatch.player1Score} vs ${fullMatch.player2.username}: ${fullMatch.player2Score})`);
           return winner;
         }),
@@ -1291,10 +1407,16 @@ export class TournamentsService {
     }
 
     console.log(`✅ PROGRESSING TOURNAMENT ${match.tournament.id} after match ${matchId} completion`);
-    
+
+    // Vérifier que les deux joueurs sont assignés
+    if (!match.player1 || !match.player2) {
+      console.log(`❌ Match ${matchId} has null players - cannot progress tournament`);
+      return;
+    }
+
     // Determine winner based on scores
     const winner = match.player1Score > match.player2Score ? match.player1 : match.player2;
-    
+
     console.log(`🏆 WINNER: ${winner.username} (${match.player1.username}: ${match.player1Score} vs ${match.player2.username}: ${match.player2Score})`);
     
     // Vérifier si ce match finit le round avant de progresser

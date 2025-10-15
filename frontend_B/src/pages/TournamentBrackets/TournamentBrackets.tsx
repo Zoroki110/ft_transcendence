@@ -88,22 +88,30 @@ const TournamentBracketsPage: React.FC = () => {
   }
 
   // Vérifier si les brackets sont disponibles
-  if (tournament.status !== 'in_progress' && tournament.status !== 'completed') {
+  // Les brackets sont disponibles si:
+  // 1. Le tournoi est en cours ou terminé OU
+  // 2. Le tournoi a les brackets générés (pour les tournois sans date prévue)
+  const bracketsAvailable =
+    tournament.status === 'in_progress' ||
+    tournament.status === 'completed' ||
+    (tournament.bracketGenerated && !tournament.startDate);
+
+  if (!bracketsAvailable) {
     return (
       <div className="brackets-page-unavailable">
         <div className="unavailable-icon">🚧</div>
         <h2>Brackets non disponibles</h2>
-        <p>Les brackets ne sont disponibles que pour les tournois en cours ou terminés.</p>
+        <p>Les brackets ne sont pas encore générés pour ce tournoi.</p>
         <p>Statut actuel: <strong>{tournament.status}</strong></p>
         <div className="unavailable-actions">
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={() => navigate(`/tournaments/${tournament.id}`)}
           >
             ← Retour au tournoi
           </button>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={() => navigate('/tournaments')}
           >
             Liste des tournois

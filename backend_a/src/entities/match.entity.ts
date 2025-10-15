@@ -16,18 +16,18 @@ export class Match {
   id: number;
 
   @ManyToOne(() => User, (user) => user.matchesAsPlayer1, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'player1_id' })
-  player1: User;
+  player1: User | null;
 
   @ManyToOne(() => User, (user) => user.matchesAsPlayer2, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'player2_id' })
-  player2: User;
+  player2: User | null;
 
   @Column({ default: 0, type: 'int' })
   player1Score: number;

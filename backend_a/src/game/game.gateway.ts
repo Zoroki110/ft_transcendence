@@ -1013,6 +1013,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Récupérer les vrais IDs depuis la base de données pour éviter les erreurs d'attribution
       try {
         const match = await this.gameService.findOneMatch(matchId);
+
+        // Vérifier que les deux joueurs sont assignés
+        if (!match.player1 || !match.player2) {
+          this.logger.error(`❌ Match ${matchId} has null players - cannot process tournament match end`);
+          return;
+        }
+
         const realPlayer1Id = match.player1.id;
         const realPlayer2Id = match.player2.id;
         

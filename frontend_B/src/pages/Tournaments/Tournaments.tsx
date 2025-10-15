@@ -113,28 +113,50 @@ const Tournaments: React.FC = () => {
   const handleQuickJoin = async (tournamentId: number, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     console.log('🔍 TOURNAMENTS: Quick join start', {
       tournamentId,
       userId: user?.id,
       isLoggedIn
     });
-    
+
     if (!isLoggedIn) {
       alert('Vous devez être connecté pour rejoindre un tournoi');
       return;
     }
 
     const result = await hookJoinTournament(tournamentId);
-    
+
     if (result) {
+      console.log('✅ TOURNAMENTS: Quick join success', {
+        tournamentId: result.id,
+        startDate: result.startDate,
+        bracketGenerated: result.bracketGenerated,
+        status: result.status
+      });
+
+      // 🎯 INSTANT BRACKETS: Si le tournoi n'a pas de date prévue et que les brackets sont générés, rediriger
+      const hasNoScheduledDate = !result.startDate;
+      const hasBrackets = result.bracketGenerated;
+
+      console.log('🔍 REDIRECT CHECK:', {
+        hasNoScheduledDate,
+        hasBrackets,
+        willRedirect: hasNoScheduledDate && hasBrackets
+      });
+
+      if (hasNoScheduledDate && hasBrackets) {
+        console.log('🎯 REDIRECTING: Tournament has no scheduled date, redirecting to brackets');
+        window.location.href = `/tournaments/${tournamentId}/brackets`;
+        return; // Ne pas continuer après la redirection
+      }
+
       // Recharger la liste des tournois pour synchroniser
       await refetch();
       // Recharger aussi mes tournois si on est sur cet onglet
       if (activeTab === 'my') {
         await loadMyTournaments();
       }
-      console.log('✅ TOURNAMENTS: Quick join success, lists refreshed');
     }
   };
 

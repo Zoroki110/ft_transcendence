@@ -16,6 +16,7 @@ up-full: ## Démarre TOUS les services (nécessite que les dossiers backend_a/, 
 	@echo "🚀 Démarrage complet..."
 	@docker-compose -f docker/docker-compose.yml up -d
 
+
 up: up-infra ## Alias pour up-infra (par défaut)
 
 down: ## Arrête tous les services
