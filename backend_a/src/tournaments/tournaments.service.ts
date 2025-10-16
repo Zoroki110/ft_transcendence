@@ -51,7 +51,6 @@ export class TournamentsService {
       throw new NotFoundException('Créateur introuvable');
     }
 
-    this.validateDates(createTournamentDto);
 
     const tournament = this.tournamentRepository.create({
       ...createTournamentDto,
@@ -218,7 +217,7 @@ export class TournamentsService {
 
     const offset = (page - 1) * limit;
     queryBuilder.skip(offset).take(limit);
-    queryBuilder.orderBy('tournament.endDate', 'DESC'); // Trier par date de fin pour les terminés
+    queryBuilder.orderBy('tournament.createdAt', 'DESC');
 
     const [tournaments, total] = await queryBuilder.getManyAndCount();
     return { tournaments, total };
@@ -527,8 +526,7 @@ export class TournamentsService {
 
     // Just update status if brackets already exist
     await this.tournamentRepository.update(tournamentId, {
-      status: TournamentStatus.IN_PROGRESS,
-      startDate: new Date()
+      status: TournamentStatus.IN_PROGRESS
     });
 
     console.log('✅ TOURNAMENT STARTED');
@@ -585,8 +583,6 @@ export class TournamentsService {
     await this.tournamentRepository.update(tournamentId, {
       bracketGenerated: false,
       status: TournamentStatus.FULL,
-      startDate: undefined,
-      endDate: undefined,
       winnerId: undefined
     });
 
@@ -937,7 +933,6 @@ export class TournamentsService {
         tournament.winnerId = winners[0].id;
         tournament.winner = winners[0];
         tournament.status = TournamentStatus.COMPLETED;
-        tournament.endDate = new Date();
 
         // Mettre à jour les stats du champion
         await this.userRepository.update(winners[0].id, {
@@ -955,7 +950,7 @@ export class TournamentsService {
             username: winners[0].username,
             avatar: winners[0].avatar,
           },
-          completedAt: tournament.endDate,
+          completedAt: new Date(),
           celebration: true, // Déclenche l'animation de spray
         });
 
@@ -1340,37 +1335,6 @@ export class TournamentsService {
     return result?.maxRound || 0;
   }
 
-  private validateDates(dto: CreateTournamentDto): void {
-    // Validation assouplie pour permettre plus de flexibilité
-    
-    // Vérifier uniquement la cohérence entre les dates (pas par rapport au présent)
-    if (
-      dto.registrationEnd &&
-      dto.registrationStart &&
-      new Date(dto.registrationEnd) <= new Date(dto.registrationStart)
-    ) {
-      throw new BadRequestException(
-        'La date de fin des inscriptions doit être après le début',
-      );
-    }
-
-    if (
-      dto.startDate &&
-      dto.registrationEnd &&
-      new Date(dto.startDate) <= new Date(dto.registrationEnd)
-    ) {
-      throw new BadRequestException(
-        'La date de début du tournoi doit être après la fin des inscriptions',
-      );
-    }
-
-    // Note: On permet maintenant des dates dans le passé pour faciliter les tests
-    console.log('📅 TOURNAMENTS: Validation des dates réussie', {
-      registrationStart: dto.registrationStart,
-      registrationEnd: dto.registrationEnd,
-      startDate: dto.startDate
-    });
-  }
 
   private validateUpdate(
     tournament: Tournament,

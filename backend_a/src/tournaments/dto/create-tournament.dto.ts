@@ -4,13 +4,9 @@ import {
   IsEnum,
   IsNumber,
   IsBoolean,
-  IsDateString,
   MinLength,
   MaxLength,
   Min,
-  Max,
-  IsPositive,
-  isString,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -49,42 +45,16 @@ export class CreateTournamentDto {
   type?: TournamentType;
 
   @ApiPropertyOptional({
-    description: 'Nombre maximum de participants',
-    example: 16,
-    minimum: 2,
-    maximum: 64,
+    description: 'Nombre maximum de participants (4 ou 8)',
+    example: 8,
+    enum: [4, 8],
     default: 8,
   })
   @IsOptional()
   @IsNumber({}, { message: 'Le nombre de participants doit être un nombre' })
-  @Min(2, { message: 'Au minimum 2 participants' })
-  @Max(64, { message: 'Au maximum 64 participants' })
   @Transform(({ value }) => parseInt(value))
   maxParticipants?: number;
 
-  @ApiPropertyOptional({
-    description: 'Date de début des inscriptions',
-    example: '2025-08-25T10:00:00Z',
-  })
-  @IsOptional()
-  @IsDateString({}, { message: 'Date de début des inscriptions invalide' })
-  registrationStart?: string;
-
-  @ApiPropertyOptional({
-    description: 'Date de fin des inscriptions',
-    example: '2025-08-30T23:59:59Z',
-  })
-  @IsOptional()
-  @IsDateString({}, { message: 'Date de fin des inscriptions invalide' })
-  registrationEnd?: string;
-
-  @ApiPropertyOptional({
-    description: 'Date de début du tournoi',
-    example: '2025-09-01T14:00:00Z',
-  })
-  @IsOptional()
-  @IsDateString({}, { message: 'Date de début du tournoi invalide' })
-  startDate?: string;
 
   @ApiPropertyOptional({
     description: 'Prize pool du tournoi (en euros)',

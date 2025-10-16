@@ -86,7 +86,7 @@ export interface Tournament {
   id: number;
   name: string;
   description?: string;
-  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  type: 'single_elimination';
   status: 'draft' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
   isPublic: boolean;
   maxParticipants: number;
@@ -97,9 +97,6 @@ export interface Tournament {
   matches?: Match[];
 
   // Dates
-  registrationDeadline?: string;
-  startDate?: string;
-  endDate?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -107,11 +104,9 @@ export interface Tournament {
 export interface CreateTournamentDto {
   name: string;
   description?: string;
-  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  type: 'single_elimination';
   isPublic?: boolean;
   maxParticipants: number;
-  registrationDeadline?: string;
-  startDate?: string;
 }
 
 export interface UpdateTournamentDto {
@@ -119,8 +114,6 @@ export interface UpdateTournamentDto {
   description?: string;
   isPublic?: boolean;
   maxParticipants?: number;
-  registrationDeadline?: string;
-  startDate?: string;
 }
 
 export interface JoinTournamentDto {
@@ -129,7 +122,7 @@ export interface JoinTournamentDto {
 
 export interface TournamentQueryDto {
   status?: 'waiting' | 'in_progress' | 'finished' | 'cancelled';
-  type?: 'single_elimination' | 'double_elimination' | 'round_robin';
+  type?: 'single_elimination';
   isPublic?: boolean;
   limit?: number;
   page?: number;
@@ -291,11 +284,9 @@ export interface RegisterFormData {
 export interface TournamentFormData {
   name: string;
   description: string;
-  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  type: 'single_elimination';
   isPublic: boolean;
   maxParticipants: number;
-  registrationDeadline: string;
-  startDate: string;
 }
 
 export interface ProfileFormData {
@@ -306,7 +297,7 @@ export interface ProfileFormData {
 
 // ===== UTILITY TYPES =====
 export type TournamentStatus = 'draft' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
-export type TournamentType = 'single_elimination' | 'double_elimination' | 'round_robin';
+export type TournamentType = 'single_elimination';
 export type MatchStatus = 'waiting' | 'in_progress' | 'finished' | 'cancelled';
 export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';
 
