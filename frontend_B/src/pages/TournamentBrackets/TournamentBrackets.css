@@ -1,4 +1,4 @@
-/* frontend_B/src/pages/TournamentBrackets/TournamentBrackets.css */
+/* frontend_B/src/pages/TournamentBrackets/TournamentBrackets.css - AVEC ATTENTE JOUEURS */
 
 .brackets-page {
   width: 100%;
@@ -38,6 +38,9 @@
   font-weight: bold;
   color: var(--text-primary);
   margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .tournament-info {
@@ -54,6 +57,9 @@
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tournament-status-badge {
@@ -61,13 +67,13 @@
 }
 
 .tournament-participants {
-  background: var(--primary-light);
+  background: var(--primary-light, #e6f0ff);
   color: var(--primary);
 }
 
 .creator-badge {
-  background: var(--warning-light);
-  color: var(--warning);
+  background: var(--warning-light, #fff3cd);
+  color: var(--warning-dark, #856404);
 }
 
 .header-actions {
@@ -76,10 +82,170 @@
   align-items: center;
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .brackets-page-content {
   margin: 2rem 0;
 }
 
+/* MESSAGE D'ATTENTE */
+.waiting-message {
+  padding: 3rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  border: 2px solid var(--primary);
+  border-radius: 16px;
+  margin: 2rem auto;
+  max-width: 800px;
+}
+
+.waiting-icon {
+  color: var(--primary);
+  margin: 0 auto 1.5rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.waiting-message h3 {
+  font-size: 1.5rem;
+  color: var(--gray-900);
+  margin-bottom: 1rem;
+}
+
+.waiting-message > p {
+  color: var(--gray-700);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+/* LISTE DES PARTICIPANTS */
+.participants-preview {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin: 2rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.participants-preview h4 {
+  text-align: left;
+  color: var(--gray-800);
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.participants-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 2px solid var(--gray-200);
+  transition: all 0.2s;
+}
+
+.participant-item:not(.waiting):hover {
+  border-color: var(--primary);
+  transform: translateX(4px);
+}
+
+.participant-item.waiting {
+  background: var(--gray-100);
+  border-style: dashed;
+  border-color: var(--gray-300);
+}
+
+.participant-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.participant-item.waiting .participant-number {
+  background: var(--gray-400);
+}
+
+.participant-name {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.waiting-text {
+  color: var(--gray-500);
+  font-style: italic;
+}
+
+.creator-icon {
+  color: var(--warning-dark, #856404);
+  flex-shrink: 0;
+}
+
+.waiting-spinner {
+  color: var(--gray-500);
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* HINT POUR LE CRÉATEUR */
+.start-tournament-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--primary-light, #e6f0ff);
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.start-tournament-hint svg {
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.start-tournament-hint p {
+  margin: 0;
+  color: var(--gray-800);
+  font-size: 0.95rem;
+}
+
+/* STATISTIQUES */
 .brackets-stats-section {
   margin: 3rem 0 2rem 0;
 }
@@ -91,6 +257,9 @@
 .brackets-stats-section h3 {
   margin: 0 0 1.5rem 0;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .stats-grid {
@@ -118,7 +287,7 @@
 
 .stat-item.champion {
   border-color: var(--warning);
-  background: var(--warning-light);
+  background: var(--warning-light, #fff3cd);
 }
 
 .stat-label {
@@ -126,6 +295,9 @@
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .stat-value {
@@ -135,13 +307,12 @@
 }
 
 .stat-item.champion .stat-value {
-  color: var(--warning);
+  color: var(--warning-dark, #856404);
 }
 
 /* Loading et Error states */
 .brackets-page-loading,
-.brackets-page-error,
-.brackets-page-unavailable {
+.brackets-page-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -151,30 +322,21 @@
   padding: 3rem;
 }
 
-.loading-icon,
-.error-icon,
-.unavailable-icon {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
+.loading-spinner {
+  margin: 0 auto 1.5rem;
+  color: var(--primary);
+  animation: spin 1s linear infinite;
 }
 
-.brackets-page-error .error-message,
-.brackets-page-unavailable p {
+.error-icon {
+  margin: 0 auto 1.5rem;
+  color: var(--danger);
+}
+
+.error-message {
   color: var(--text-secondary);
   font-size: 1.1rem;
   margin-bottom: 1rem;
-}
-
-.brackets-page-unavailable h2 {
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-}
-
-.unavailable-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 2rem;
 }
 
 /* Responsive */
@@ -183,7 +345,7 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: flex-start;
@@ -194,32 +356,36 @@
   .page-title {
     font-size: 1.5rem;
   }
-  
+
   .tournament-info {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .header-actions {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .header-actions .btn {
     width: 100%;
     justify-content: center;
   }
-  
+
+  .waiting-message {
+    padding: 2rem 1rem;
+  }
+
+  .participants-preview {
+    padding: 1.5rem;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
-  .unavailable-actions {
+
+  .start-tournament-hint {
     flex-direction: column;
-    width: 100%;
-  }
-  
-  .unavailable-actions .btn {
-    width: 100%;
+    text-align: center;
   }
 }

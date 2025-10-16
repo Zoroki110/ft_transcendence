@@ -1,6 +1,32 @@
-// frontend_B/src/pages/Tournaments/Tournaments.tsx - AMÉLIORÉ AVEC TABS
+// frontend_B/src/pages/Tournaments/Tournaments.tsx - AVEC ICÔNES
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Trophy,
+  Plus,
+  Globe,
+  Star,
+  Search,
+  Filter,
+  Users,
+  Crown,
+  CheckCircle,
+  Calendar,
+  Settings,
+  LogIn,
+  UserPlus,
+  LogOut,
+  Eye,
+  CircleAlert,
+  Loader2,
+  Inbox,
+  FileEdit,
+  CircleX,
+  CircleDashed,
+  PlayCircle,
+  CircleCheck,
+  Lock
+} from 'lucide-react';
 import { useTournaments } from '../../hooks/useTournaments';
 import { useUser } from '../../contexts/UserContext';
 import { getTournamentPermissions } from '../../utils/tournamentPermissions';
@@ -86,12 +112,36 @@ const Tournaments: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      draft: { text: '📝 Brouillon', color: 'var(--gray-500)' },
-      open: { text: '🟢 Ouvert', color: 'var(--success)' },
-      full: { text: '🔴 Complet', color: 'var(--warning)' },
-      in_progress: { text: '▶️ En cours', color: 'var(--primary)' },
-      completed: { text: '✅ Terminé', color: 'var(--gray-600)' },
-      cancelled: { text: '❌ Annulé', color: 'var(--danger)' }
+      draft: {
+        text: 'Brouillon',
+        color: 'var(--gray-500)',
+        icon: <FileEdit size={14} />
+      },
+      open: {
+        text: 'Ouvert',
+        color: 'var(--success)',
+        icon: <CircleDashed size={14} />
+      },
+      full: {
+        text: 'Complet',
+        color: 'var(--warning)',
+        icon: <CircleAlert size={14} />
+      },
+      in_progress: {
+        text: 'En cours',
+        color: 'var(--primary)',
+        icon: <PlayCircle size={14} />
+      },
+      completed: {
+        text: 'Terminé',
+        color: 'var(--gray-600)',
+        icon: <CircleCheck size={14} />
+      },
+      cancelled: {
+        text: 'Annulé',
+        color: 'var(--danger)',
+        icon: <CircleX size={14} />
+      }
     };
     return badges[status as keyof typeof badges] || badges.draft;
   };
@@ -109,10 +159,8 @@ const Tournaments: React.FC = () => {
     const result = await hookJoinTournament(tournamentId);
 
     if (result) {
-      await refetchAvailable();
-      if (activeTab === 'my') {
-        await loadMyTournaments();
-      }
+      // Rediriger vers la page des brackets du tournoi
+      window.location.href = `/tournaments/${tournamentId}/brackets`;
     }
   };
 
@@ -147,7 +195,8 @@ const Tournaments: React.FC = () => {
               color: statusBadge.color
             }}
           >
-            {statusBadge.text}
+            {statusBadge.icon}
+            <span>{statusBadge.text}</span>
           </span>
         </div>
 
@@ -159,17 +208,26 @@ const Tournaments: React.FC = () => {
 
         <div className="tournament-meta">
           <div className="tournament-meta-item">
-            <span className="meta-label">🏆 Type</span>
+            <span className="meta-label">
+              <Trophy size={16} />
+              <span>Type</span>
+            </span>
             <span className="meta-value">Élimination simple</span>
           </div>
           <div className="tournament-meta-item">
-            <span className="meta-label">👥 Participants</span>
+            <span className="meta-label">
+              <Users size={16} />
+              <span>Participants</span>
+            </span>
             <span className="meta-value">
               {tournament.currentParticipants}/{tournament.maxParticipants}
             </span>
           </div>
           <div className="tournament-meta-item">
-            <span className="meta-label">👑 Créateur</span>
+            <span className="meta-label">
+              <Crown size={16} />
+              <span>Créateur</span>
+            </span>
             <span className="meta-value">{tournament.creator?.username || 'Inconnu'}</span>
           </div>
         </div>
@@ -188,10 +246,16 @@ const Tournaments: React.FC = () => {
 
         <div className="tournament-indicators">
           {permissions.isCreator && (
-            <span className="indicator creator-indicator">👑 Votre tournoi</span>
+            <span className="indicator creator-indicator">
+              <Crown size={14} />
+              <span>Votre tournoi</span>
+            </span>
           )}
           {permissions.isParticipant && !permissions.isCreator && (
-            <span className="indicator participant-indicator">✓ Inscrit</span>
+            <span className="indicator participant-indicator">
+              <CheckCircle size={14} />
+              <span>Inscrit</span>
+            </span>
           )}
         </div>
 
@@ -203,7 +267,8 @@ const Tournaments: React.FC = () => {
                 className="btn btn-primary btn-sm"
                 onClick={(e) => e.stopPropagation()}
               >
-                ⚙️ Gérer
+                <Settings size={16} />
+                <span>Gérer</span>
               </Link>
             )}
 
@@ -212,7 +277,8 @@ const Tournaments: React.FC = () => {
                 className="btn btn-success btn-sm"
                 onClick={(e) => handleQuickJoin(tournament.id, e)}
               >
-                ✅ Rejoindre
+                <UserPlus size={16} />
+                <span>Rejoindre</span>
               </button>
             )}
 
@@ -221,13 +287,15 @@ const Tournaments: React.FC = () => {
                 className="btn btn-danger btn-sm"
                 onClick={(e) => handleQuickLeave(tournament.id, e)}
               >
-                🚪 Quitter
+                <LogOut size={16} />
+                <span>Quitter</span>
               </button>
             )}
 
             {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && (
               <button className="btn btn-secondary btn-sm" disabled>
-                🔴 Complet
+                <CircleAlert size={16} />
+                <span>Complet</span>
               </button>
             )}
 
@@ -235,7 +303,8 @@ const Tournaments: React.FC = () => {
               to={`/tournaments/${tournament.id}`}
               className="btn btn-outline btn-sm"
             >
-              Voir détails →
+              <Eye size={16} />
+              <span>Voir détails</span>
             </Link>
           </div>
         </div>
@@ -249,11 +318,15 @@ const Tournaments: React.FC = () => {
         <div className="container">
           <div className="tournaments-header-content">
             <div>
-              <h1 className="page-title">🏆 Tournois</h1>
+              <h1 className="page-title">
+                <Trophy size={32} />
+                <span>Tournois</span>
+              </h1>
               <p className="page-subtitle">Rejoignez ou créez un tournoi</p>
             </div>
             <Link to="/create-tournament" className="btn btn-primary">
-              ➕ Créer un tournoi
+              <Plus size={20} />
+              <span>Créer un tournoi</span>
             </Link>
           </div>
         </div>
@@ -266,7 +339,7 @@ const Tournaments: React.FC = () => {
             className={`tab ${activeTab === 'available' ? 'active' : ''}`}
             onClick={() => setActiveTab('available')}
           >
-            <span className="tab-icon">🌐</span>
+            <Globe size={20} className="tab-icon" />
             <span className="tab-label">Tournois disponibles</span>
             <span className="tab-count">{availableTournaments.length}</span>
           </button>
@@ -274,7 +347,7 @@ const Tournaments: React.FC = () => {
             className={`tab ${activeTab === 'my' ? 'active' : ''}`}
             onClick={() => setActiveTab('my')}
           >
-            <span className="tab-icon">⭐</span>
+            <Star size={20} className="tab-icon" />
             <span className="tab-label">Mes tournois</span>
             <span className="tab-count">{myTournaments.length}</span>
           </button>
@@ -284,7 +357,10 @@ const Tournaments: React.FC = () => {
         <div className="card tournaments-filters">
           <div className="filters-row">
             <div className="form-group">
-              <label className="form-label">🔍 Recherche</label>
+              <label className="form-label">
+                <Search size={16} />
+                <span>Recherche</span>
+              </label>
               <input
                 className="input"
                 placeholder="Nom du tournoi..."
@@ -295,16 +371,19 @@ const Tournaments: React.FC = () => {
 
             {activeTab === 'available' && (
               <div className="form-group">
-                <label className="form-label">📊 Statut</label>
+                <label className="form-label">
+                  <Filter size={16} />
+                  <span>Statut</span>
+                </label>
                 <select
                   className="input"
                   value={filters.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
                 >
                   <option value="all">Tous</option>
-                  <option value="open">🟢 Ouverts</option>
-                  <option value="full">🔴 Complets</option>
-                  <option value="in_progress">▶️ En cours</option>
+                  <option value="open">Ouverts</option>
+                  <option value="full">Complets</option>
+                  <option value="in_progress">En cours</option>
                 </select>
               </div>
             )}
@@ -317,20 +396,21 @@ const Tournaments: React.FC = () => {
           <>
             {availableLoading ? (
               <div className="tournaments-loading">
-                <div className="loading-spinner"></div>
+                <Loader2 size={50} className="loading-spinner" />
                 <p>Chargement des tournois...</p>
               </div>
             ) : availableError ? (
               <div className="tournaments-error">
-                <div className="error-icon">⚠️</div>
+                <CircleAlert size={48} className="error-icon" />
                 <p className="error-message">{availableError}</p>
               </div>
             ) : filteredAvailableTournaments.length === 0 ? (
               <div className="card tournaments-empty">
-                <div className="empty-icon">😕</div>
+                <Inbox size={64} className="empty-icon" />
                 <p className="empty-text">Aucun tournoi disponible</p>
                 <Link to="/create-tournament" className="btn btn-primary">
-                  ➕ Créer le premier tournoi
+                  <Plus size={20} />
+                  <span>Créer le premier tournoi</span>
                 </Link>
               </div>
             ) : (
@@ -346,30 +426,33 @@ const Tournaments: React.FC = () => {
           <>
             {!isLoggedIn ? (
               <div className="card auth-required">
-                <p>🔒 Vous devez être connecté pour voir vos tournois</p>
+                <Lock size={48} className="auth-icon" />
+                <p>Vous devez être connecté pour voir vos tournois</p>
                 <Link to="/login" className="btn btn-primary">
-                  Se connecter
+                  <LogIn size={20} />
+                  <span>Se connecter</span>
                 </Link>
               </div>
             ) : myTournamentsLoading ? (
               <div className="tournaments-loading">
-                <div className="loading-spinner"></div>
+                <Loader2 size={50} className="loading-spinner" />
                 <p>Chargement de vos tournois...</p>
               </div>
             ) : myTournamentsError ? (
               <div className="tournaments-error">
-                <div className="error-icon">⚠️</div>
+                <CircleAlert size={48} className="error-icon" />
                 <p className="error-message">{myTournamentsError}</p>
               </div>
             ) : filteredMyTournaments.length === 0 ? (
               <div className="card tournaments-empty">
-                <div className="empty-icon">📭</div>
+                <Inbox size={64} className="empty-icon" />
                 <p className="empty-text">Vous ne participez à aucun tournoi</p>
                 <button
                   className="btn btn-primary"
                   onClick={() => setActiveTab('available')}
                 >
-                  🌐 Voir les tournois disponibles
+                  <Globe size={20} />
+                  <span>Voir les tournois disponibles</span>
                 </button>
               </div>
             ) : (
