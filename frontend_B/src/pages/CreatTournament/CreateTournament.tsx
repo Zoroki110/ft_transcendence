@@ -7,9 +7,8 @@ import "./CreateTournament.css";
 interface TournamentForm {
   name: string;
   description: string;
-  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  type: 'single_elimination';
   maxParticipants: number;
-  startDate?: string;
 }
 
 const CreateTournament: React.FC = () => {
@@ -23,25 +22,7 @@ const CreateTournament: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const tournamentTypes = [
-    { 
-      value: 'single_elimination', 
-      label: '🏆 Élimination simple', 
-      description: 'Un seul match perdu = éliminé' 
-    },
-    { 
-      value: 'double_elimination', 
-      label: '🏆🏆 Élimination double', 
-      description: 'Deux chances, plus équitable' 
-    },
-    { 
-      value: 'round_robin', 
-      label: '🔄 Round Robin', 
-      description: 'Tout le monde joue contre tout le monde' 
-    },
-  ];
-
-  const participantOptions = [4, 8, 16, 32, 64];
+  const participantOptions = [4, 8];
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -162,31 +143,6 @@ const CreateTournament: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Type de tournoi *</label>
-                <div className="type-options">
-                  {tournamentTypes.map(type => (
-                    <label
-                      key={type.value}
-                      className={`type-option ${formData.type === type.value ? 'active' : ''}`}
-                    >
-                      <input
-                        type="radio"
-                        name="type"
-                        value={type.value}
-                        checked={formData.type === type.value}
-                        onChange={(e) => handleChange('type', e.target.value)}
-                        className="type-radio"
-                      />
-                      <div className="type-content">
-                        <div className="type-label">{type.label}</div>
-                        <div className="type-description">{type.description}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="maxParticipants" className="form-label">
                   Nombre maximum de participants *
                 </label>
@@ -207,22 +163,6 @@ const CreateTournament: React.FC = () => {
                 )}
               </div>
 
-              <div className="form-group">
-                <label htmlFor="startDate" className="form-label">
-                  Date de début (optionnel)
-                </label>
-                <input
-                  id="startDate"
-                  type="datetime-local"
-                  className="input"
-                  value={formData.startDate || ''}
-                  onChange={(e) => handleChange('startDate', e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                />
-                <div className="form-hint">
-                  Si non spécifiée, le tournoi démarrera dès qu'il sera complet
-                </div>
-              </div>
 
               <div className="form-summary">
                 <h3 className="summary-title">📋 Récapitulatif</h3>
@@ -231,16 +171,11 @@ const CreateTournament: React.FC = () => {
                     <strong>Nom :</strong> {formData.name || <em className="summary-empty">Non défini</em>}
                   </div>
                   <div className="summary-item">
-                    <strong>Type :</strong> {tournamentTypes.find(t => t.value === formData.type)?.label}
+                    <strong>Type :</strong> 🏆 Élimination simple
                   </div>
                   <div className="summary-item">
                     <strong>Participants :</strong> {formData.maxParticipants} maximum
                   </div>
-                  {formData.startDate && (
-                    <div className="summary-item">
-                      <strong>Début :</strong> {new Date(formData.startDate).toLocaleString('fr-FR')}
-                    </div>
-                  )}
                 </div>
               </div>
 

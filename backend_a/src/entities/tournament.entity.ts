@@ -60,17 +60,6 @@ export class Tournament {
   @Column({ name: 'current_participants', default: 0 })
   currentParticipants: number;
 
-  @Column({ name: 'registration_start', type: 'timestamp', nullable: true })
-  registrationStart: Date;
-
-  @Column({ name: 'registration_end', type: 'timestamp', nullable: true })
-  registrationEnd: Date;
-
-  @Column({ name: 'start_date', type: 'timestamp', nullable: true })
-  startDate: Date;
-
-  @Column({ name: 'end_date', type: 'timestamp', nullable: true })
-  endDate: Date;
 
   @Column({
     name: 'prize_pool',
@@ -126,12 +115,9 @@ export class Tournament {
   updateAt: Date;
 
   get isRegistrationOpen(): boolean {
-    const now = new Date();
     return (
       (this.status == TournamentStatus.DRAFT ||
         this.status == TournamentStatus.OPEN) &&
-      (!this.registrationStart || this.registrationStart <= now) &&
-      (!this.registrationEnd || this.registrationEnd >= now) &&
       this.currentParticipants < this.maxParticipants
     );
   }
