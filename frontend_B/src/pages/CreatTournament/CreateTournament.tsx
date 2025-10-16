@@ -1,6 +1,16 @@
-// frontend_B/src/pages/CreateTournament/CreateTournament.tsx
+// frontend_B/src/pages/CreateTournament/CreateTournament.tsx - AVEC ICÔNES
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Plus,
+  FileText,
+  Users,
+  Trophy,
+  X,
+  Check,
+  Loader2,
+  ClipboardList
+} from 'lucide-react';
 import { tournamentAPI } from '../../services/api';
 import "./CreateTournament.css";
 
@@ -62,7 +72,7 @@ const CreateTournament: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -73,8 +83,8 @@ const CreateTournament: React.FC = () => {
       const response = await tournamentAPI.createTournament(formData);
       navigate(`/tournaments/${response.data.id}`);
     } catch (err: any) {
-      setErrors({ 
-        submit: err.response?.data?.message || 'Erreur lors de la création du tournoi' 
+      setErrors({
+        submit: err.response?.data?.message || 'Erreur lors de la création du tournoi'
       });
       setIsSubmitting(false);
     }
@@ -84,7 +94,10 @@ const CreateTournament: React.FC = () => {
     <div className="create-tournament-page">
       <div className="page-header">
         <div className="container">
-          <h1 className="page-title">➕ Créer un tournoi</h1>
+          <h1 className="page-title">
+            <Plus size={32} />
+            <span>Créer un tournoi</span>
+          </h1>
           <p className="page-subtitle">Organisez votre propre compétition</p>
         </div>
       </div>
@@ -93,7 +106,10 @@ const CreateTournament: React.FC = () => {
         <div className="create-tournament-container">
           <form onSubmit={handleSubmit}>
             <div className="card">
-              <h2 className="form-section-title">📋 Informations du tournoi</h2>
+              <h2 className="form-section-title">
+                <ClipboardList size={24} />
+                <span>Informations du tournoi</span>
+              </h2>
 
               {errors.submit && (
                 <div className="form-error-global">
@@ -103,7 +119,8 @@ const CreateTournament: React.FC = () => {
 
               <div className="form-group">
                 <label htmlFor="name" className="form-label">
-                  Nom du tournoi *
+                  <FileText size={16} />
+                  <span>Nom du tournoi *</span>
                 </label>
                 <input
                   id="name"
@@ -123,7 +140,8 @@ const CreateTournament: React.FC = () => {
 
               <div className="form-group">
                 <label htmlFor="description" className="form-label">
-                  Description (optionnel)
+                  <FileText size={16} />
+                  <span>Description (optionnel)</span>
                 </label>
                 <textarea
                   id="description"
@@ -144,7 +162,8 @@ const CreateTournament: React.FC = () => {
 
               <div className="form-group">
                 <label htmlFor="maxParticipants" className="form-label">
-                  Nombre maximum de participants *
+                  <Users size={16} />
+                  <span>Nombre maximum de participants *</span>
                 </label>
                 <select
                   id="maxParticipants"
@@ -163,18 +182,34 @@ const CreateTournament: React.FC = () => {
                 )}
               </div>
 
-
               <div className="form-summary">
-                <h3 className="summary-title">📋 Récapitulatif</h3>
+                <h3 className="summary-title">
+                  <ClipboardList size={20} />
+                  <span>Récapitulatif</span>
+                </h3>
                 <div className="summary-content">
                   <div className="summary-item">
-                    <strong>Nom :</strong> {formData.name || <em className="summary-empty">Non défini</em>}
+                    <span className="summary-label">
+                      <FileText size={16} />
+                      <span>Nom :</span>
+                    </span>
+                    <span className="summary-value">
+                      {formData.name || <em className="summary-empty">Non défini</em>}
+                    </span>
                   </div>
                   <div className="summary-item">
-                    <strong>Type :</strong> 🏆 Élimination simple
+                    <span className="summary-label">
+                      <Trophy size={16} />
+                      <span>Type :</span>
+                    </span>
+                    <span className="summary-value">Élimination simple</span>
                   </div>
                   <div className="summary-item">
-                    <strong>Participants :</strong> {formData.maxParticipants} maximum
+                    <span className="summary-label">
+                      <Users size={16} />
+                      <span>Participants :</span>
+                    </span>
+                    <span className="summary-value">{formData.maxParticipants} maximum</span>
                   </div>
                 </div>
               </div>
@@ -186,14 +221,25 @@ const CreateTournament: React.FC = () => {
                   onClick={() => navigate('/tournaments')}
                   disabled={isSubmitting}
                 >
-                  ❌ Annuler
+                  <X size={18} />
+                  <span>Annuler</span>
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? '⏳ Création...' : '✅ Créer le tournoi'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={18} className="spinner" />
+                      <span>Création...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      <span>Créer le tournoi</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
