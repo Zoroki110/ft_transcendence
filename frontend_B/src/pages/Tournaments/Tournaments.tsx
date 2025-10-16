@@ -1,4 +1,4 @@
-// frontend_B/src/pages/Tournaments/Tournaments.tsx - CORRIGÉ AVEC HOOK
+// frontend_B/src/pages/Tournaments/Tournaments.tsx - AMÉLIORÉ AVEC TABS
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTournaments } from '../../hooks/useTournaments';
@@ -11,26 +11,25 @@ import './Tournaments.css';
 
 const Tournaments: React.FC = () => {
   const { user, isLoggedIn } = useUser();
-  const [activeTab, setActiveTab] = useState<'public' | 'my'>('my'); // Par défaut "Mes tournois"
+  const [activeTab, setActiveTab] = useState<'available' | 'my'>('available');
   const [filters, setFilters] = useState({
     status: 'open',
-    type: 'all',
     search: ''
   });
 
-  // Hook pour les tournois publics (lobbys ouverts)
+  // Hook pour les tournois disponibles (publics)
   const {
-    tournaments,
-    loading: isLoading,
-    error,
+    tournaments: availableTournaments,
+    loading: availableLoading,
+    error: availableError,
     updateQuery,
-    refetch
+    refetch: refetchAvailable
   } = useTournaments({ status: 'open' });
 
   // État pour mes tournois
-  const [myTournaments, setMyTournaments] = useState([]);
+  const [myTournaments, setMyTournaments] = useState<Tournament[]>([]);
   const [myTournamentsLoading, setMyTournamentsLoading] = useState(false);
-  const [myTournamentsError, setMyTournamentsError] = useState(null);
+  const [myTournamentsError, setMyTournamentsError] = useState<string | null>(null);
 
   const {
     state: actionState,
@@ -74,19 +73,16 @@ const Tournaments: React.FC = () => {
     }
   };
 
-  const handleTypeChange = (type: string) => {
-    setFilters(prev => ({ ...prev, type }));
-    if (type !== 'all') {
-      updateQuery({ type: type as any });
-    } else {
-      updateQuery({ type: undefined });
-    }
+  // Filtrer les tournois selon la recherche
+  const filterTournaments = (tournaments: Tournament[]) => {
+    return tournaments.filter(tournament =>
+      (tournament.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+      (tournament.description || '').toLowerCase().includes(filters.search.toLowerCase())
+    );
   };
 
-  const filteredTournaments = tournaments.filter(tournament =>
-    (tournament.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-    (tournament.description || '').toLowerCase().includes(filters.search.toLowerCase())
-  );
+  const filteredAvailableTournaments = filterTournaments(availableTournaments);
+  const filteredMyTournaments = filterTournaments(myTournaments);
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -100,66 +96,152 @@ const Tournaments: React.FC = () => {
     return badges[status as keyof typeof badges] || badges.draft;
   };
 
-  const getTypeName = (type: string) => {
-    const types = {
-      single_elimination: '🏆 Élimination simple',
-      double_elimination: '🏆🏆 Élimination double',
-      round_robin: '🔄 Round Robin'
-    };
-    return types[type as keyof typeof types] || type;
-  };
-
   // Fonctions pour gérer l'inscription/désinscription rapide
   const handleQuickJoin = async (tournamentId: number, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    console.log('🔍 TOURNAMENTS: Quick join start', {
-      tournamentId,
-      userId: user?.id,
-      isLoggedIn
-    });
-    
+
     if (!isLoggedIn) {
       alert('Vous devez être connecté pour rejoindre un tournoi');
       return;
     }
 
     const result = await hookJoinTournament(tournamentId);
-    
+
     if (result) {
-      // Recharger la liste des tournois pour synchroniser
-      await refetch();
-      // Recharger aussi mes tournois si on est sur cet onglet
+      await refetchAvailable();
       if (activeTab === 'my') {
         await loadMyTournaments();
       }
-      console.log('✅ TOURNAMENTS: Quick join success, lists refreshed');
     }
   };
 
   const handleQuickLeave = async (tournamentId: number, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    console.log('🔍 TOURNAMENTS: Quick leave start', {
-      tournamentId,
-      userId: user?.id
-    });
 
     const result = await hookLeaveTournament(tournamentId);
-    
+
     if (result) {
-      // Recharger la liste des tournois pour synchroniser
-      await refetch();
-      // Recharger aussi mes tournois si on est sur cet onglet
+      await refetchAvailable();
       if (activeTab === 'my') {
         await loadMyTournaments();
       }
-      console.log('✅ TOURNAMENTS: Quick leave success, lists refreshed');
     }
   };
 
+  // Composant de carte de tournoi
+  const TournamentCard = ({ tournament }: { tournament: Tournament }) => {
+    const statusBadge = getStatusBadge(tournament.status);
+    const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
+    const permissions = getTournamentPermissions(tournament, user, isLoggedIn);
+
+    return (
+      <div className="card tournament-card">
+        <div className="tournament-card-header">
+          <h3 className="tournament-name">{tournament.name}</h3>
+          <span
+            className="tournament-badge"
+            style={{
+              background: `${statusBadge.color}20`,
+              color: statusBadge.color
+            }}
+          >
+            {statusBadge.text}
+          </span>
+        </div>
+
+        {tournament.description && (
+          <p className="tournament-description">
+            {tournament.description}
+          </p>
+        )}
+
+        <div className="tournament-meta">
+          <div className="tournament-meta-item">
+            <span className="meta-label">🏆 Type</span>
+            <span className="meta-value">Élimination simple</span>
+          </div>
+          <div className="tournament-meta-item">
+            <span className="meta-label">👥 Participants</span>
+            <span className="meta-value">
+              {tournament.currentParticipants}/{tournament.maxParticipants}
+            </span>
+          </div>
+          <div className="tournament-meta-item">
+            <span className="meta-label">👑 Créateur</span>
+            <span className="meta-value">{tournament.creator?.username || 'Inconnu'}</span>
+          </div>
+        </div>
+
+        <div className="tournament-progress">
+          <div className="tournament-progress-bar">
+            <div
+              className="tournament-progress-fill"
+              style={{
+                width: `${progress}%`,
+                background: progress >= 100 ? 'var(--danger)' : 'var(--success)'
+              }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="tournament-indicators">
+          {permissions.isCreator && (
+            <span className="indicator creator-indicator">👑 Votre tournoi</span>
+          )}
+          {permissions.isParticipant && !permissions.isCreator && (
+            <span className="indicator participant-indicator">✓ Inscrit</span>
+          )}
+        </div>
+
+        <div className="tournament-card-footer">
+          <div className="tournament-actions">
+            {permissions.isCreator && (
+              <Link
+                to={`/tournaments/${tournament.id}/manage`}
+                className="btn btn-primary btn-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ⚙️ Gérer
+              </Link>
+            )}
+
+            {permissions.canJoin && (
+              <button
+                className="btn btn-success btn-sm"
+                onClick={(e) => handleQuickJoin(tournament.id, e)}
+              >
+                ✅ Rejoindre
+              </button>
+            )}
+
+            {permissions.canLeave && (
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={(e) => handleQuickLeave(tournament.id, e)}
+              >
+                🚪 Quitter
+              </button>
+            )}
+
+            {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && (
+              <button className="btn btn-secondary btn-sm" disabled>
+                🔴 Complet
+              </button>
+            )}
+
+            <Link
+              to={`/tournaments/${tournament.id}`}
+              className="btn btn-outline btn-sm"
+            >
+              Voir détails →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="tournaments-page">
@@ -178,40 +260,31 @@ const Tournaments: React.FC = () => {
       </div>
 
       <div className="container">
+        {/* TABS DE NAVIGATION */}
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'available' ? 'active' : ''}`}
+            onClick={() => setActiveTab('available')}
+          >
+            <span className="tab-icon">🌐</span>
+            <span className="tab-label">Tournois disponibles</span>
+            <span className="tab-count">{availableTournaments.length}</span>
+          </button>
+          <button
+            className={`tab ${activeTab === 'my' ? 'active' : ''}`}
+            onClick={() => setActiveTab('my')}
+          >
+            <span className="tab-icon">⭐</span>
+            <span className="tab-label">Mes tournois</span>
+            <span className="tab-count">{myTournaments.length}</span>
+          </button>
+        </div>
+
+        {/* FILTRES */}
         <div className="card tournaments-filters">
-          <h3 className="filters-title">🔍 Filtres</h3>
-          <div className="filters-grid">
+          <div className="filters-row">
             <div className="form-group">
-              <label className="form-label">Statut</label>
-              <select
-                className="input"
-                value={filters.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-              >
-                <option value="all">📊 Tous</option>
-                <option value="open">🟢 Ouverts</option>
-                <option value="full">🔴 Complets</option>
-                <option value="in_progress">▶️ En cours</option>
-                <option value="completed">✅ Terminés</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Type</label>
-              <select
-                className="input"
-                value={filters.type}
-                onChange={(e) => handleTypeChange(e.target.value)}
-              >
-                <option value="all">🎮 Tous</option>
-                <option value="single_elimination">🏆 Élimination simple</option>
-                <option value="double_elimination">🏆🏆 Élimination double</option>
-                <option value="round_robin">🔄 Round Robin</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Recherche</label>
+              <label className="form-label">🔍 Recherche</label>
               <input
                 className="input"
                 placeholder="Nom du tournoi..."
@@ -219,144 +292,94 @@ const Tournaments: React.FC = () => {
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               />
             </div>
+
+            {activeTab === 'available' && (
+              <div className="form-group">
+                <label className="form-label">📊 Statut</label>
+                <select
+                  className="input"
+                  value={filters.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                >
+                  <option value="all">Tous</option>
+                  <option value="open">🟢 Ouverts</option>
+                  <option value="full">🔴 Complets</option>
+                  <option value="in_progress">▶️ En cours</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="tournaments-loading">
-            <div className="loading-icon">⏳</div>
-            <p>Chargement des tournois...</p>
-          </div>
-        ) : error ? (
-          <div className="tournaments-error">
-            <div className="error-icon">⚠️</div>
-            <p className="error-message">{error}</p>
-          </div>
-        ) : filteredTournaments.length === 0 ? (
-          <div className="card tournaments-empty">
-            <div className="empty-icon">😕</div>
-            <p className="empty-text">Aucun tournoi trouvé</p>
-            <Link to="/create-tournament" className="btn btn-primary">
-              ➕ Créer le premier tournoi
-            </Link>
-          </div>
+        {/* CONTENU DES TABS */}
+        {activeTab === 'available' ? (
+          // TOURNOIS DISPONIBLES
+          <>
+            {availableLoading ? (
+              <div className="tournaments-loading">
+                <div className="loading-spinner"></div>
+                <p>Chargement des tournois...</p>
+              </div>
+            ) : availableError ? (
+              <div className="tournaments-error">
+                <div className="error-icon">⚠️</div>
+                <p className="error-message">{availableError}</p>
+              </div>
+            ) : filteredAvailableTournaments.length === 0 ? (
+              <div className="card tournaments-empty">
+                <div className="empty-icon">😕</div>
+                <p className="empty-text">Aucun tournoi disponible</p>
+                <Link to="/create-tournament" className="btn btn-primary">
+                  ➕ Créer le premier tournoi
+                </Link>
+              </div>
+            ) : (
+              <div className="tournaments-grid">
+                {filteredAvailableTournaments.map(tournament => (
+                  <TournamentCard key={tournament.id} tournament={tournament} />
+                ))}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="grid grid-2">
-            {filteredTournaments.map(tournament => {
-              const statusBadge = getStatusBadge(tournament.status);
-              const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
-              const permissions = getTournamentPermissions(tournament, user, isLoggedIn);
-              
-              // Debug des permissions uniquement en développement
-              if (process.env.NODE_ENV === 'development') {
-                console.log(`🔍 Permissions tournoi ${tournament.id}:`, {
-                  isParticipant: permissions.isParticipant,
-                  canJoin: permissions.canJoin,
-                  canLeave: permissions.canLeave,
-                  participantsCount: tournament.participants?.length || 0,
-                  currentParticipants: tournament.currentParticipants
-                });
-              }
-
-              return (
-                <div key={tournament.id} className="card tournament-card">
-                  <div className="tournament-card-header">
-                    <h3 className="tournament-name">{tournament.name}</h3>
-                    <span 
-                      className="tournament-badge"
-                      style={{ 
-                        background: `${statusBadge.color}20`,
-                        color: statusBadge.color
-                      }}
-                    >
-                      {statusBadge.text}
-                    </span>
-                  </div>
-
-                  <p className="tournament-description">
-                    {tournament.description || 'Pas de description'}
-                  </p>
-
-                  <div className="tournament-progress">
-                    <div className="tournament-progress-info">
-                      <span>{getTypeName(tournament.type)}</span>
-                      <span className="tournament-participants">
-                        {tournament.currentParticipants}/{tournament.maxParticipants}
-                        {permissions.isParticipant && <span className="participant-indicator"> ✓ Inscrit</span>}
-                        {permissions.isCreator && <span className="creator-indicator"> 👑 Votre tournoi</span>}
-                      </span>
-                    </div>
-                    <div className="tournament-progress-bar">
-                      <div 
-                        className="tournament-progress-fill"
-                        style={{ 
-                          width: `${progress}%`,
-                          background: progress >= 100 ? 'var(--danger)' : 'var(--success)'
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="tournament-card-footer">
-                    <span className="tournament-creator">
-                      Par {tournament.creator?.username || 'Inconnu'}
-                    </span>
-                    <div className="tournament-actions">
-                      {/* Actions pour créateurs */}
-                      {permissions.isCreator && (
-                        <Link
-                          to={`/tournaments/${tournament.id}/manage`}
-                          className="btn btn-primary btn-sm"
-                          onClick={(e) => e.stopPropagation()}
-                          title="Gérer votre tournoi"
-                        >
-                          ⚙️ Gérer
-                        </Link>
-                      )}
-
-                      {/* Actions pour participants */}
-                      {permissions.canJoin && (
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={(e) => handleQuickJoin(tournament.id, e)}
-                          title="Rejoindre le tournoi"
-                        >
-                          ✅ Rejoindre
-                        </button>
-                      )}
-
-                      {permissions.canLeave && (
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={(e) => handleQuickLeave(tournament.id, e)}
-                          title="Quitter le tournoi"
-                        >
-                          🚪 Quitter
-                        </button>
-                      )}
-
-                      {/* Bouton complet si le tournoi est plein */}
-                      {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          disabled
-                          title="Tournoi complet"
-                        >
-                          🔴 Complet
-                        </button>
-                      )}
-                      <Link 
-                        to={`/tournaments/${tournament.id}`} 
-                        className="btn btn-primary btn-sm"
-                      >
-                        Voir détails →
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          // MES TOURNOIS
+          <>
+            {!isLoggedIn ? (
+              <div className="card auth-required">
+                <p>🔒 Vous devez être connecté pour voir vos tournois</p>
+                <Link to="/login" className="btn btn-primary">
+                  Se connecter
+                </Link>
+              </div>
+            ) : myTournamentsLoading ? (
+              <div className="tournaments-loading">
+                <div className="loading-spinner"></div>
+                <p>Chargement de vos tournois...</p>
+              </div>
+            ) : myTournamentsError ? (
+              <div className="tournaments-error">
+                <div className="error-icon">⚠️</div>
+                <p className="error-message">{myTournamentsError}</p>
+              </div>
+            ) : filteredMyTournaments.length === 0 ? (
+              <div className="card tournaments-empty">
+                <div className="empty-icon">📭</div>
+                <p className="empty-text">Vous ne participez à aucun tournoi</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setActiveTab('available')}
+                >
+                  🌐 Voir les tournois disponibles
+                </button>
+              </div>
+            ) : (
+              <div className="tournaments-grid">
+                {filteredMyTournaments.map(tournament => (
+                  <TournamentCard key={tournament.id} tournament={tournament} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
