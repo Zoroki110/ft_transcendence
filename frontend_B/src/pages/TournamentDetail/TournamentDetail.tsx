@@ -7,6 +7,7 @@ import { Tournament } from '../../types';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
 import { useTournamentActions } from '../../hooks/useTournamentActions';
 import TournamentBrackets from '../../components/TournamentBrackets/TournamentBrackets';
+import TournamentSpectator from '../../components/TournamentSpectator/TournamentSpectator';
 import { socketService } from '../../services/socket';
 import './TournamentDetail.css';
 
@@ -47,6 +48,18 @@ const TournamentDetail: React.FC = () => {
 
     fetchTournament();
   }, [id]);
+
+  // Scroll vers la section spectateur si l'ancre est présente
+  useEffect(() => {
+    if (tournament && window.location.hash === '#spectator') {
+      setTimeout(() => {
+        const spectatorSection = document.querySelector('.tournament-spectator-section');
+        if (spectatorSection) {
+          spectatorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+    }
+  }, [tournament]);
 
   // Plus besoin d'auto-refresh car les brackets se génèrent seulement au démarrage
 
@@ -465,6 +478,13 @@ const TournamentDetail: React.FC = () => {
                 <p>🎊 Félicitations au champion ! 🎊</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {tournament.status === 'in_progress' && (
+          <div className="card tournament-spectator-section">
+            <h2 className="detail-section-title">👁️ Matchs en direct</h2>
+            <TournamentSpectator tournamentId={tournament.id} />
           </div>
         )}
 

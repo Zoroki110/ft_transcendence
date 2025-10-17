@@ -250,6 +250,16 @@ export const tournamentAPI = {
   // Récupérer les tournois de l'utilisateur connecté
   getMyTournaments: (params?: any) =>
     apiClient.get('/tournaments/my-tournaments', { params }),
+
+  // Spectateurs
+  joinAsSpectator: (tournamentId: number) =>
+    apiClient.post(`/tournaments/${tournamentId}/spectate`),
+
+  leaveAsSpectator: (tournamentId: number) =>
+    apiClient.delete(`/tournaments/${tournamentId}/spectate`),
+
+  getSpectators: (tournamentId: number) =>
+    apiClient.get(`/tournaments/${tournamentId}/spectators`),
 };
 
 // ===== GAMES API =====
