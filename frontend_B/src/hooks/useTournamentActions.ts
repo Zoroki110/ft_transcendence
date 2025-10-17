@@ -9,6 +9,8 @@ interface TournamentActionState {
   isLeaving: boolean;
   isStarting: boolean;
   isDeleting: boolean;
+  showCountdown: boolean;
+  countdownMessage: string;
 }
 
 interface UseTournamentActionsReturn {
@@ -24,7 +26,9 @@ export function useTournamentActions(): UseTournamentActionsReturn {
     isJoining: false,
     isLeaving: false,
     isStarting: false,
-    isDeleting: false
+    isDeleting: false,
+    showCountdown: false,
+    countdownMessage: 'Démarrage du tournoi'
   });
 
   const joinTournament = useCallback(async (tournamentId: number): Promise<Tournament | null> => {

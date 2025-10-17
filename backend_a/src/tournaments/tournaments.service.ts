@@ -519,9 +519,27 @@ export class TournamentsService {
       throw new BadRequestException('Il faut au moins 2 participants');
     }
 
-    // If brackets not generated, generate them first
-    if (!tournament.bracketGenerated) {
+    // Check if matches already exist for this tournament
+    const existingMatches = await this.matchRepository.find({
+      where: { tournament: { id: tournamentId } }
+    });
+
+    console.log(`🔍 EXISTING MATCHES: Found ${existingMatches.length} matches`);
+
+    // If brackets not generated AND no matches exist, generate them
+    if (!tournament.bracketGenerated && existingMatches.length === 0) {
+      console.log('📝 No brackets and no matches - generating brackets');
       return await this.generateBrackets(tournamentId, userId);
+    }
+
+    // If matches already exist but bracketGenerated is false, just update the flags
+    if (existingMatches.length > 0 && !tournament.bracketGenerated) {
+      console.log('⚠️ Matches exist but bracketGenerated is false - fixing flags');
+      await this.tournamentRepository.update(tournamentId, {
+        bracketGenerated: true,
+        status: TournamentStatus.IN_PROGRESS
+      });
+      return await this.findOne(tournamentId, userId);
     }
 
     // Just update status if brackets already exist
