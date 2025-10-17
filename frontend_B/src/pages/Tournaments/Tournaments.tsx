@@ -292,11 +292,22 @@ const Tournaments: React.FC = () => {
               </button>
             )}
 
-            {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && (
+            {permissions.isFull && !permissions.isCreator && !permissions.isParticipant && tournament.status !== 'in_progress' && (
               <button className="btn btn-secondary btn-sm" disabled>
                 <CircleAlert size={16} />
                 <span>Complet</span>
               </button>
+            )}
+
+            {tournament.status === 'in_progress' && (
+              <Link
+                to={`/tournaments/${tournament.id}#spectator`}
+                className="btn btn-primary btn-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Eye size={16} />
+                <span>Regarder</span>
+              </Link>
             )}
 
             <Link
@@ -304,7 +315,7 @@ const Tournaments: React.FC = () => {
               className="btn btn-outline btn-sm"
             >
               <Eye size={16} />
-              <span>Voir détails</span>
+              <span>Détails</span>
             </Link>
           </div>
         </div>
