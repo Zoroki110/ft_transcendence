@@ -87,17 +87,19 @@ const TournamentDetail: React.FC = () => {
   const handleStart = async () => {
     if (!tournament) return;
 
-    console.log('🔍 DETAIL: Starting tournament start process', {
+    console.log('🔍 DETAIL: Starting tournament', {
       tournamentId: tournament.id,
       userId: user?.id,
       permissions
     });
 
     const updatedTournament = await hookStartTournament(tournament.id);
-    
+
     if (updatedTournament) {
       setTournament(updatedTournament);
-      console.log('✅ DETAIL: Tournament state updated after start');
+      console.log('✅ DETAIL: Tournament started, redirecting to brackets');
+      // Redirect to brackets page where countdown will be shown
+      navigate(`/tournaments/${tournament.id}/brackets`);
     }
   };
 
@@ -497,7 +499,7 @@ const TournamentDetail: React.FC = () => {
         )}
 
         <div className="tournament-back">
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={() => navigate('/tournaments')}
           >

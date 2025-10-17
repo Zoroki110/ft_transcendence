@@ -135,13 +135,13 @@ const TournamentBrackets: React.FC<TournamentBracketsProps> = ({
   const handleStartMatch = async (match: Match) => {
     try {
       console.log('🚀 Starting tournament match:', { tournamentId, matchId: match.id });
-      
+
       const response = await tournamentAPI.startTournamentMatch(tournamentId, match.id);
       console.log('✅ Match started:', response.data);
-      
+
       // Rediriger vers le jeu
       window.location.href = response.data.gameUrl;
-      
+
     } catch (err: any) {
       console.error('❌ Error starting match:', err);
       alert(err.response?.data?.message || 'Erreur lors du démarrage du match');

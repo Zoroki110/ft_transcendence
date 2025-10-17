@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { userAPI } from '../../services/api';
+import MatchHistory from '../../components/MatchHistory/MatchHistory';
 import './Profile.css';
 
 interface UserStats {
@@ -507,6 +508,22 @@ const Profile: React.FC = () => {
               </button>
             )}
           </div>
+        </div>
+
+        <div className="card">
+          <div className="section-header">
+            <svg className="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <h2 className="profile-section-title">
+              Historique des matchs {!isMyProfile && `de ${profileUser.username}`}
+            </h2>
+          </div>
+          <MatchHistory
+            userId={targetUserId}
+            isMyProfile={isMyProfile}
+            limit={10}
+          />
         </div>
       </div>
     </div>

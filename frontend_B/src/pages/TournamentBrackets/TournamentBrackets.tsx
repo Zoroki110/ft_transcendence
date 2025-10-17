@@ -16,6 +16,7 @@ import { tournamentAPI } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import { Tournament } from '../../types';
 import TournamentBrackets from '../../components/TournamentBrackets/TournamentBrackets';
+import Countdown from '../../components/Countdown/Countdown';
 import { useTournamentPermissions } from '../../hooks/useTournamentPermissions';
 import './TournamentBrackets.css';
 
@@ -26,6 +27,8 @@ const TournamentBracketsPage: React.FC = () => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [tournamentJustStarted, setTournamentJustStarted] = useState(false);
 
   const permissions = useTournamentPermissions(tournament, user, isLoggedIn);
 
@@ -36,8 +39,22 @@ const TournamentBracketsPage: React.FC = () => {
       try {
         setIsLoading(true);
         const response = await tournamentAPI.getTournament(parseInt(id));
-        setTournament(response.data);
-        console.log('🏆 Tournament loaded for brackets:', response.data);
+        const newTournament = response.data;
+
+        // Detect if tournament just started (status changed from full to in_progress)
+        if (
+          tournament &&
+          tournament.status === 'full' &&
+          newTournament.status === 'in_progress' &&
+          !tournamentJustStarted
+        ) {
+          console.log('🚀 Tournament just started! Showing countdown...');
+          setTournamentJustStarted(true);
+          setShowCountdown(true);
+        }
+
+        setTournament(newTournament);
+        console.log('🏆 Tournament loaded for brackets:', newTournament);
       } catch (err: any) {
         console.error('❌ Error loading tournament:', err);
         setError(err.response?.data?.message || 'Erreur de chargement');
@@ -56,7 +73,7 @@ const TournamentBracketsPage: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, tournament?.status]);
+  }, [id, tournament?.status, tournamentJustStarted]);
 
   const handleTournamentUpdate = async () => {
     if (!tournament) return;
@@ -67,6 +84,47 @@ const TournamentBracketsPage: React.FC = () => {
       console.log('✅ Tournament data refreshed');
     } catch (err) {
       console.error('❌ Error refreshing tournament:', err);
+    }
+  };
+
+  const handleCountdownComplete = async () => {
+    console.log('⏰ Countdown complete! Starting user match automatically...');
+    setShowCountdown(false);
+
+    if (!tournament || !user) {
+      console.error('❌ No tournament or user data');
+      return;
+    }
+
+    try {
+      // Get brackets to find user's match
+      const bracketsResponse = await tournamentAPI.getBrackets(tournament.id);
+      const brackets = bracketsResponse.data;
+
+      // Find the user's match in round 1
+      const round1Matches = brackets.brackets[1] || [];
+      const userMatch = round1Matches.find((match: any) =>
+        match.player1Id === user.id || match.player2Id === user.id
+      );
+
+      if (userMatch && userMatch.status === 'pending') {
+        console.log(`🎮 Found user match #${userMatch.id}, starting automatically...`);
+
+        // Start the match
+        const startResponse = await tournamentAPI.startTournamentMatch(tournament.id, userMatch.id);
+        console.log('✅ Match started:', startResponse.data);
+
+        // Redirect to game
+        window.location.href = startResponse.data.gameUrl;
+      } else {
+        console.log('⚠️ No pending match found for user, staying on brackets page');
+        // Just refresh the page to show brackets
+        handleTournamentUpdate();
+      }
+    } catch (err: any) {
+      console.error('❌ Error starting match:', err);
+      alert(err.response?.data?.message || 'Erreur lors du démarrage du match');
+      handleTournamentUpdate();
     }
   };
 
@@ -287,6 +345,16 @@ const TournamentBracketsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Countdown overlay - shown after brackets are visible */}
+      {showCountdown && (
+        <Countdown
+          initialSeconds={10}
+          onComplete={handleCountdownComplete}
+          title="C'est parti !"
+          subtitle="Votre match va commencer dans"
+        />
+      )}
     </div>
   );
 };
