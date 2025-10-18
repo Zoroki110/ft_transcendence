@@ -1,5 +1,18 @@
 # Makefile pour Transcendence DevOps
 
+# ---- Compose autodetect (v1 or v2) ----
+DC := $(shell if command -v docker-compose >/dev/null 2>&1; then \
+              echo docker-compose; \
+           elif docker compose version >/dev/null 2>&1; then \
+              echo docker compose; \
+           else \
+              echo ""; \
+           fi)
+ifeq ($(DC),)
+$(error Docker Compose not found. Install docker-compose-plugin or ensure 'docker compose' works in PATH)
+endif
+
+
 .PHONY: help up down logs status clean up-infra up-full backend frontend game restart-backend restart-frontend restart-game rebuild-backend rebuild-frontend rebuild-game
 
 help: ## Affiche cette aide
@@ -10,27 +23,27 @@ help: ## Affiche cette aide
 
 up-infra: ## Démarre uniquement l'infrastructure (DB, Redis, Monitoring)
 	@echo "🏗️ Démarrage de l'infrastructure..."
-	@docker-compose -f docker/docker-compose.yml up -d database redis prometheus grafana cadvisor
+	@$(DC) -f docker/docker-compose.yml up -d database redis prometheus grafana cadvisor
 
 up-full: ## Démarre TOUS les services (nécessite que les dossiers backend_a/, frontend_b/ existent)
 	@echo "🚀 Démarrage complet..."
-	@docker-compose -f docker/docker-compose.yml up -d
+	@$(DC) -f docker/docker-compose.yml up -d
 
 up: up-infra ## Alias pour up-infra (par défaut)
 
 down: ## Arrête tous les services
 	@echo "🛑 Arrêt de tous les services..."
-	@docker-compose -f docker/docker-compose.yml down
+	@$(DC) -f docker/docker-compose.yml down
 
 logs: ## Affiche les logs de tous les services
-	@docker-compose -f docker/docker-compose.yml logs -f
+	@$(DC) -f docker/docker-compose.yml logs -f
 
 logs-infra: ## Affiche les logs de l'infrastructure uniquement
-	@docker-compose -f docker/docker-compose.yml logs -f database redis prometheus grafana
+	@$(DC) -f docker/docker-compose.yml logs -f database redis prometheus grafana
 
 status: ## Vérifie le statut des services
 	@echo "🔍 Statut des services:"
-	@docker-compose -f docker/docker-compose.yml ps
+	@$(DC) -f docker/docker-compose.yml ps
 
 clean: ## Nettoie les ressources Docker
 	@echo "🧹 Nettoyage..."
@@ -38,7 +51,7 @@ clean: ## Nettoie les ressources Docker
 
 config: ## Vérifie la configuration docker-compose
 	@echo "⚙️ Vérification de la configuration..."
-	@docker-compose -f docker/docker-compose.yml config
+	@$(DC) -f docker/docker-compose.yml config
 
 setup: ## Setup initial (génère .env si nécessaire)
 	@echo "🔧 Setup initial..."
@@ -62,67 +75,67 @@ test-infra: ## Teste l'infrastructure (ports, santé des services)
 	@echo "📈 Grafana: http://localhost:3004"
 	@curl -s http://localhost:3004/api/health > /dev/null && echo "✅ Grafana OK" || echo "❌ Grafana KO"
 	@echo "💾 PostgreSQL:"
-	@docker-compose -f docker/docker-compose.yml exec -T database pg_isready -U transcendence && echo "✅ PostgreSQL OK" || echo "❌ PostgreSQL KO"
+	@$(DC) -f docker/docker-compose.yml exec -T database pg_isready -U transcendence && echo "✅ PostgreSQL OK" || echo "❌ PostgreSQL KO"
 
 # ========== COMMANDES POUR SERVICES INDIVIDUELS ==========
 
 backend: ## Démarre uniquement le backend
 	@echo "🚀 Démarrage du backend..."
-	@docker-compose -f docker/docker-compose.yml up -d backend_a
+	@$(DC) -f docker/docker-compose.yml up -d backend_a
 
 frontend: ## Démarre uniquement le frontend
 	@echo "🎨 Démarrage du frontend..."
-	@docker-compose -f docker/docker-compose.yml up -d frontend_b
+	@$(DC) -f docker/docker-compose.yml up -d frontend_b
 
 restart-backend: ## Redémarre le backend (sans rebuild)
 	@echo "🔄 Redémarrage du backend..."
-	@docker-compose -f docker/docker-compose.yml restart backend_a
+	@$(DC) -f docker/docker-compose.yml restart backend_a
 	@echo "✅ Backend redémarré"
 
 restart-frontend: ## Redémarre le frontend (sans rebuild)
 	@echo "🔄 Redémarrage du frontend..."
-	@docker-compose -f docker/docker-compose.yml restart frontend_b
+	@$(DC) -f docker/docker-compose.yml restart frontend_b
 	@echo "✅ Frontend redémarré"
 
 rebuild-backend: ## Rebuild et redémarre le backend
 	@echo "🔨 Rebuild du backend..."
-	@docker-compose -f docker/docker-compose.yml build backend_a
-	@docker-compose -f docker/docker-compose.yml up -d backend_a
+	@$(DC) -f docker/docker-compose.yml build backend_a
+	@$(DC) -f docker/docker-compose.yml up -d backend_a
 	@echo "✅ Backend rebuild et redémarré"
 
 rebuild-frontend: ## Rebuild et redémarre le frontend
 	@echo "🔨 Rebuild du frontend..."
-	@docker-compose -f docker/docker-compose.yml build frontend_b
-	@docker-compose -f docker/docker-compose.yml up -d frontend_b
+	@$(DC) -f docker/docker-compose.yml build frontend_b
+	@$(DC) -f docker/docker-compose.yml up -d frontend_b
 	@echo "✅ Frontend rebuild et redémarré"
 
 logs-backend: ## Affiche les logs du backend
-	@docker-compose -f docker/docker-compose.yml logs -f backend_a
+	@$(DC) -f docker/docker-compose.yml logs -f backend_a
 
 logs-frontend: ## Affiche les logs du frontend
-	@docker-compose -f docker/docker-compose.yml logs -f frontend_b
+	@$(DC) -f docker/docker-compose.yml logs -f frontend_b
 
 stop-backend: ## Arrête le backend
 	@echo "🛑 Arrêt du backend..."
-	@docker-compose -f docker/docker-compose.yml stop backend_a
+	@$(DC) -f docker/docker-compose.yml stop backend_a
 
 stop-frontend: ## Arrête le frontend
 	@echo "🛑 Arrêt du frontend..."
-	@docker-compose -f docker/docker-compose.yml stop frontend_b
+	@$(DC) -f docker/docker-compose.yml stop frontend_b
 
 exec-backend: ## Ouvre un shell dans le conteneur backend
 	@echo "🐚 Connexion au backend..."
-	@docker-compose -f docker/docker-compose.yml exec backend_a sh
+	@$(DC) -f docker/docker-compose.yml exec backend_a sh
 
 exec-frontend: ## Ouvre un shell dans le conteneur frontend
 	@echo "🐚 Connexion au frontend..."
-	@docker-compose -f docker/docker-compose.yml exec frontend_b sh
+	@$(DC) -f docker/docker-compose.yml exec frontend_b sh
 
 db-shell: ## Ouvre un shell psql dans la base de données
 	@echo "💾 Connexion à PostgreSQL..."
-	@docker-compose -f docker/docker-compose.yml exec database psql -U transcendence -d transcendence_dev
+	@$(DC) -f docker/docker-compose.yml exec database psql -U transcendence -d transcendence_dev
 
 db-migrate: ## Applique la migration pour les champs ready
 	@echo "🔄 Application de la migration ready fields..."
-	@docker-compose -f docker/docker-compose.yml exec -T database psql -U transcendence -d transcendence_dev < ../backend_a/add-ready-fields.sql
+	@$(DC) -f docker/docker-compose.yml exec -T database psql -U transcendence -d transcendence_dev < ../backend_a/add-ready-fields.sql
 	@echo "✅ Migration appliquée"

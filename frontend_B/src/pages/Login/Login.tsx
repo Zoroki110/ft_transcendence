@@ -17,15 +17,12 @@ const Login: React.FC = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
   // Rediriger si déjà connecté (avec délai pour permettre de voir la page)
-  useEffect(() => {
-    if (isLoggedIn && user) {
-      const timer = setTimeout(() => {
-        navigate('/');
-      }, 2000); // 2 secondes de délai
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isLoggedIn, user, navigate]);
+useEffect(() => {
+  if (!userLoading && isLoggedIn && user) {
+    const timer = setTimeout(() => navigate('/'), 2000);
+    return () => clearTimeout(timer);
+  }
+}, [userLoading, isLoggedIn, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +73,11 @@ const Login: React.FC = () => {
 
 
   const handleOAuth42 = () => {
-    const redirectUri = window.location.origin + '/auth/callback';
-    const oauth42Url = `${import.meta.env.VITE_API_URL}/auth/42?redirect_uri=${redirectUri}`;
-    window.location.href = oauth42Url;
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'; // fallback
+    const returnTo = `${window.location.origin}/auth/complete`;
+    const url = `${API_BASE}/auth/42?return_to=${encodeURIComponent(returnTo)}`;
+    console.log('[OAuth42] redirecting to:', url);
+    window.location.assign(url);
   };
 
   // Si déjà connecté, afficher un message différent
@@ -91,7 +90,7 @@ const Login: React.FC = () => {
             <p className="page-subtitle">Vous êtes déjà connecté en tant que {user.username}</p>
           </div>
         </div>
-        
+
         <div className="container">
           <div className="login-container">
             <div className="card">
@@ -100,7 +99,7 @@ const Login: React.FC = () => {
                 <h2>Bonjour {user.displayName || user.username} !</h2>
                 <p>Vous êtes déjà connecté à votre compte.</p>
                 <p>Vous serez redirigé vers l'accueil dans quelques secondes...</p>
-                
+
                 <div className="form-actions">
                   <button
                     onClick={() => navigate('/')}
@@ -135,7 +134,7 @@ const Login: React.FC = () => {
       <div className="container">
         <div className="login-container">
           <div className="login-box">
-            
+
               <div className="card">
                 <h2 className="login-title">
                   {isRegisterMode ? 'S\'inscrire' : 'Se connecter'}
@@ -149,6 +148,7 @@ const Login: React.FC = () => {
 
                 <div className="login-oauth">
                   <button
+                    type="button"
                     onClick={handleOAuth42}
                     disabled={isLoading}
                     className="oauth-button oauth-42"
