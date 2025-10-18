@@ -24,6 +24,7 @@ interface UserContextType {
   loadProfile: () => Promise<void>;
   loadStats: () => Promise<void>;
   loadDashboard: () => Promise<void>;
+  setUserFromSession: (raw: any) => void;
 
   // Actions statut
   setOnlineStatus: (isOnline: boolean) => Promise<void>;
@@ -50,14 +51,31 @@ interface UserProviderProps {
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+  /* const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     const hasToken = storageService.hasToken();
     console.log('🔍 DEBUG UserContext init:', { hasToken, sessionStorage: true });
     storageService.debugToken();
     return hasToken;
-  });
-  const [loading, setLoading] = useState<boolean>(false);
+  }); */
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  ////////////////////////////////////////////////////////
+  //               ADDED THIS FOR OAUTH                 //
+  ////////////////////////////////////////////////////////
+
+// expose this already-existing setter
+const setUserFromSession = useCallback((raw: any) => {
+  const mapped = { id: raw.sub ?? raw.id, username: raw.username, email: raw.email };
+  setUser(prev => ({ ...(prev ?? {}), ...mapped } as any));
+  setIsLoggedIn(true);
+  setError(null);
+}, []);
+
+const firstVisitRef = React.useRef(!sessionStorage.getItem('auth_boot_done'));
+
+  //////////////////// END OF ADDS FOR OAUTH ////////////////////////
 
   // Déconnexion - DÉFINIE EN PREMIER
   const logout = useCallback(async (): Promise<void> => {
@@ -83,7 +101,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       console.log('Chargement du profil...');
-      
+
       const response = await userAPI.getMyProfile();
       const userData = response.data;
 
@@ -307,31 +325,46 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   }, []);
 
   // Auto-chargement du profil au démarrage si un token est présent
-  useEffect(() => {
-    const initializeUser = async () => {
-      if (storageService.hasToken() && !user && !loading) {
-        console.log('🔄 AUTO-LOAD: Token détecté au démarrage, chargement du profil...');
-        try {
-          await loadProfile();
-        } catch (error) {
-          console.error('❌ AUTO-LOAD: Échec du chargement automatique:', error);
-          // Si le token est invalide, on déconnecte
-          await logout();
-        }
-      }
-    };
+useEffect(() => {
+  let mounted = true;
+  const controller = new AbortController();
+  const t = setTimeout(() => { try { controller.abort(); } catch {} }, 2500);
 
-    initializeUser();
-  }, [user, loading, loadProfile, logout]); // Avec les bonnes dépendances
+  (async () => {
+    try {
+      const res = await authAPI.me(controller.signal);
+      if (!mounted) return;
+
+      if (res.status === 200 && res.data) {
+        setUserFromSession(res.data);
+      } else {
+        // 401/403/etc → stay logged out, do nothing (no reloads)
+        // console.log('[boot] not authenticated:', res.status);
+      }
+    } catch (err) {
+      // network/aborted → just continue logged out
+    } finally {
+      clearTimeout(t);
+      if (mounted) setLoading(false);
+    }
+  })();
+
+  return () => {
+    mounted = false;
+    clearTimeout(t);
+    try { controller.abort(); } catch {}
+  };
+}, [setUserFromSession]);
+
 
   // Écouter les événements de tournoi terminé pour rafraîchir le profil
   useEffect(() => {
     if (isLoggedIn && user) {
       console.log('🏆 Setting up tournament completion listener for user:', user.username);
-      
+
       const handleTournamentCompleted = async (data: any) => {
         console.log('🏆 Tournament completed event received:', data);
-        
+
         // Si l'utilisateur actuel est le champion, rafraîchir son profil
         if (data.champion && data.champion.id === user.id) {
           console.log('🎉 Current user won the tournament! Refreshing profile...');
@@ -365,6 +398,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     setOnlineStatus,
     uploadAvatar,
     removeAvatar,
+    setUserFromSession,
   };
 
   return (

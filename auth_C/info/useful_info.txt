@@ -1,0 +1,96 @@
+
+
+curl -sS -H "Authorization: Bearer $ACCESS" http://localhost:3000/auth/me | jq
+
+curl -sS -H "Authorization: Bearer $ACCESS" http://localhost:3000/auth/2fa/generate | jq
+
+(base) simna@Simonspc:~/student/ft_transcendence/auth_C/transcendence-auth$ curl -sS -X POST -H "Authorization: Bearer $ACCESS" -H "Content-Type: application/json"   -d '{"code":"577 157"}'   http://localhost:3000/au
+th/2fa/enable | jq
+{
+  "message": "Invalid 2FA code",
+  "error": "Unauthorized",
+  "statusCode": 401
+}
+
+Get the qrcode:
+
+curl -sS -X POST -H "Authorization: Bearer $ACCESS" http://localhost:3000/auth/2fa/generate | jq
+{
+  "qrCode": "data:image/png;base64,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",
+  "secretBase32": "MNLWKVL5GJDUSVB6JZ3FEWDCIR2G4RKU",
+  "otpauthUrl": "otpauth://totp/ft_transcendence%20(sinawara)?secret=MNLWKVL5GJDUSVB6JZ3FEWDCIR2G4RKU"
+}
+
+
+
+
+
+
+Steps to verify the 2FA works correctly:
+
+1.
+	cd auth_C
+	cd transcendence-auth
+	npm run start:dev
+
+2.
+	Go to "http://localhost:3000/auth/42" in your browser
+
+	You should get something like this:
+
+	----
+	{"message":"Authenticated successfully","user":{"id":"201734","username":"sinawara","twoFactorEnabled":false},"access_token":{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMDE3MzQiLCJ1c2VybmFtZSI6InNpbmF3YXJhIiwiaWF0IjoxNzYwNTMyMjgyLCJleHAiOjE3NjA1MzU4ODJ9.yWzpgzRnWNJ2OJ9_SU4JuXKqUkqvYubtO_eXFf39BGk","refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMDE3MzQiLCJ1c2VybmFtZSI6InNpbmF3YXJhIiwiaWF0IjoxNzYwNTMyMjgyLCJleHAiOjE3NjExMzcwODJ9.Gbj48DkBYeRc0t3Lo_zKTLzyepANGSfvtaADxBHe8xw"}}
+---
+
+3.
+	a. Copy the access token value
+	b. Assign that value to an env variable with "export ACCESS='the value here'"
+
+4. Sanity check: you have a valid access token
+
+	"curl -sS -H "Authorization: Bearer $ACCESS" http://localhost:3000/auth/me | jq"
+	Expected Result:
+		{
+			"userId": "201734",
+			"username": "sinawara"
+		}
+
+5. Generate 2FA secret (this sets it server-side!)
+
+	GEN=$(curl -sS -X POST -H "Authorization: Bearer $ACCESS" \
+  http://localhost:3000/auth/2fa/generate)
+
+  echo "$GEN" | jq
+  Expected Result:
+  {
+	"qrCode": "data:image/png;base64,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",
+	"secretBase32": "HYZC4WCLO45H2QLZEVYUYKDBFJNCKSJ2",
+	"otpauthUrl": "otpauth://totp/ft_transcendence%20(sinawara)?secret=HYZC4WCLO45H2QLZEVYUYKDBFJNCKSJ2"
+	}
+
+	BASE32=$(echo "$GEN" | jq -r '.secretBase32')
+	echo "BASE32=$BASE32"
+
+6. Now either:
+	- Scan the qrCode in Google Authenticator / Aegis / Authy
+		To do this, copy the qrcode value, and directly paste it into your browser
+	- Or Generate the code locally (no phone needed):
+		node -e "const s=process.argv[1];import('speakeasy').then(x=>console.log(x.totp({secret:s,encoding:'base32'})));"
+		"$BASE32"
+
+7. Enable 2FA (IMPORTANT: send field token, not code)
+	TOKEN=$(node -e "const s=process.argv[1];import('speakeasy').then(x=>console.log(x.totp({secret:s,encoding:'base32'})));" "$BASE32")
+
+	curl -sS -X POST -H "Authorization: Bearer $ACCESS" -H "Content-Type: application/json" \
+	-d "{\"token\":\"$TOKEN\"}" \
+	http://localhost:3000/auth/2fa/enable | jq
+
+	Expected Result:
+		{
+			"success": true
+		}
+
+8. Login Again
+
+	Do your normal OAuth login again (e.g., visit /auth/42 in the browser).
+	When 2FA is enabled, your backend should now return a twofa_token (short-lived), e.g.:
