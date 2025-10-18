@@ -13,10 +13,18 @@ debugLog('Configuration API:', {
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: API_CONFIG.TIMEOUT,
+  timeout: 10000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+const apiBare: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+  timeout: 3000, // short; it’s just a probe
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Intercepteur pour ajouter le token JWT
@@ -68,18 +76,30 @@ apiClient.interceptors.response.use(
 
 // ===== AUTH API =====
 export const authAPI = {
-  // Connexion avec email/password
   login: (email: string, password: string) =>
     apiClient.post('/auth/login', { email, password }),
 
-  // Inscription
   register: (username: string, email: string, password: string) =>
     apiClient.post('/auth/register', { username, email, password }),
 
-  // OAuth 42
-  loginWith42: () =>
-    apiClient.get('/auth/42'),
+  // OPTIONAL: turn this into a redirect helper (no axios)
+  loginWith42: (returnTo?: string) => {
+    const frontReturn = returnTo ?? `${window.location.origin}/auth/complete`;
+    const url = `${API_BASE_URL}/auth/42?return_to=${encodeURIComponent(frontReturn)}`;
+    window.location.assign(url);
+  },
 
+  // Add these for the post-login flow & session checks
+  me: async (signal?: AbortSignal) => {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    method: 'GET',
+    credentials: 'include',
+    signal,
+  });
+  const data = res.status === 200 ? await res.json() : null;
+  return { status: res.status, data };
+},
+  logout: () => apiClient.post('/auth/logout'),
 };
 
 // ===== USERS API =====
