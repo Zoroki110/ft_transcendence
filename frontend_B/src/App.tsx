@@ -33,6 +33,8 @@ import TestSignup from './pages/TestSignup';
 import Friends from './pages/Friends/Friends';
 import Challenges from './pages/Challenges/Challenges';
 import Chat from './pages/Chat/Chat';
+import AuthComplete from './pages/Login/AuthComplete';
+
 
 import './App.css';
 
@@ -51,9 +53,16 @@ function App() {
                 <main className="main-content">
                 <Routes>
                 {/* Pages publiques */}
-                <Route path="/" element={<Home />} />
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedRoute>
+                            <Home />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route path="/login" element={<Login />} />
-                
+
                 {/* Tournois */}
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/tournaments/:id" element={<TournamentDetail />} />
@@ -61,12 +70,12 @@ function App() {
                 <Route path="/tournaments/:id/manage" element={<ProtectedRoute><ManageTournament /></ProtectedRoute>} />
                 <Route path="/create-tournament" element={<ProtectedRoute><CreateTournament /></ProtectedRoute>} />
                 <Route path="/brackets-demo" element={<BracketsDemo />} />
-                
+
                 {/* Jeu */}
                 <Route path="/matchmaking" element={<ProtectedRoute><GamesList /></ProtectedRoute>} />
                 <Route path="/matchmaking/:gameId" element={<ProtectedRoute><Matchmaking /></ProtectedRoute>} />
                 <Route path="/game/:gameId" element={<Game />} />
-                
+
                 {/* Utilisateur - Routes protégées */}
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/profile/:id" element={<Profile />} />
@@ -84,6 +93,9 @@ function App() {
                 {/* Page de test des APIs */}
                 <Route path="/api-test" element={<APITest />} />
                 <Route path="/test-signup" element={<TestSignup />} />
+
+                {/* Landing page once auth is finished */}
+                <Route path="/auth/complete" element={<AuthComplete />} />
               </Routes>
             </main>
           </div>
