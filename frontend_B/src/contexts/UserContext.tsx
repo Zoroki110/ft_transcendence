@@ -79,12 +79,14 @@ const firstVisitRef = React.useRef(!sessionStorage.getItem('auth_boot_done'));
 
   // Déconnexion - DÉFINIE EN PREMIER
   const logout = useCallback(async (): Promise<void> => {
+    try { await authAPI.logout(); } catch {}
     try {
       storageService.removeToken();
       setUser(null);
       setStats(null);
       setIsLoggedIn(false);
       setError(null);
+      try { await authAPI.me(); } catch {}
       console.log('🔓 Déconnexion réussie (sessionStorage cleared)');
     } catch (err) {
       console.error('Erreur lors de la déconnexion:', err);
@@ -174,7 +176,11 @@ const firstVisitRef = React.useRef(!sessionStorage.getItem('auth_boot_done'));
 
       const completeUser = normalizeUserData(userData);
 
-      storageService.setToken(access_token);
+      try {
+        const res = await authAPI.me(); // bare client; withCredentials true
+        if (res.status === 200) setUserFromSession(res.data); // flip isLoggedIn = true
+        } catch {}
+
       setUser(completeUser);
       setIsLoggedIn(true);
       console.log('🔑 Token stocké dans sessionStorage pour:', userData.username);
@@ -223,7 +229,10 @@ const firstVisitRef = React.useRef(!sessionStorage.getItem('auth_boot_done'));
 
       const completeUser = normalizeUserData(userData);
 
-      storageService.setToken(access_token);
+      try {
+        const res = await authAPI.me(); // bare client; withCredentials true
+        if (res.status === 200) setUserFromSession(res.data); // flip isLoggedIn = true
+        } catch {}
       setUser(completeUser);
       setIsLoggedIn(true);
       console.log('🔑 Token stocké dans sessionStorage pour:', userData.username);
