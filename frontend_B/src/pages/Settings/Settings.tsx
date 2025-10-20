@@ -1,7 +1,10 @@
 // frontend_B/src/pages/Settings/Settings.tsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { userAPI, authAPI } from '../../services/api';
+import { API_CONFIG } from '../../config';
+import { DEFAULT_AVATARS, getAvatarById, DEFAULT_AVATAR_ID } from '../../utils/avatars';
 import './Settings.css';
 
 interface UserSettings {
@@ -12,27 +15,33 @@ interface UserSettings {
 }
 
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const { user, loading: userLoading, updateProfile: contextUpdateProfile } = useUser();
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [settings, setSettings] = useState<UserSettings>({
     username: '',
     displayName: '',
     email: '',
-    avatar: '😀'
+    avatar: DEFAULT_AVATAR_ID.toString()
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const avatars = ['😀', '😎', '🎮', '🕹️', '👤', '🎯', '🏆', '⚡', '🔥', '💎'];
-
   useEffect(() => {
     if (user) {
+      // Convertir l'ancien format d'avatar si nécessaire
+      let avatarValue = user.avatar || DEFAULT_AVATAR_ID.toString();
+
+      // Si c'est un ancien chemin /uploads/, utiliser l'avatar par défaut
+      if (avatarValue.startsWith('/uploads/')) {
+        avatarValue = DEFAULT_AVATAR_ID.toString();
+      }
+
       setSettings({
         username: user.username,
         displayName: user.displayName || '',
         email: user.email,
-        avatar: user.avatar || '😀'
+        avatar: avatarValue
       });
     }
   }, [user]);
@@ -40,7 +49,7 @@ const Settings: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setIsSaving(true);
     setMessage(null);
 
@@ -49,11 +58,16 @@ const Settings: React.FC = () => {
       const success = await contextUpdateProfile({
         username: settings.username,
         email: settings.email,
-        displayName: settings.displayName || null
+        displayName: settings.displayName || null,
+        avatar: settings.avatar // Inclure l'avatar sélectionné
       });
 
       if (success) {
         setMessage({ type: 'success', text: 'Paramètres sauvegardés !' });
+        // Rediriger vers le profil après 1.5 secondes
+        setTimeout(() => {
+          navigate('/profile');
+        }, 1500);
       } else {
         setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
       }
@@ -110,20 +124,29 @@ const Settings: React.FC = () => {
             {activeTab === 'profile' && (
               <div className="card">
                 <h2 className="settings-section-title">👤 Profil</h2>
-                
+
                 <div className="form-group">
-                  <label className="form-label">Avatar</label>
+                  <label className="form-label">Choisissez votre avatar</label>
+                  <p className="form-hint">Sélectionnez un avatar parmi les options disponibles</p>
                   <div className="avatar-grid">
-                    {avatars.map(avatar => (
-                      <button
-                        key={avatar}
-                        type="button"
-                        onClick={() => setSettings(prev => ({ ...prev, avatar }))}
-                        className={`avatar-option ${settings.avatar === avatar ? 'active' : ''}`}
-                      >
-                        {avatar}
-                      </button>
-                    ))}
+                    {DEFAULT_AVATARS.map(avatar => {
+                      const isSelected = settings.avatar === avatar.id.toString();
+                      return (
+                        <button
+                          key={avatar.id}
+                          type="button"
+                          onClick={() => setSettings(prev => ({ ...prev, avatar: avatar.id.toString() }))}
+                          className={`avatar-option ${isSelected ? 'active' : ''}`}
+                          style={{
+                            backgroundColor: isSelected ? avatar.color : 'transparent',
+                            border: isSelected ? `3px solid ${avatar.color}` : '2px solid #e0e0e0'
+                          }}
+                          title={avatar.name}
+                        >
+                          <span style={{ fontSize: '2rem' }}>{avatar.emoji}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -172,11 +195,15 @@ const Settings: React.FC = () => {
             )}
 
             <div className="settings-actions">
-              <button type="button" className="btn btn-secondary">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate('/profile')}
+              >
                 🔄 Annuler
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary"
                 disabled={isSaving}
               >

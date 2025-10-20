@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
 import { gameAPI, userAPI } from '../services/api';
+import { getAvatarDisplay } from '../utils/avatars';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -289,20 +290,16 @@ const Navigation: React.FC = () => {
                 <span className="user-avatar" style={{
                   width: '40px',
                   height: '40px',
-                  background: '#667eea',
+                  background: getAvatarDisplay(user.avatar).color || '#667eea',
                   color: 'white',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: '600',
-                  fontSize: '1rem'
+                  fontSize: '1.2rem'
                 }}>
-                  {user.avatar || (
-                    <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: '24px', height: '24px' }}>
-                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
-                  )}
+                  {getAvatarDisplay(user.avatar).value}
                 </span>
                 <span className="user-name" style={{ fontWeight: '600', color: '#4a5568' }}>
                   {user.username}
@@ -352,7 +349,7 @@ const Navigation: React.FC = () => {
                       fontSize: '1.5rem',
                       border: '2px solid rgba(255, 255, 255, 0.3)'
                     }}>
-                      {user.avatar || '👤'}
+                      {getAvatarDisplay(user.avatar).value}
                     </div>
                     <div className="dropdown-user-info" style={{ flex: '1' }}>
                       <div className="dropdown-username" style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.25rem' }}>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 import { userAPI } from '../../services/api';
+import { getAvatarDisplay } from '../../utils/avatars';
 import MatchHistory from '../../components/MatchHistory/MatchHistory';
 import './Profile.css';
 
@@ -201,13 +202,26 @@ const Profile: React.FC = () => {
         <div className="container">
           <div className="profile-header-content">
             <div className="profile-avatar-large">
-              {profileUser.avatar ? (
-                <span className="avatar-emoji">{profileUser.avatar}</span>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              )}
+              {(() => {
+                const avatarData = getAvatarDisplay(profileUser.avatar);
+                return (
+                  <div
+                    className="avatar-display"
+                    style={{
+                      backgroundColor: avatarData.color || '#e0e0e0',
+                      borderRadius: '50%',
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '4rem'
+                    }}
+                  >
+                    <span className="avatar-emoji">{avatarData.value}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="profile-header-info">
               <h1 className="page-title">
@@ -281,7 +295,7 @@ const Profile: React.FC = () => {
                   </svg>
                   Avatar
                 </div>
-                <span className="profile-avatar-display">{profileUser.avatar || '👤'}</span>
+                <span className="profile-avatar-display">{getAvatarDisplay(profileUser.avatar).value}</span>
               </div>
 
               <div className="profile-info-item profile-info-item-divider">

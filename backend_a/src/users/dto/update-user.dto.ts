@@ -32,4 +32,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
       'Display name can only contain letters, numbers, underscore and dash',
   })
   displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
 }
